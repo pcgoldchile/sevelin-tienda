@@ -4,10 +4,11 @@
 > arquitectura completo (todas las fases) vive en `README-ECOMMERCE-SEVELIN.md`, en el repo del POS
 > (`sevelin-pos-oficial`) — este documento es el estado de ESTE repo (`sevelin-tienda`) nada más.
 
-**Fecha:** 26-08-2026 · **Versión activa:** v2 (Fase 2) · **Estado:** solo desarrollo local, no
+**Fecha:** 26-08-2026 · **Versión activa:** v3 (Fase 3) · **Estado:** solo desarrollo local, no
 desplegado todavía. No hay proyecto Supabase Web real creado, ni proyecto Vercel, ni webhook
-configurado — ver "Pendiente" abajo (sin cambios desde la Fase 1, sigue bloqueando ver el catálogo
-real).
+configurado, ni credenciales de Flow/OpenFactura — ver "Pendiente" abajo (sin cambios desde la Fase
+1 salvo agregar los bloqueantes propios de la Fase 3, sigue bloqueando probar cualquier flujo de
+punta a punta con datos reales).
 
 ---
 
@@ -19,6 +20,27 @@ Next.js 16 (App Router) · TypeScript · Tailwind v4 · `@supabase/supabase-js`.
 - Conecta a su **propio** proyecto Supabase ("Supabase Web": `productos_web`, `pedidos_web`) — NUNCA
   al Supabase del POS directo.
 - Se sincroniza desde el POS vía Database Webhook → `POST /api/sync/producto` (push, no polling).
+
+## Estado: qué está HECHO (Fase 3)
+- Checkout de invitado + pago con Flow + boleta electrónica con OpenFactura (ver
+  `docs/CHANGELOG-V03.md` para el detalle completo):
+  - `src/lib/envio.ts`: `costoEnvioPlano()` — tarifa plana fija (`COSTO_ENVIO_PLANO`) mientras la
+    cotización real (Haversine + Shipit) no exista (Fase 4). Confirmado con el usuario.
+  - `src/lib/pedidos.ts`: `crearPedido()`, `obtenerPedidoPorNumero()`, `guardarPagoFlow()`,
+    `marcarPedidoFallido()`, `guardarDatosBoleta()`, `marcarPedidoPagado()` (mutex
+    `CREADO→PAGADO` contra reintentos del webhook de Flow).
+  - `src/lib/flow.ts` / `src/lib/openfactura.ts`: clientes de Flow y OpenFactura. **Sin verificar
+    contra las APIs reales** (no hay credenciales) — ver TODO marcados en ambos archivos y sección
+    "Pendiente" abajo.
+  - `src/lib/pos-interno.ts`: llama a `POST /api/interno/ajustar-stock`, ruta **nueva** que se
+    agregó a `sevelin-pos-oficial/api/index.js` (no existía, quedó pendiente desde la Fase 0 del
+    POS — ver `sevelin-pos-oficial/docs/CHANGELOG-V25.md`).
+  - `supabase/02-numeracion-pedidos.sql`: numeración atómica de pedidos (`generar_numero_pedido()`).
+  - `POST /api/checkout`, `POST /api/flow-webhook`, `GET /api/pedido/:numero`: Route Handlers
+    nuevos, mismas convenciones que los existentes.
+  - `src/app/checkout/page.tsx` + `src/components/formulario-checkout.tsx`, `src/app/pedido/[numero]/page.tsx`:
+    frontend del checkout y de estado del pedido. Botón "Ir a pagar" del carrito ya no está
+    deshabilitado.
 
 ## Estado: qué está HECHO (Fase 2)
 - Frontend público completo (ver `docs/CHANGELOG-V02.md` para el detalle):
@@ -73,12 +95,20 @@ Next.js 16 (App Router) · TypeScript · Tailwind v4 · `@supabase/supabase-js`.
 5. Primera carga del catálogo: el webhook solo sincroniza cambios futuros. Los productos ya marcados
    `publicado_web=true` en el POS ANTES de configurar el webhook necesitan un re-guardado (o un script
    de sincronización masiva, no incluido en esta fase) para aparecer acá.
+6. **Credenciales sandbox de Flow y OpenFactura** (Fase 3, nuevo). Sin ellas no se puede probar
+   `POST /api/checkout` ni `POST /api/flow-webhook` contra las APIs reales — ver
+   `docs/CHANGELOG-V03.md` sección 8: el algoritmo de firma de Flow (`src/lib/flow.ts`) y el
+   `TipoDTE` de OpenFactura (`src/lib/openfactura.ts`) están implementados según el README maestro
+   pero **sin verificar contra la documentación vigente real** — hacerlo antes del primer pago real.
+7. **Proyecto Vercel real** (Fase 3, agrava el punto 3 de arriba): Flow necesita URLs públicas
+   reales para `urlConfirmation`/`urlReturn` (hoy `NEXT_PUBLIC_SITE_URL` apunta a
+   `http://localhost:3000`, inalcanzable para Flow) — el checkout no se puede probar de punta a
+   punta hasta que la tienda esté desplegada. También hace falta plan Vercel Pro para el
+   `maxDuration=60` de `POST /api/flow-webhook` (el plan Hobby limita a 10s).
 
 ## Pendiente (backlog, siguientes fases)
-- **Fase 3:** checkout + Flow (pago) + OpenFactura (boletas). El botón "Ir a pagar" del carrito ya
-  existe pero está deshabilitado a propósito — se activa en esta fase.
-- **Fase 4:** cotización de envío (Haversine local + Shipit). El drawer del carrito hoy solo muestra
-  subtotal (sin línea de envío) — se agrega en esta fase.
+- **Fase 4:** cotización de envío (Haversine local + Shipit), reemplazando la tarifa plana fija
+  (`COSTO_ENVIO_PLANO`) de la Fase 3.
 - **Fase 5:** panel "Pedidos Web" — vive en el POS, no en este repo.
 - **Fase 6:** QA end-to-end + dominio `sevelin.cl`.
 
@@ -90,7 +120,10 @@ Next.js 16 (App Router) · TypeScript · Tailwind v4 · `@supabase/supabase-js`.
   de la Fase 0/1): sirve para ver hero/header/drawer/estados de error reales. Sin un Supabase Web
   real no se ven productos reales — para probar el carrito con contenido, sembrar un carrito de
   prueba directo en `localStorage` (clave `sevelin-carrito`, ver `docs/CHANGELOG-V02.md` sección 6
-  para el formato exacto de los items).
+  para el formato exacto de los items). El checkout (`/checkout`) se prueba igual, sembrando el
+  carrito; el submit real contra `POST /api/checkout` falla con 409 sin Supabase Web real, pero
+  sirve para confirmar que el formulario, el cálculo de envío/total y el manejo de errores
+  funcionan (ver `docs/CHANGELOG-V03.md` sección 7).
 - No hay suite de tests versionada en el repo todavía (mismo criterio ad hoc que el POS): se verificó
   con un doble en memoria de Supabase (monkey-patch del cliente ya creado, no del import) en un
   archivo temporal, corrido con `npx tsx` y borrado después — ver `docs/CHANGELOG-V01.md` para el
@@ -119,3 +152,13 @@ Next.js 16 (App Router) · TypeScript · Tailwind v4 · `@supabase/supabase-js`.
 - Un error de conexión a Supabase en `/productos/[sku]` (sin `try/catch`) da un 500 crudo en vez del
   mismo fallback de "catálogo no disponible" que usan home y listado — hay que capturarlo ahí
   también, no solo en las páginas de listado.
+- Un `next dev` dejado corriendo varias horas entre sesiones (puerto 3000 ocupado por un PID viejo)
+  puede degradar hasta crashear con "Jest worker encountered N child process exceptions" al primer
+  cambio nuevo — no es un bug del código, es el proceso de dev acumulando estado de HMR. Si
+  `preview_start` reporta el puerto 3000 ocupado y no es un servidor nuestro reconocible, matar ese
+  PID y levantar de nuevo resuelve el problema (mismo criterio: siempre revisar qué es el proceso
+  antes de matarlo, no asumir).
+- El mutex `UPDATE ... WHERE estado='CREADO'` (`marcarPedidoPagado()`) depende de que nada más
+  cambie `pedidos_web.estado` entre `CREADO` y `PAGADO` por otro camino. Si en una fase futura se
+  agrega alguna forma de cancelar un pedido en `CREADO` (ej. un cron de limpieza), hay que revisar
+  que no compita con este mutex.

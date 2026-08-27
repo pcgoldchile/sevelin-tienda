@@ -17,6 +17,57 @@ export interface ProductoWeb {
   sincronizado_en: string;
 }
 
+/** Dirección de envío del checkout de invitado — se guarda tal cual en `pedidos_web.direccion_envio`. */
+export interface DireccionEnvio {
+  calle: string;
+  numero: string;
+  comuna: string;
+  referencia: string | null;
+}
+
+/** Ítem dentro de `pedidos_web.items` — snapshot de precio/nombre al momento de la compra, no
+ * una referencia viva a `productos_web` (que puede cambiar de precio después). `producto_pos_id`
+ * es el dato que necesita `POST /api/interno/ajustar-stock` del POS para descontar el producto
+ * correcto (ver README-ECOMMERCE-SEVELIN.md sección 5). */
+export interface ItemPedido {
+  sku: string;
+  producto_pos_id: number;
+  nombre: string;
+  precio_web: number;
+  cantidad: number;
+}
+
+export type EstadoPedido =
+  | 'CREADO'
+  | 'PAGADO'
+  | 'PREPARANDO'
+  | 'ENVIADO'
+  | 'ENTREGADO'
+  | 'CANCELADO'
+  | 'FALLIDO';
+
+/** Espejo de `pedidos_web` — ver README-ECOMMERCE-SEVELIN.md sección 4.2. */
+export interface PedidoWeb {
+  id: number;
+  numero_pedido: string;
+  estado: EstadoPedido;
+  cliente_nombre: string | null;
+  cliente_email: string | null;
+  cliente_telefono: string | null;
+  direccion_envio: DireccionEnvio;
+  items: ItemPedido[];
+  metodo_envio: 'LOCAL' | 'COURIER';
+  costo_envio: number;
+  subtotal: number;
+  total: number;
+  flow_token: string | null;
+  flow_order: number | null;
+  url_boleta_sii: string | null;
+  folio_dte: string | null;
+  tracking_courier: string | null;
+  creado_en: string;
+}
+
 /** Fila cruda de `productos` tal como la manda el Database Webhook del POS. */
 export interface ProductoPOS {
   id: number;

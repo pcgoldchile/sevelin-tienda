@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { formatoCLP } from "@/lib/formato";
 import { useCarrito } from "@/context/carrito-context";
 
@@ -89,15 +90,19 @@ export function CarritoDrawer() {
             <span>Subtotal</span>
             <span className="text-base font-semibold text-zinc-900">{formatoCLP.format(subtotal)}</span>
           </div>
-          <p className="mt-1 text-xs text-zinc-400">El envío se calcula más adelante, en el pago.</p>
-          <button
-            type="button"
-            disabled
-            title="El pago todavía no está disponible en la tienda"
-            className="mt-3 w-full cursor-not-allowed rounded-lg bg-zinc-300 px-4 py-2.5 text-sm font-medium text-zinc-500"
+          <p className="mt-1 text-xs text-zinc-400">El envío se calcula en el siguiente paso.</p>
+          <Link
+            href="/checkout"
+            onClick={cerrarCarrito}
+            className={`mt-3 block w-full rounded-lg px-4 py-2.5 text-center text-sm font-medium transition ${
+              items.length === 0
+                ? "pointer-events-none cursor-not-allowed bg-zinc-200 text-zinc-400"
+                : "bg-zinc-900 text-white hover:bg-zinc-700"
+            }`}
+            aria-disabled={items.length === 0}
           >
-            Ir a pagar — Próximamente
-          </button>
+            Ir a pagar
+          </Link>
         </footer>
       </aside>
     </div>
