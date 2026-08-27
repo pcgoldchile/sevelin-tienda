@@ -51,14 +51,40 @@ export async function listarCategorias(): Promise<string[]> {
   return Array.from(categorias).sort((a, b) => a.localeCompare(b, 'es'));
 }
 
+/**
+ * Whitelist de orden para /productos — nunca se interpola el query param
+ * crudo en .order(), siempre se pasa por este mapa (valor no reconocido o
+ * ausente cae en 'relevancia', el orden por defecto de siempre).
+ */
+export const ORDEN_CATALOGO = {
+  relevancia: { columna: 'nombre', ascending: true },
+  'nombre-asc': { columna: 'nombre', ascending: true },
+  'nombre-desc': { columna: 'nombre', ascending: false },
+  'precio-asc': { columna: 'precio_web', ascending: true },
+  'precio-desc': { columna: 'precio_web', ascending: false },
+} as const;
+
+export type OrdenCatalogo = keyof typeof ORDEN_CATALOGO;
+
+export function esOrdenCatalogoValido(valor: string | undefined): valor is OrdenCatalogo {
+  return !!valor && valor in ORDEN_CATALOGO;
+}
+
 /** Catálogo publicado filtrado por categoría y/o texto libre, para /productos. */
-export async function buscarCatalogo(filtros: { categoria?: string; q?: string }): Promise<ProductoWeb[]> {
+export async function buscarCatalogo(filtros: {
+  categoria?: string;
+  q?: string;
+  orden?: string;
+}): Promise<ProductoWeb[]> {
+  const clave: OrdenCatalogo = esOrdenCatalogoValido(filtros.orden) ? filtros.orden : 'relevancia';
+  const { columna, ascending } = ORDEN_CATALOGO[clave];
+
   let query = supabaseWeb
     .from('productos_web')
     .select('*')
     .eq('publicado_web', true)
     .gt('stock_web', 0)
-    .order('nombre', { ascending: true });
+    .order(columna, { ascending });
 
   if (filtros.categoria) query = query.eq('categoria', filtros.categoria);
   if (filtros.q) {

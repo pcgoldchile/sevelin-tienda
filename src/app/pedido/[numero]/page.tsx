@@ -21,10 +21,10 @@ const MENSAJE_ESTADO: Record<string, string> = {
 
 const ESTILO_ESTADO: Record<string, string> = {
   CREADO: "bg-surface-sunken text-ink-soft",
-  PAGADO: "bg-teal-soft text-teal",
-  PREPARANDO: "bg-teal-soft text-teal",
-  ENVIADO: "bg-teal-soft text-teal",
-  ENTREGADO: "bg-teal text-white",
+  PAGADO: "bg-success-soft text-success",
+  PREPARANDO: "bg-success-soft text-success",
+  ENVIADO: "bg-success-soft text-success",
+  ENTREGADO: "bg-success text-white",
   CANCELADO: "bg-red-100 text-red-700",
   FALLIDO: "bg-red-100 text-red-700",
 };
@@ -85,7 +85,7 @@ export default async function EstadoPedido({ params }: PropsPagina) {
           href={pedido.url_boleta_sii}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-4 inline-block text-sm font-medium text-coral hover:underline"
+          className="mt-4 inline-block text-sm font-medium text-accent hover:underline"
         >
           Ver boleta
         </a>
@@ -100,7 +100,7 @@ export default async function EstadoPedido({ params }: PropsPagina) {
             {whatsapp && (
               <>
                 {" "}¿Necesitas boleta o factura?{" "}
-                <a href={`https://wa.me/${whatsapp}`} target="_blank" rel="noopener noreferrer" className="text-coral hover:underline">
+                <a href={`https://wa.me/${whatsapp}`} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
                   Escríbenos por WhatsApp
                 </a>
                 .
@@ -110,7 +110,7 @@ export default async function EstadoPedido({ params }: PropsPagina) {
         )
       )}
 
-      <Link href="/" className="mt-6 block text-sm text-ink-soft transition-colors hover:text-coral">
+      <Link href="/" className="mt-6 block text-sm text-ink-soft transition-colors hover:text-accent">
         Volver a la tienda
       </Link>
     </main>

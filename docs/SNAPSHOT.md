@@ -4,8 +4,12 @@
 > arquitectura completo (todas las fases) vive en `README-ECOMMERCE-SEVELIN.md`, en el repo del POS
 > (`sevelin-pos-oficial`) — este documento es el estado de ESTE repo (`sevelin-tienda`) nada más.
 
-**Fecha:** 26-08-2026 · **Versión activa:** v7 (rediseño visual, ver `docs/CHANGELOG-V07.md`) ·
-**Estado:** solo desarrollo local, no desplegado
+**Fecha:** 27-08-2026 · **Versión activa:** v8 (orden de catálogo, toast del carrito, paleta de
+marca azul eléctrico, umbral de stock — ver `docs/CHANGELOG-V08.md`). **Pendiente antes de que el
+umbral de stock funcione en producción:** correr `supabase/04-stock-umbral-web.sql` en el Supabase
+Web real (agrega `productos_web.stock_umbral_web`) — debe correr ANTES de que el POS (v27,
+módulo "Página Web → Categorías") empiece a mandar ese campo, o el trigger de sync fallaría. ·
+**Estado (a la fecha de v7):** solo desarrollo local, no desplegado
 todavía. El usuario ya creó el proyecto Supabase Web real y consiguió credenciales sandbox de
 Flow — la conexión a Supabase Web **funciona** (solo faltan correr las migraciones SQL, ahora 3) y
 `POST /payment/create` de Flow está **verificado** contra la API real (se encontró y corrigió un

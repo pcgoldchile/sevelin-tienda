@@ -21,7 +21,7 @@ export function CarritoDrawer() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-navy-deep/50 backdrop-blur-sm"
+            className="absolute inset-0 bg-surface-sunken/70 backdrop-blur-sm"
           />
           <motion.aside
             initial={{ x: "100%" }}
@@ -93,7 +93,7 @@ export function CarritoDrawer() {
                             <button
                               type="button"
                               onClick={() => quitarItem(item.sku)}
-                              className="text-xs text-ink-faint underline transition-colors hover:text-coral"
+                              className="text-xs text-ink-faint underline transition-colors hover:text-accent"
                             >
                               Quitar
                             </button>
@@ -118,7 +118,7 @@ export function CarritoDrawer() {
                 className={`mt-3 block w-full rounded-full px-4 py-3 text-center text-sm font-semibold transition-all ${
                   items.length === 0
                     ? "pointer-events-none cursor-not-allowed bg-surface-sunken text-ink-faint"
-                    : "bg-coral text-white shadow-glow-coral hover:bg-coral-deep"
+                    : "bg-accent text-white shadow-glow-accent hover:bg-accent-deep"
                 }`}
                 aria-disabled={items.length === 0}
               >

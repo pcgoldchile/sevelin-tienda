@@ -25,8 +25,8 @@ export function Header({ categorias }: { categorias: string[] }) {
     <header className="sticky top-0 z-40 border-b border-border bg-surface/85 backdrop-blur-md">
       <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3 sm:px-6 lg:px-8">
         <Link href="/" className="group flex shrink-0 items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full bg-coral shadow-glow-coral transition-transform group-hover:scale-125" />
-          <span className="font-display text-lg font-bold tracking-tight text-navy">Sevelin</span>
+          <span className="h-2 w-2 rounded-full bg-accent shadow-glow-accent transition-transform group-hover:scale-125" />
+          <span className="font-display text-lg font-bold tracking-tight text-primary">Sevelin</span>
         </Link>
 
         <nav className="relative hidden md:block">
@@ -79,7 +79,7 @@ export function Header({ categorias }: { categorias: string[] }) {
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
             placeholder="Buscar productos…"
-            className="w-full rounded-l-full border border-border bg-surface-sunken/60 px-4 py-1.5 text-sm outline-none transition-colors focus:border-coral focus:bg-surface"
+            className="w-full rounded-l-full border border-border bg-surface-sunken/60 px-4 py-1.5 text-sm outline-none transition-colors focus:border-accent focus:bg-surface"
           />
           <button
             type="submit"
@@ -106,7 +106,7 @@ export function Header({ categorias }: { categorias: string[] }) {
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.5, opacity: 0 }}
                 transition={{ type: "spring", stiffness: 400, damping: 20 }}
-                className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-coral px-1 text-[11px] font-semibold text-white shadow-glow-coral"
+                className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1 text-[11px] font-semibold text-white shadow-glow-accent"
               >
                 {cantidadTotal}
               </motion.span>
@@ -140,7 +140,7 @@ export function Header({ categorias }: { categorias: string[] }) {
                   value={busqueda}
                   onChange={(e) => setBusqueda(e.target.value)}
                   placeholder="Buscar productos…"
-                  className="w-full rounded-l-full border border-border px-4 py-1.5 text-sm outline-none focus:border-coral"
+                  className="w-full rounded-l-full border border-border px-4 py-1.5 text-sm outline-none focus:border-accent"
                 />
                 <button type="submit" className="rounded-r-full border border-l-0 border-border px-3 text-sm">
                   🔍

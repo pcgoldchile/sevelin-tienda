@@ -36,16 +36,16 @@ export function HeroCarrusel() {
   const slide = SLIDES[indice];
 
   return (
-    <section className="relative overflow-hidden bg-navy-deep">
+    <section className="relative overflow-hidden bg-surface-sunken">
       {/* Resplandor cálido de fondo — el sol sobre el desierto de Arica,
           sin caer en el cliché del gradiente morado-a-azul genérico. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full bg-coral opacity-20 blur-[100px]"
+        className="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full bg-accent opacity-20 blur-[100px]"
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute -bottom-32 left-0 h-80 w-80 rounded-full bg-teal opacity-[0.12] blur-[100px]"
+        className="pointer-events-none absolute -bottom-32 left-0 h-80 w-80 rounded-full bg-primary opacity-[0.14] blur-[100px]"
       />
 
       <div className="relative mx-auto flex min-h-[320px] max-w-6xl flex-col justify-center gap-4 px-4 py-16 sm:px-6 lg:px-8">
@@ -66,7 +66,7 @@ export function HeroCarrusel() {
               <motion.span
                 whileHover={{ y: -2 }}
                 whileTap={{ scale: 0.97 }}
-                className="mt-2 inline-block rounded-full bg-coral px-6 py-3 text-sm font-semibold text-white shadow-glow-coral transition-shadow group-hover:shadow-[0_0_0_1px_rgba(255,106,61,0.25),0_16px_40px_-6px_rgba(255,106,61,0.6)]"
+                className="mt-2 inline-block rounded-full bg-accent px-6 py-3 text-sm font-semibold text-white shadow-glow-accent transition-shadow group-hover:shadow-[0_0_0_1px_rgba(255,106,61,0.25),0_16px_40px_-6px_rgba(255,106,61,0.6)]"
               >
                 Ver catálogo
               </motion.span>
@@ -86,7 +86,7 @@ export function HeroCarrusel() {
           >
             <span
               className={`block h-1.5 rounded-full transition-all duration-300 ${
-                i === indice ? "w-8 bg-coral" : "w-4 bg-white/25 group-hover:bg-white/40"
+                i === indice ? "w-8 bg-accent" : "w-4 bg-white/25 group-hover:bg-white/40"
               }`}
             />
           </button>

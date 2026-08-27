@@ -4,6 +4,7 @@ import { MotionConfig } from "framer-motion";
 import "./globals.css";
 import { listarCategorias } from "@/lib/catalogo";
 import { CarritoProvider } from "@/context/carrito-context";
+import { ToastProvider } from "@/context/toast-context";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { CarritoDrawer } from "@/components/carrito-drawer";
@@ -48,7 +49,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             Apunta a #contenido, que envuelve el <main> de cada página. */}
         <a
           href="#contenido"
-          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-full focus:bg-navy focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-white"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-full focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-white"
         >
           Saltar al contenido
         </a>
@@ -57,13 +58,15 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             .agents/skills/animate — "reduced motion ships con la animación,
             no como un follow-up"). */}
         <MotionConfig reducedMotion="user">
-          <CarritoProvider>
-            <Header categorias={categorias} />
-            <div id="contenido">{children}</div>
-            <Footer />
-            <CarritoDrawer />
-            <WhatsappFlotante />
-          </CarritoProvider>
+          <ToastProvider>
+            <CarritoProvider>
+              <Header categorias={categorias} />
+              <div id="contenido">{children}</div>
+              <Footer />
+              <CarritoDrawer />
+              <WhatsappFlotante />
+            </CarritoProvider>
+          </ToastProvider>
         </MotionConfig>
       </body>
     </html>

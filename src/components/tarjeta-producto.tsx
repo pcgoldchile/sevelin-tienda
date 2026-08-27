@@ -6,10 +6,12 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { formatoCLP } from "@/lib/formato";
 import { useCarrito } from "@/context/carrito-context";
+import { useToast } from "@/context/toast-context";
 import type { ProductoWeb } from "@/lib/tipos";
 
 export function TarjetaProducto({ producto }: { producto: ProductoWeb }) {
   const { agregarItem } = useCarrito();
+  const { mostrarToast } = useToast();
   const [cantidad, setCantidad] = useState(1);
   const [agregado, setAgregado] = useState(false);
 
@@ -34,7 +36,7 @@ export function TarjetaProducto({ producto }: { producto: ProductoWeb }) {
       </Link>
       <div className="flex flex-1 flex-col gap-1 p-3.5">
         <span className="text-xs text-ink-faint">{producto.sku}</span>
-        <Link href={`/productos/${producto.sku}`} className="line-clamp-2 text-sm font-medium text-ink hover:text-navy">
+        <Link href={`/productos/${producto.sku}`} className="line-clamp-2 text-sm font-medium text-ink hover:text-primary">
           {producto.nombre}
         </Link>
         <span className="mt-1 text-base font-semibold text-ink tabular-nums">
@@ -66,12 +68,13 @@ export function TarjetaProducto({ producto }: { producto: ProductoWeb }) {
             whileTap={{ scale: 0.95 }}
             onClick={() => {
               agregarItem(producto, cantidad);
+              mostrarToast(`${producto.nombre} agregado al carrito`);
               setCantidad(1);
               setAgregado(true);
               setTimeout(() => setAgregado(false), 1500);
             }}
             className={`flex-1 rounded-full px-3 py-1.5 text-sm font-medium text-white transition-colors ${
-              agregado ? "bg-teal" : "bg-navy hover:bg-navy-soft"
+              agregado ? "bg-success" : "bg-primary hover:bg-primary-deep"
             }`}
           >
             {agregado ? "✓ Listo" : "Agregar"}

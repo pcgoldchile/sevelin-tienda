@@ -39,7 +39,7 @@ export function GaleriaProducto({ imagenes, nombre }: { imagenes: string[]; nomb
               type="button"
               onClick={() => setActiva(i)}
               className={`relative h-16 w-16 overflow-hidden rounded-xl border-2 transition-colors ${
-                i === activa ? "border-coral" : "border-border hover:border-border-strong"
+                i === activa ? "border-accent" : "border-border hover:border-border-strong"
               }`}
               aria-label={`Ver foto ${i + 1}`}
             >

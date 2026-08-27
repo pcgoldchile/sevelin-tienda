@@ -8,7 +8,7 @@ import { useCarrito } from "@/context/carrito-context";
 import type { OpcionEnvio } from "@/lib/envio";
 
 const CAMPO =
-  "rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm outline-none transition-colors focus:border-coral";
+  "rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm outline-none transition-colors focus:border-accent";
 
 export function FormularioCheckout() {
   const { items, subtotal, vaciarCarrito } = useCarrito();
@@ -117,7 +117,7 @@ export function FormularioCheckout() {
     return (
       <div className="rounded-2xl bg-surface p-8 text-center shadow-elevated-md">
         <p className="text-sm text-ink-soft">Tu carrito está vacío.</p>
-        <Link href="/productos" className="mt-3 inline-block text-sm font-medium text-coral hover:underline">
+        <Link href="/productos" className="mt-3 inline-block text-sm font-medium text-accent hover:underline">
           Ver productos
         </Link>
       </div>
@@ -148,7 +148,7 @@ export function FormularioCheckout() {
             onClick={calcularEnvio}
             disabled={calculandoEnvio}
             whileTap={{ scale: 0.97 }}
-            className="self-start rounded-full border border-border-strong px-4 py-2 text-sm font-medium text-ink-soft transition-colors hover:border-navy hover:text-navy disabled:cursor-not-allowed disabled:opacity-60"
+            className="self-start rounded-full border border-border-strong px-4 py-2 text-sm font-medium text-ink-soft transition-colors hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-60"
           >
             {calculandoEnvio ? "Calculando…" : opciones ? "Recalcular envío" : "Calcular envío"}
           </motion.button>
@@ -167,7 +167,7 @@ export function FormularioCheckout() {
                     <label
                       key={opcion.metodo}
                       className={`flex cursor-pointer items-center justify-between gap-3 rounded-xl border px-4 py-3 text-sm transition-all ${
-                        elegida ? "border-coral bg-coral-soft/40 shadow-glow-coral" : "border-border bg-surface hover:border-border-strong"
+                        elegida ? "border-accent bg-accent-soft/40 shadow-glow-accent" : "border-border bg-surface hover:border-border-strong"
                       }`}
                     >
                       <span className="flex items-center gap-3">
@@ -176,7 +176,7 @@ export function FormularioCheckout() {
                           name="metodo-envio"
                           checked={elegida}
                           onChange={() => setMetodoElegido(opcion.metodo)}
-                          className="accent-coral"
+                          className="accent-accent"
                         />
                         {opcion.detalle}
                       </span>
@@ -200,7 +200,7 @@ export function FormularioCheckout() {
           disabled={enviando || !metodoElegido}
           whileTap={{ scale: 0.98 }}
           title={!metodoElegido ? "Calcula y elige el envío primero" : undefined}
-          className="mt-2 rounded-full bg-coral px-5 py-3.5 text-sm font-semibold text-white shadow-glow-coral transition-colors hover:bg-coral-deep disabled:cursor-not-allowed disabled:bg-border-strong disabled:text-ink-faint disabled:shadow-none"
+          className="mt-2 rounded-full bg-accent px-5 py-3.5 text-sm font-semibold text-white shadow-glow-accent transition-colors hover:bg-accent-deep disabled:cursor-not-allowed disabled:bg-border-strong disabled:text-ink-faint disabled:shadow-none"
         >
           {enviando ? "Redirigiendo a Flow…" : `Pagar ${formatoCLP.format(total)}`}
         </motion.button>

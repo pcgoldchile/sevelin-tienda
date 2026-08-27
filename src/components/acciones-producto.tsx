@@ -3,10 +3,13 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { useCarrito } from "@/context/carrito-context";
+import { useToast } from "@/context/toast-context";
+import { formatoStock } from "@/lib/formato";
 import type { ProductoWeb } from "@/lib/tipos";
 
 export function AccionesProducto({ producto }: { producto: ProductoWeb }) {
   const { agregarItem } = useCarrito();
+  const { mostrarToast } = useToast();
   const [cantidad, setCantidad] = useState(1);
   const [agregado, setAgregado] = useState(false);
 
@@ -32,7 +35,7 @@ export function AccionesProducto({ producto }: { producto: ProductoWeb }) {
             +
           </button>
         </div>
-        <span className="text-sm text-ink-faint">{producto.stock_web} disponibles</span>
+        <span className="text-sm text-ink-faint">{formatoStock(producto.stock_web, producto.stock_umbral_web)}</span>
       </div>
 
       <motion.button
@@ -40,12 +43,13 @@ export function AccionesProducto({ producto }: { producto: ProductoWeb }) {
         whileTap={{ scale: 0.97 }}
         onClick={() => {
           agregarItem(producto, cantidad);
+          mostrarToast(`${producto.nombre} agregado al carrito`);
           setCantidad(1);
           setAgregado(true);
           setTimeout(() => setAgregado(false), 2000);
         }}
-        className={`rounded-full px-6 py-3 text-sm font-semibold text-white shadow-glow-coral transition-colors ${
-          agregado ? "bg-teal" : "bg-coral hover:bg-coral-deep"
+        className={`rounded-full px-6 py-3 text-sm font-semibold text-white shadow-glow-accent transition-colors ${
+          agregado ? "bg-success" : "bg-accent hover:bg-accent-deep"
         }`}
       >
         {agregado ? "¡Agregado! ✓" : "Agregar al carrito"}

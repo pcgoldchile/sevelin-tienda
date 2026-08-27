@@ -14,6 +14,9 @@ export interface ProductoWeb {
   alto_cm: number | null;
   ancho_cm: number | null;
   profundidad_cm: number | null;
+  // NULL = usa el default de la tienda (+5, ver formatoStock en src/lib/formato.ts).
+  // Se configura por producto desde el POS (módulo "Página Web → Categorías").
+  stock_umbral_web: number | null;
   sincronizado_en: string;
 }
 
@@ -87,4 +90,7 @@ export interface ProductoPOS {
   alto_cm: number | null;
   ancho_cm: number | null;
   profundidad_cm: number | null;
+  // categoria_id (FK interna del POS a producto_categorias) NO viaja acá a
+  // propósito: no tiene contraparte en este Supabase, solo se usa categoria_web.
+  stock_umbral_web: number | null;
 }

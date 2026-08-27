@@ -92,7 +92,6 @@ export function CarritoProvider({ children }: { children: ReactNode }) {
         },
       ];
     });
-    setAbierto(true);
   }, []);
 
   const quitarItem = useCallback((sku: string) => {

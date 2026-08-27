@@ -90,6 +90,7 @@ export async function POST(req: NextRequest) {
     alto_cm: producto.alto_cm,
     ancho_cm: producto.ancho_cm,
     profundidad_cm: producto.profundidad_cm,
+    stock_umbral_web: producto.stock_umbral_web ?? null,
     sincronizado_en: new Date().toISOString()
   };
 

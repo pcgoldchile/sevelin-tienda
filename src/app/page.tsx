@@ -35,7 +35,7 @@ export default async function Home() {
       <section className="mx-auto w-full max-w-6xl px-4 py-14 sm:px-6 lg:px-8">
         <div className="flex items-baseline justify-between">
           <h2 className="text-2xl font-semibold tracking-tight text-ink">Destacados</h2>
-          <Link href="/productos" className="text-sm font-medium text-ink-soft transition-colors hover:text-coral">
+          <Link href="/productos" className="text-sm font-medium text-ink-soft transition-colors hover:text-accent">
             Ver todos →
           </Link>
         </div>

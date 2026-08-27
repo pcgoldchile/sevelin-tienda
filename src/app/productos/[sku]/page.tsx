@@ -32,13 +32,13 @@ export default async function FichaProducto({ params }: PropsPagina) {
   return (
     <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
       <nav className="mb-6 text-sm text-ink-faint">
-        <Link href="/" className="transition-colors hover:text-coral">Inicio</Link>
+        <Link href="/" className="transition-colors hover:text-accent">Inicio</Link>
         <span className="mx-1.5">/</span>
-        <Link href="/productos" className="transition-colors hover:text-coral">Productos</Link>
+        <Link href="/productos" className="transition-colors hover:text-accent">Productos</Link>
         {producto.categoria && (
           <>
             <span className="mx-1.5">/</span>
-            <Link href={`/productos?categoria=${encodeURIComponent(producto.categoria)}`} className="transition-colors hover:text-coral">
+            <Link href={`/productos?categoria=${encodeURIComponent(producto.categoria)}`} className="transition-colors hover:text-accent">
               {producto.categoria}
             </Link>
           </>
@@ -51,7 +51,7 @@ export default async function FichaProducto({ params }: PropsPagina) {
         <div className="flex flex-col gap-4">
           <span className="text-xs font-medium uppercase tracking-wider text-ink-faint">{producto.sku}</span>
           <h1 className="text-3xl font-semibold tracking-tight text-ink">{producto.nombre}</h1>
-          <span className="text-2xl font-bold text-navy tabular-nums">{formatoCLP.format(producto.precio_web)}</span>
+          <span className="text-2xl font-bold text-primary tabular-nums">{formatoCLP.format(producto.precio_web)}</span>
 
           {producto.descripcion_web && (
             <p className="whitespace-pre-line text-sm leading-relaxed text-ink-soft">{producto.descripcion_web}</p>
