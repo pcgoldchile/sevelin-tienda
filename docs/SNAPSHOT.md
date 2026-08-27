@@ -4,9 +4,10 @@
 > arquitectura completo (todas las fases) vive en `README-ECOMMERCE-SEVELIN.md`, en el repo del POS
 > (`sevelin-pos-oficial`) — este documento es el estado de ESTE repo (`sevelin-tienda`) nada más.
 
-**Fecha:** 26-08-2026 · **Versión activa:** v1 (Fase 1) · **Estado:** solo desarrollo local, no
+**Fecha:** 26-08-2026 · **Versión activa:** v2 (Fase 2) · **Estado:** solo desarrollo local, no
 desplegado todavía. No hay proyecto Supabase Web real creado, ni proyecto Vercel, ni webhook
-configurado — ver "Pendiente" abajo.
+configurado — ver "Pendiente" abajo (sin cambios desde la Fase 1, sigue bloqueando ver el catálogo
+real).
 
 ---
 
@@ -18,6 +19,27 @@ Next.js 16 (App Router) · TypeScript · Tailwind v4 · `@supabase/supabase-js`.
 - Conecta a su **propio** proyecto Supabase ("Supabase Web": `productos_web`, `pedidos_web`) — NUNCA
   al Supabase del POS directo.
 - Se sincroniza desde el POS vía Database Webhook → `POST /api/sync/producto` (push, no polling).
+
+## Estado: qué está HECHO (Fase 2)
+- Frontend público completo (ver `docs/CHANGELOG-V02.md` para el detalle):
+  - `src/context/carrito-context.tsx`: carrito en `localStorage` (sin cuentas de cliente, checkout
+    como invitado), `CarritoProvider` / `useCarrito()`.
+  - `src/components/`: `header.tsx` (categorías, buscador, carrito, menú móvil), `carrito-drawer.tsx`
+    (drawer lateral, solo subtotal — sin envío, botón de pago deshabilitado hasta la Fase 3/4),
+    `tarjeta-producto.tsx`, `galeria-producto.tsx`, `acciones-producto.tsx`, `hero-carrusel.tsx`
+    (3 slides fijos, sin gestión de banners — fuera de alcance a propósito), `franja-confianza.tsx`,
+    `whatsapp-flotante.tsx`, `footer.tsx`.
+  - `src/app/page.tsx` (home: hero + destacados + franja), `src/app/productos/page.tsx` (listado con
+    filtro de categoría y búsqueda), `src/app/productos/[sku]/page.tsx` (ficha de producto).
+  - `src/lib/catalogo.ts`: `listarCategorias()`, `buscarCatalogo({ categoria, q })` (con
+    sanitización del texto de búsqueda antes de armar el filtro `.or()` de PostgREST).
+  - `src/lib/formato.ts`: `formatoCLP` compartido (antes duplicado en `page.tsx`).
+  - `NEXT_PUBLIC_WHATSAPP_NUMBER` (`56935750828`) y `NEXT_PUBLIC_INSTAGRAM_URL`
+    (`https://instagram.com/sevelin.cl`): datos reales de contacto, ya configurados en
+    `.env.local.example` y `.env.local`. Si se dejan vacíos, el botón flotante de WhatsApp y el
+    enlace de Instagram del footer se ocultan en vez de mostrar un dato inventado.
+  - Navegación por categoría es un **filtro plano** (no mega-menú jerárquico): el schema de
+    `productos_web` no tiene subcategoría — decisión confirmada con el usuario, ver changelog.
 
 ## Estado: qué está HECHO (Fase 1)
 - Proyecto Next.js inicializado (`create-next-app`, TypeScript + Tailwind v4 + App Router).
@@ -53,10 +75,10 @@ Next.js 16 (App Router) · TypeScript · Tailwind v4 · `@supabase/supabase-js`.
    de sincronización masiva, no incluido en esta fase) para aparecer acá.
 
 ## Pendiente (backlog, siguientes fases)
-- **Fase 2:** frontend público completo — home real, ficha de producto, carrito (drawer lateral),
-  diseño inspirado en sipoonline.cl (ver README maestro sección 7).
-- **Fase 3:** checkout + Flow (pago) + OpenFactura (boletas).
-- **Fase 4:** cotización de envío (Haversine local + Shipit).
+- **Fase 3:** checkout + Flow (pago) + OpenFactura (boletas). El botón "Ir a pagar" del carrito ya
+  existe pero está deshabilitado a propósito — se activa en esta fase.
+- **Fase 4:** cotización de envío (Haversine local + Shipit). El drawer del carrito hoy solo muestra
+  subtotal (sin línea de envío) — se agrega en esta fase.
 - **Fase 5:** panel "Pedidos Web" — vive en el POS, no en este repo.
 - **Fase 6:** QA end-to-end + dominio `sevelin.cl`.
 
@@ -64,10 +86,15 @@ Next.js 16 (App Router) · TypeScript · Tailwind v4 · `@supabase/supabase-js`.
 - `npm run build`: compila TypeScript, corre el linter implícito, prerenderiza `/` (con manejo de
   error si Supabase no está configurado — no rompe el build).
 - `npm run lint`: ESLint.
+- `npm run dev` + Browser pane (sí hay Chromium disponible en el entorno de la Fase 2, a diferencia
+  de la Fase 0/1): sirve para ver hero/header/drawer/estados de error reales. Sin un Supabase Web
+  real no se ven productos reales — para probar el carrito con contenido, sembrar un carrito de
+  prueba directo en `localStorage` (clave `sevelin-carrito`, ver `docs/CHANGELOG-V02.md` sección 6
+  para el formato exacto de los items).
 - No hay suite de tests versionada en el repo todavía (mismo criterio ad hoc que el POS): se verificó
   con un doble en memoria de Supabase (monkey-patch del cliente ya creado, no del import) en un
   archivo temporal, corrido con `npx tsx` y borrado después — ver `docs/CHANGELOG-V01.md` para el
-  detalle de qué se probó.
+  detalle de qué se probó en la Fase 1.
 
 ## Trampas ya descubiertas (no repetir)
 - El `.gitignore` que genera `create-next-app` trae `.env*` (ignora TODO archivo que empiece con
@@ -80,3 +107,15 @@ Next.js 16 (App Router) · TypeScript · Tailwind v4 · `@supabase/supabase-js`.
 - Los módulos ESM de Next.js no se pueden mockear con el truco de `require.cache` que usa el POS
   (CommonJS): en su lugar, se monkey-patchea el objeto ya exportado por `supabase-web.ts` (los
   módulos ESM son singletons, así que el resto del código ve el mismo objeto parchado).
+- **Estado que viene de `localStorage` (carrito) nunca va en el inicializador `lazy` de `useState`**:
+  el servidor no tiene `localStorage`, así que si el primer render del cliente ya trae el valor
+  guardado, difiere del HTML que mandó el servidor (que partió vacío) y React marca un hydration
+  mismatch. Va en un `useEffect` que corre después de montar — un re-render extra es aceptable, un
+  mismatch no.
+- El filtro `.or()` de PostgREST (usado en `buscarCatalogo` para buscar por nombre/SKU) usa
+  coma/paréntesis/punto como separadores estructurales del filtro compuesto. Un texto de búsqueda de
+  usuario con esos caracteres tal cual puede romper o alterar el filtro — sanitizar antes de
+  interpolarlo (ver `src/lib/catalogo.ts`).
+- Un error de conexión a Supabase en `/productos/[sku]` (sin `try/catch`) da un 500 crudo en vez del
+  mismo fallback de "catálogo no disponible" que usan home y listado — hay que capturarlo ahí
+  también, no solo en las páginas de listado.
