@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { FLOW_ESTADO_PAGADO, obtenerEstadoPagoFlow } from '@/lib/flow';
-import { emitirBoleta } from '@/lib/openfactura';
+import { emitirBoleta, openFacturaHabilitada } from '@/lib/openfactura';
 import { ajustarStockPos } from '@/lib/pos-interno';
 import { guardarDatosBoleta, marcarPedidoPagado, obtenerPedidoPorNumero } from '@/lib/pedidos';
 
@@ -75,17 +75,23 @@ export async function POST(req: NextRequest) {
     console.error(`[flow-webhook] ${numeroPedido}: no se pudo ajustar stock en el POS:`, err instanceof Error ? err.message : err);
   }
 
-  try {
-    const boleta = await emitirBoleta({
-      numeroPedido,
-      clienteNombre: pedido.cliente_nombre || 'Cliente',
-      items: pedido.items,
-      costoEnvio: pedido.costo_envio,
-      total: pedido.total,
-    });
-    await guardarDatosBoleta(numeroPedido, boleta.folio, boleta.urlBoletaSii);
-  } catch (err) {
-    console.error(`[flow-webhook] ${numeroPedido}: no se pudo emitir la boleta:`, err instanceof Error ? err.message : err);
+  // OpenFactura está deshabilitado a propósito (costo mensual, decisión del
+  // negocio — ver src/lib/openfactura.ts): el comprobante de pago de Flow
+  // respalda la venta, y boleta/factura se emite manual si el cliente la
+  // pide. No es un error ni algo que loguear como falla en cada pago.
+  if (openFacturaHabilitada()) {
+    try {
+      const boleta = await emitirBoleta({
+        numeroPedido,
+        clienteNombre: pedido.cliente_nombre || 'Cliente',
+        items: pedido.items,
+        costoEnvio: pedido.costo_envio,
+        total: pedido.total,
+      });
+      await guardarDatosBoleta(numeroPedido, boleta.folio, boleta.urlBoletaSii);
+    } catch (err) {
+      console.error(`[flow-webhook] ${numeroPedido}: no se pudo emitir la boleta:`, err instanceof Error ? err.message : err);
+    }
   }
 
   return NextResponse.json({ ok: true, motivo: 'procesado', numero_pedido: numeroPedido });

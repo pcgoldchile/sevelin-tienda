@@ -33,6 +33,14 @@ README-ECOMMERCE-SEVELIN.md sección 2.1).
 ## Primera carga del catálogo
 
 El webhook solo dispara con cambios FUTUROS (INSERT/UPDATE/DELETE a partir de que se activa). Los
-productos que ya existían en el POS antes de configurar el webhook no se sincronizan solos: hay que
-re-guardar cada uno una vez desde el modal de producto del POS (para que dispare un UPDATE), o pedir
-un script de sincronización masiva aparte si son muchos — no incluido en esta fase.
+productos que ya existían en el POS antes de configurar el webhook no se sincronizan solos.
+
+Dos formas de resolverlo:
+- Re-guardar cada producto una vez desde el modal de producto del POS (dispara un UPDATE, y ese sí
+  activa el webhook) — a mano, práctico si son pocos.
+- **`sevelin-pos-oficial/scripts/sincronizar-catalogo-web.js`** (nuevo): script de una sola vez que
+  reutiliza el mismo contrato del webhook (`POST /api/sync/producto` con el envelope
+  `{type, table, record}`) para empujar de una vez todos los productos ya marcados
+  `publicado_web=true`. Requiere `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY`/`SYNC_SECRET` (del POS)
+  y `TIENDA_SYNC_URL` (la URL real de esta tienda + `/api/sync/producto`) en el `.env` del POS.
+  Correrlo DESPUÉS de configurar el webhook (pasos de arriba), no antes.

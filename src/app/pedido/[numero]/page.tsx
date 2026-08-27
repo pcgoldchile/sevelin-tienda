@@ -7,6 +7,8 @@ interface PropsPagina {
   params: Promise<{ numero: string }>;
 }
 
+const PAGO_CONFIRMADO = ["PAGADO", "PREPARANDO", "ENVIADO", "ENTREGADO"];
+
 const MENSAJE_ESTADO: Record<string, string> = {
   CREADO: "Estamos confirmando tu pago con Flow. Esto puede tardar unos segundos — vuelve a cargar esta página en un momento.",
   PAGADO: "¡Pago confirmado! Estamos preparando tu pedido.",
@@ -15,6 +17,16 @@ const MENSAJE_ESTADO: Record<string, string> = {
   ENTREGADO: "Tu pedido fue entregado.",
   CANCELADO: "Este pedido fue cancelado.",
   FALLIDO: "El pago no se pudo completar. Puedes volver a intentarlo desde tu carrito.",
+};
+
+const ESTILO_ESTADO: Record<string, string> = {
+  CREADO: "bg-surface-sunken text-ink-soft",
+  PAGADO: "bg-teal-soft text-teal",
+  PREPARANDO: "bg-teal-soft text-teal",
+  ENVIADO: "bg-teal-soft text-teal",
+  ENTREGADO: "bg-teal text-white",
+  CANCELADO: "bg-red-100 text-red-700",
+  FALLIDO: "bg-red-100 text-red-700",
 };
 
 export default async function EstadoPedido({ params }: PropsPagina) {
@@ -29,52 +41,76 @@ export default async function EstadoPedido({ params }: PropsPagina) {
     console.error("[EstadoPedido] No se pudo cargar el pedido:", err instanceof Error ? err.message : err);
     return (
       <main className="mx-auto max-w-2xl px-4 py-10 sm:px-6 lg:px-8">
-        <p className="text-zinc-500">No pudimos consultar tu pedido en este momento.</p>
+        <p className="text-ink-soft">No pudimos consultar tu pedido en este momento.</p>
       </main>
     );
   }
   if (!pedido) notFound();
 
+  const whatsapp = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER;
+
   return (
     <main className="mx-auto max-w-2xl px-4 py-10 sm:px-6 lg:px-8">
-      <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">Pedido {pedido.numero_pedido}</h1>
-      <p className="mt-2 text-sm text-zinc-600">
-        {MENSAJE_ESTADO[pedido.estado] || `Estado: ${pedido.estado}`}
-      </p>
+      <div className="flex flex-wrap items-center gap-3">
+        <h1 className="text-3xl font-semibold tracking-tight text-ink">Pedido {pedido.numero_pedido}</h1>
+        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${ESTILO_ESTADO[pedido.estado] || "bg-surface-sunken text-ink-soft"}`}>
+          {pedido.estado}
+        </span>
+      </div>
+      <p className="mt-2 text-sm text-ink-soft">{MENSAJE_ESTADO[pedido.estado] || `Estado: ${pedido.estado}`}</p>
 
-      <div className="mt-6 rounded-lg border border-zinc-200 p-4">
+      <div className="mt-6 rounded-2xl bg-surface p-5 shadow-elevated-md">
         <ul className="flex flex-col gap-2">
           {pedido.items.map((item) => (
-            <li key={item.sku} className="flex justify-between text-sm text-zinc-600">
+            <li key={item.sku} className="flex justify-between text-sm text-ink-soft">
               <span>{item.nombre} × {item.cantidad}</span>
-              <span>{formatoCLP.format(item.precio_web * item.cantidad)}</span>
+              <span className="tabular-nums">{formatoCLP.format(item.precio_web * item.cantidad)}</span>
             </li>
           ))}
         </ul>
-        <div className="mt-3 flex flex-col gap-1 border-t border-zinc-200 pt-3 text-sm">
-          <div className="flex justify-between text-zinc-500">
+        <div className="mt-3 flex flex-col gap-1.5 border-t border-border pt-3 text-sm">
+          <div className="flex justify-between text-ink-soft">
             <span>Envío</span>
-            <span>{formatoCLP.format(pedido.costo_envio)}</span>
+            <span className="tabular-nums">{formatoCLP.format(pedido.costo_envio)}</span>
           </div>
-          <div className="flex justify-between text-base font-semibold text-zinc-900">
+          <div className="flex justify-between text-base font-semibold text-ink">
             <span>Total</span>
-            <span>{formatoCLP.format(pedido.total)}</span>
+            <span className="tabular-nums">{formatoCLP.format(pedido.total)}</span>
           </div>
         </div>
       </div>
 
-      {pedido.url_boleta_sii && (
+      {pedido.url_boleta_sii ? (
         <a
           href={pedido.url_boleta_sii}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-4 inline-block text-sm font-medium text-zinc-900 underline"
+          className="mt-4 inline-block text-sm font-medium text-coral hover:underline"
         >
           Ver boleta
         </a>
+      ) : (
+        PAGO_CONFIRMADO.includes(pedido.estado) && (
+          // Boleta/factura electrónica automática está deshabilitada por ahora
+          // (ver src/lib/openfactura.ts) — el comprobante de pago de Flow
+          // respalda la compra; si el cliente necesita boleta o factura, se
+          // emite manual, nunca se inventa un link que no existe.
+          <p className="mt-4 text-sm text-ink-soft">
+            Tu comprobante de pago de Flow respalda esta compra.
+            {whatsapp && (
+              <>
+                {" "}¿Necesitas boleta o factura?{" "}
+                <a href={`https://wa.me/${whatsapp}`} target="_blank" rel="noopener noreferrer" className="text-coral hover:underline">
+                  Escríbenos por WhatsApp
+                </a>
+                .
+              </>
+            )}
+          </p>
+        )
       )}
 
-      <Link href="/" className="mt-6 block text-sm text-zinc-500 hover:text-zinc-900">
+      <Link href="/" className="mt-6 block text-sm text-ink-soft transition-colors hover:text-coral">
         Volver a la tienda
       </Link>
     </main>

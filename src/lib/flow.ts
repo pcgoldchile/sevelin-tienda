@@ -5,13 +5,20 @@ import { createHmac } from 'crypto';
  * sección 6. Server-only (usa FLOW_SECRET_KEY): nunca se importa desde
  * código 'use client'.
  *
- * TODO CRÍTICO — sin verificar contra Flow real: no hay credenciales
- * sandbox en esta sesión (ver docs/SNAPSHOT.md), así que el algoritmo de
- * firma y los campos exactos de estas llamadas se implementaron según la
- * sección 6 del README maestro, sin poder probarlos contra la API real.
- * El propio README advierte "confirmar el código exacto vigente... no
- * asumirlo de memoria" — verificar esto contra la documentación oficial
- * de Flow antes del primer pago real en sandbox.
+ * `crearPagoFlow()` / `firmarParametrosFlow()` — VERIFICADOS contra el
+ * sandbox real (26-08-2026, con credenciales del usuario): la firma
+ * original (basada en el README maestro, "clave=valor") daba "Invalid
+ * Signature"; la correcta, confirmada contra
+ * developers.flow.cl/en/docs/tutorial-basics/create-order, concatena
+ * "claveValor" SIN el "=". `POST /payment/create` respondió 200 con
+ * `url`/`token`/`flowOrder` reales tras el fix. Dato suelto: Flow rechaza
+ * emails con pinta de prueba (`test@...`) como inválidos — usar un email
+ * de aspecto real al probar.
+ *
+ * TODO pendiente — sin verificar: `obtenerEstadoPagoFlow()` (getStatus) y
+ * los códigos de `FLOW_ESTADO_PAGADO` siguen sin probarse contra un pago
+ * real completado (hace falta pasar por el checkout de Flow de principio a
+ * fin, no solo crear la orden). Verificar antes del primer pago real.
  */
 
 const FLOW_API_BASE = process.env.FLOW_API_BASE || 'https://sandbox.flow.cl/api';
@@ -27,13 +34,16 @@ function credencialesFlow(): { apiKey: string; secretKey: string } {
 
 /**
  * Firma de Flow: ordenar los parámetros alfabéticamente por nombre de
- * clave, concatenar "clave=valor" sin separador entre pares, y firmar con
- * HMAC-SHA256 usando el secretKey del comercio (README sección 6). El
- * resultado (hex) se manda como parámetro adicional "s". Ver TODO arriba.
+ * clave, concatenar "claveValor" (SIN "=" ni separador entre pares — ej.
+ * "amount5000apiKeyXXXcurrencyCLP") y firmar con HMAC-SHA256 usando el
+ * secretKey del comercio. Verificado contra developers.flow.cl/en/docs/
+ * tutorial-basics/create-order (el README maestro decía "clave=valor", que
+ * es incorrecto — quedó corregido tras probar contra el sandbox real y
+ * recibir "Invalid Signature").
  */
 function firmarParametrosFlow(params: Record<string, string>, secretKey: string): string {
   const claves = Object.keys(params).sort();
-  const cadena = claves.map((clave) => `${clave}=${params[clave]}`).join('');
+  const cadena = claves.map((clave) => `${clave}${params[clave]}`).join('');
   return createHmac('sha256', secretKey).update(cadena).digest('hex');
 }
 

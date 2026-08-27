@@ -1,6 +1,6 @@
 import { supabaseWeb } from './supabase-web';
-import { costoEnvioPlano } from './envio';
 import type { DireccionEnvio, ItemPedido, PedidoWeb } from './tipos';
+import type { MetodoEnvio } from './envio';
 
 interface DatosCliente {
   nombre: string;
@@ -11,26 +11,26 @@ interface DatosCliente {
 /**
  * Crea un pedido en estado CREADO. `items` ya viene resuelto por el llamador
  * (POST /api/checkout) contra productos_web — nunca contra lo que mande el
- * cliente: precio y stock siempre se recalculan en el servidor.
+ * cliente: precio y stock siempre se recalculan en el servidor. Lo mismo
+ * para `metodoEnvio`/`costoEnvio`: el llamador ya los recalculó con
+ * confirmarEnvio() (src/lib/envio.ts) contra la dirección real, nunca se
+ * confía en una cotización previa mostrada al cliente.
  *
  * `numero_pedido` se genera con generar_numero_pedido() (ver
  * supabase/02-numeracion-pedidos.sql), una SEQUENCE de Postgres: evita que
  * dos checkouts casi simultáneos generen el mismo correlativo.
- *
- * metodo_envio queda fijo en 'LOCAL': la cotización real que distingue
- * LOCAL/COURIER (Haversine + Shipit) es Fase 4, todavía no existe — ver
- * src/lib/envio.ts.
  */
 export async function crearPedido(datos: {
   cliente: DatosCliente;
   direccion: DireccionEnvio;
   items: ItemPedido[];
+  metodoEnvio: MetodoEnvio;
+  costoEnvio: number;
 }): Promise<PedidoWeb> {
   const { data: numeroPedido, error: errorNumero } = await supabaseWeb.rpc('generar_numero_pedido');
   if (errorNumero) throw new Error(errorNumero.message);
 
   const subtotal = datos.items.reduce((acc, item) => acc + item.precio_web * item.cantidad, 0);
-  const costo_envio = costoEnvioPlano();
 
   const { data, error } = await supabaseWeb
     .from('pedidos_web')
@@ -42,10 +42,10 @@ export async function crearPedido(datos: {
       cliente_telefono: datos.cliente.telefono,
       direccion_envio: datos.direccion,
       items: datos.items,
-      metodo_envio: 'LOCAL',
-      costo_envio,
+      metodo_envio: datos.metodoEnvio,
+      costo_envio: datos.costoEnvio,
       subtotal,
-      total: subtotal + costo_envio,
+      total: subtotal + datos.costoEnvio,
     })
     .select()
     .single();

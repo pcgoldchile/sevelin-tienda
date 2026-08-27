@@ -7,17 +7,31 @@ import type { ItemPedido } from './tipos';
  * boleta (checkout de invitado, sin RUT) — factura queda fuera de alcance
  * de esta fase.
  *
- * TODO CRÍTICO — sin verificar contra OpenFactura real: no hay credenciales
- * en esta sesión (ver docs/SNAPSHOT.md). El código exacto de `TipoDTE` para
- * boleta electrónica (39 según el estándar de tipos de DTE del SII) y la
- * forma exacta del body se implementaron según la sección 6 del README
- * maestro, que advierte explícitamente "confirmar el código exacto vigente
- * en la documentación de Haulmer al momento de implementar — no asumirlo
- * de memoria". Verificar antes de emitir la primera boleta real.
+ * DESHABILITADO A PROPÓSITO (decisión del usuario, no una credencial que
+ * falta por circunstancia): OpenFactura cuesta ~$30.000/mes y por ahora no
+ * se justifica. El respaldo de una venta web es el comprobante de pago de
+ * Flow; si un cliente pide boleta o factura, se emite manual desde el POS.
+ * `openFacturaHabilitada()` es el único punto que decide esto — el resto
+ * del código queda listo para reactivarse el día que se pague el servicio,
+ * solo configurando OPENFACTURA_API_KEY de nuevo (ver POST /api/flow-webhook,
+ * que ya salta emitirBoleta() por completo si esto da false, en vez de
+ * intentarlo y loguear un error en cada pago).
+ *
+ * TODO CRÍTICO si se reactiva — sin verificar contra OpenFactura real: el
+ * código exacto de `TipoDTE` para boleta electrónica (39 según el estándar
+ * de tipos de DTE del SII) y la forma exacta del body se implementaron
+ * según la sección 6 del README maestro, que advierte explícitamente
+ * "confirmar el código exacto vigente en la documentación de Haulmer al
+ * momento de implementar — no asumirlo de memoria". Verificar antes de
+ * emitir la primera boleta real.
  */
 
 const OPENFACTURA_API_BASE = process.env.OPENFACTURA_API_BASE || 'https://dev-api.haulmer.com/v2';
 const TIPO_DTE_BOLETA_ELECTRONICA = 39;
+
+export function openFacturaHabilitada(): boolean {
+  return !!process.env.OPENFACTURA_API_KEY;
+}
 
 function apiKeyOpenFactura(): string {
   const apiKey = process.env.OPENFACTURA_API_KEY;

@@ -56,7 +56,9 @@ export interface PedidoWeb {
   cliente_telefono: string | null;
   direccion_envio: DireccionEnvio;
   items: ItemPedido[];
-  metodo_envio: 'LOCAL' | 'COURIER';
+  // 'RETIRO' (gratis, en tienda) | 'LOCAL' (despacho a domicilio en Arica,
+  // tarifa plana) | 'CHILEXPRESS' (courier regional) — ver src/lib/envio.ts.
+  metodo_envio: 'RETIRO' | 'LOCAL' | 'CHILEXPRESS';
   costo_envio: number;
   subtotal: number;
   total: number;

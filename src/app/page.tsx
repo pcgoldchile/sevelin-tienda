@@ -32,22 +32,22 @@ export default async function Home() {
     <main className="flex flex-col">
       <HeroCarrusel />
 
-      <section className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
+      <section className="mx-auto w-full max-w-6xl px-4 py-14 sm:px-6 lg:px-8">
         <div className="flex items-baseline justify-between">
-          <h2 className="text-xl font-semibold tracking-tight text-zinc-900">Destacados</h2>
-          <Link href="/productos" className="text-sm font-medium text-zinc-500 hover:text-zinc-900">
+          <h2 className="text-2xl font-semibold tracking-tight text-ink">Destacados</h2>
+          <Link href="/productos" className="text-sm font-medium text-ink-soft transition-colors hover:text-coral">
             Ver todos →
           </Link>
         </div>
 
         {errorCatalogo ? (
-          <p className="mt-10 text-zinc-500">
+          <p className="mt-10 text-ink-soft">
             El catálogo no está disponible en este momento. Si esto persiste, revisa
-            <code className="mx-1 rounded bg-zinc-100 px-1">SUPABASE_WEB_URL</code> /
-            <code className="mx-1 rounded bg-zinc-100 px-1">SUPABASE_WEB_SERVICE_ROLE_KEY</code>.
+            <code className="mx-1 rounded bg-surface-sunken px-1">SUPABASE_WEB_URL</code> /
+            <code className="mx-1 rounded bg-surface-sunken px-1">SUPABASE_WEB_SERVICE_ROLE_KEY</code>.
           </p>
         ) : destacados.length === 0 ? (
-          <p className="mt-10 text-zinc-500">
+          <p className="mt-10 text-ink-soft">
             Todavía no hay productos publicados en la tienda. Se publican desde el modal de producto
             del POS (toggle &quot;Publicar en la web&quot;).
           </p>

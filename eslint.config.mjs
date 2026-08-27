@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Scripts de skills de terceros instaladas en .agents/skills — no son
+    // parte del código de la app, no hace falta lintearlas con las reglas
+    // de este proyecto.
+    ".agents/**",
   ]),
 ]);
 

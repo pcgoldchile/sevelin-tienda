@@ -2,12 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { obtenerProductoPorSku } from '@/lib/catalogo';
 import { crearPedido, guardarPagoFlow, marcarPedidoFallido } from '@/lib/pedidos';
 import { crearPagoFlow } from '@/lib/flow';
+import { confirmarEnvio } from '@/lib/envio';
 import type { DireccionEnvio, ItemPedido } from '@/lib/tipos';
 
 interface CuerpoCheckout {
   cliente?: { nombre?: string; email?: string; telefono?: string };
   direccion?: Partial<DireccionEnvio>;
   items?: { sku?: string; cantidad?: number }[];
+  // Solo aplica dentro de la comuna de la tienda: 'RETIRO' o 'LOCAL' — una
+  // elección legítima del cliente (ver src/lib/envio.ts). Fuera de esa
+  // comuna se ignora: siempre se cotiza con Chilexpress.
+  metodoEnvio?: string;
 }
 
 /**
@@ -67,18 +72,38 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: mensaje }, { status: 409 });
   }
 
+  const direccionCompleta: DireccionEnvio = {
+    calle: direccion.calle,
+    numero: direccion.numero,
+    comuna: direccion.comuna,
+    referencia: direccion.referencia?.trim() || null,
+  };
+
+  // Autoridad real del costo de envío: se recalcula acá aunque el cliente ya
+  // haya visto una cotización en POST /api/cotizar-envio — mismo principio
+  // que precio/stock de los ítems, nunca se confía en lo que mostró la
+  // pantalla previa.
+  let cotizacion;
+  try {
+    cotizacion = await confirmarEnvio(
+      direccionCompleta,
+      items.map(({ sku, cantidad }) => ({ sku, cantidad })),
+      cuerpo.metodoEnvio
+    );
+  } catch (err) {
+    const mensaje = err instanceof Error ? err.message : 'No se pudo cotizar el envío';
+    return NextResponse.json({ error: mensaje }, { status: 409 });
+  }
+
   let numeroPedido: string;
   let total: number;
   try {
     const pedido = await crearPedido({
       cliente: { nombre, email, telefono },
-      direccion: {
-        calle: direccion.calle,
-        numero: direccion.numero,
-        comuna: direccion.comuna,
-        referencia: direccion.referencia?.trim() || null,
-      },
+      direccion: direccionCompleta,
       items,
+      metodoEnvio: cotizacion.metodo,
+      costoEnvio: cotizacion.costo,
     });
     numeroPedido = pedido.numero_pedido;
     total = pedido.total;

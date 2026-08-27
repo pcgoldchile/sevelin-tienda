@@ -23,18 +23,18 @@ export default async function Productos({ searchParams }: PropsPagina) {
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
-      <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">
+      <h1 className="text-3xl font-semibold tracking-tight text-ink">
         {categoria || (q ? `Resultados para "${q}"` : "Todos los productos")}
       </h1>
-      <p className="mt-1 text-sm text-zinc-500">
+      <p className="mt-1 text-sm text-ink-soft">
         {productos.length} producto{productos.length === 1 ? "" : "s"} disponible{productos.length === 1 ? "" : "s"}
       </p>
 
       <div className="mt-6 flex flex-wrap gap-2">
         <Link
           href="/productos"
-          className={`rounded-full border px-3 py-1 text-sm ${
-            !categoria ? "border-zinc-900 bg-zinc-900 text-white" : "border-zinc-200 text-zinc-600 hover:bg-zinc-50"
+          className={`rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors ${
+            !categoria ? "border-navy bg-navy text-white" : "border-border text-ink-soft hover:bg-surface-sunken"
           }`}
         >
           Todas
@@ -43,8 +43,8 @@ export default async function Productos({ searchParams }: PropsPagina) {
           <Link
             key={c}
             href={`/productos?categoria=${encodeURIComponent(c)}`}
-            className={`rounded-full border px-3 py-1 text-sm ${
-              categoria === c ? "border-zinc-900 bg-zinc-900 text-white" : "border-zinc-200 text-zinc-600 hover:bg-zinc-50"
+            className={`rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors ${
+              categoria === c ? "border-navy bg-navy text-white" : "border-border text-ink-soft hover:bg-surface-sunken"
             }`}
           >
             {c}
@@ -53,9 +53,9 @@ export default async function Productos({ searchParams }: PropsPagina) {
       </div>
 
       {error ? (
-        <p className="mt-10 text-zinc-500">El catálogo no está disponible en este momento.</p>
+        <p className="mt-10 text-ink-soft">El catálogo no está disponible en este momento.</p>
       ) : productos.length === 0 ? (
-        <p className="mt-10 text-zinc-500">No se encontraron productos con ese filtro.</p>
+        <p className="mt-10 text-ink-soft">No se encontraron productos con ese filtro.</p>
       ) : (
         <div className="mt-8 grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4">
           {productos.map((producto) => (
