@@ -4,26 +4,39 @@
 > arquitectura completo (todas las fases) vive en `README-ECOMMERCE-SEVELIN.md`, en el repo del POS
 > (`sevelin-pos-oficial`) — este documento es el estado de ESTE repo (`sevelin-tienda`) nada más.
 
-**Fecha:** 27-08-2026 · **Versión activa:** v8 (orden de catálogo, toast del carrito, paleta de
-marca azul eléctrico, umbral de stock — ver `docs/CHANGELOG-V08.md`). **Pendiente antes de que el
-umbral de stock funcione en producción:** correr `supabase/04-stock-umbral-web.sql` en el Supabase
-Web real (agrega `productos_web.stock_umbral_web`) — debe correr ANTES de que el POS (v27,
-módulo "Página Web → Categorías") empiece a mandar ese campo, o el trigger de sync fallaría. ·
-**Estado (a la fecha de v7):** solo desarrollo local, no desplegado
-todavía. El usuario ya creó el proyecto Supabase Web real y consiguió credenciales sandbox de
-Flow — la conexión a Supabase Web **funciona** (solo faltan correr las migraciones SQL, ahora 3) y
-`POST /payment/create` de Flow está **verificado** contra la API real (se encontró y corrigió un
-bug real en la firma). OpenFactura se **deshabilitó a propósito** (decisión de costo). **Shipit se
-descartó por completo** (decisión de negocio: no operan retiros desde Arica) y se reemplazó por
-Chilexpress (convenio corporativo) — con una tarifa mock mientras se consiguen las API keys. El
-modelo de envío cambió: dentro de la comuna de Arica el cliente ahora **elige** entre Retiro en
-tienda (gratis) o Despacho local (tarifa plana); ya no se usa Haversine/geocodificación. Sigue
-faltando: proyecto Vercel real y correr las migraciones SQL — ver "Pendiente" abajo.
+**Fecha:** 28-08-2026 · **Versión activa:** v11 (categorización real del catálogo + fotos importadas
++ header con categorías fijas — ver "v09-v11" abajo) · **En producción:** desplegado en Vercel,
+dominio `sevelin.cl` **todavía apunta a Tiendanube** (la tienda nueva vive en la URL de Vercel por
+ahora — decidir cuándo migrar el DNS, ver "Pendiente").
+
+**Estado real (verificado en producción, no de memoria):** Supabase Web real
+(`ekxwavsnocwxtzxqxbbi`) con las 4 migraciones aplicadas, catálogo con **86 productos reales**
+publicados y categorizados en 12 categorías (Monitores/Computadores/Componentes PC/Almacenamiento/
+Periféricos/Audio/Cables y Adaptadores/Energía Portátil/Accesorios Móviles/Hogar y Estilo de
+Vida/Herramientas/Servicios Técnicos), **75 de esos 86 con fotos reales** (importadas desde
+`sevelin.cl` en Tiendanube, propiedad del mismo negocio — ver v11 abajo), header con categorías
+principales fijas + "Más categorías", carrito con toast de confirmación (foto+precio), paleta de
+marca azul eléctrico. Flow: `POST /payment/create` **verificado contra sandbox real** (no
+producción todavía). Chilexpress: **sigue en mock**, sin API key real. Cuentas de cliente: **no
+implementadas**, decisión explícita de dejarlo para una fase aparte.
 
 ---
 
 ## Stack
 Next.js 16 (App Router) · TypeScript · Tailwind v4 · `@supabase/supabase-js`.
+
+## Estado: qué está HECHO (v09-v11 — catálogo real, categorías, fotos, header)
+- **v09:** `productos_web.stock_umbral_web` (migración `supabase/04-stock-umbral-web.sql`, aplicada)
+  + `formatoStock()` en `src/lib/formato.ts` ("Más de N disponibles" en vez del stock exacto).
+- **v10:** `src/components/tarjeta-producto.tsx` y `src/app/productos/[sku]/page.tsx` ya no muestran
+  el SKU al cliente (sigue usándose como slug de URL, invisible). `src/components/banners-categoria.tsx`
+  (nuevo): 3 accesos directos en el home con placeholder de foto.
+- **v11:** el catálogo del POS (114 productos) se clasificó y publicó por completo (ver
+  `sevelin-pos-oficial` v29-v31): 86 con SKU quedaron publicados y categorizados, 75 con fotos reales
+  importadas desde `sevelin.cl` (la tienda Tiendanube del mismo negocio — nunca se enlazan sus URLs
+  directo, se descargan y realojan en Supabase Storage del POS). `header.tsx` rediseñado: franja de
+  categorías principales siempre visible (inspirada en la estructura de sipoonline.cl, no en su
+  diseño/branding) + "Más categorías" como overflow, reemplaza el dropdown único de antes.
 
 ## Arquitectura (resumen — ver README-ECOMMERCE-SEVELIN.md para el detalle completo)
 - Proyecto **separado** del POS (`sevelin-pos-oficial`), repo Git propio, deploy Vercel propio.
@@ -171,54 +184,38 @@ Next.js 16 (App Router) · TypeScript · Tailwind v4 · `@supabase/supabase-js`.
 - `docs/README-SUPABASE-WEB.md`, `docs/README-WEBHOOK-POS.md`: pasos manuales para crear el proyecto
   Supabase Web y configurar el webhook.
 
-## Pendiente (bloqueante para desplegar)
-1. **Correr las migraciones SQL en el proyecto Supabase Web real** (ya existe — `ekxwavsnocwxtzxqxbbi`,
-   la conexión ya funciona): `supabase/01-productos-web-pedidos-web.sql`,
-   `supabase/02-numeracion-pedidos.sql` y **`supabase/03-permitir-envio-gratis.sql` (nueva, v6 —
-   permite `costo_envio = 0` para "Retiro en tienda")**, en ese orden, en el SQL Editor. Ahora mismo
-   `productos_web`/`pedidos_web` no existen todavía en ese proyecto (`npm run build` lo confirma:
-   `Could not find the table 'public.productos_web' in the schema cache`) — es el único paso que
-   falta para ver el catálogo funcionando en local.
-2. Crear el proyecto Vercel (`sevelin-tienda`, separado del proyecto Vercel del POS) y desplegar —
-   quedó a medio hacer en una sesión anterior (se vio la pantalla de creación, sin confirmar si se
-   completó). Bloquea: Flow necesita URLs públicas reales para `urlConfirmation`/`urlReturn` (hoy
-   `NEXT_PUBLIC_SITE_URL` apunta a `http://localhost:3000`, inalcanzable para Flow) — el pago no se
-   puede probar de punta a punta hasta que la tienda esté desplegada. También hace falta plan
-   Vercel Pro para el `maxDuration=60` de `POST /api/flow-webhook` (el plan Hobby limita a 10s).
-3. Configurar el Database Webhook en el Supabase del **POS** apuntando a
-   `https://<dominio-de-esta-tienda>/api/sync/producto` (ver `docs/README-WEBHOOK-POS.md`) — solo
-   tiene sentido una vez que este proyecto ya está desplegado en una URL real.
-4. Primera carga del catálogo: el webhook solo sincroniza cambios futuros. Los productos ya marcados
-   `publicado_web=true` en el POS ANTES de configurar el webhook necesitan un re-guardado (o un script
-   de sincronización masiva, no incluido en esta fase) para aparecer acá.
-5. Confirmar que `SYNC_SECRET` esté configurado con el mismo valor en las variables de entorno de
-   Vercel del **POS** (no se verificó desde esta sesión) — sin eso, `POST /api/interno/ajustar-stock`
-   y `POST /api/sync/producto` rechazan todo.
-6. **Flow: falta probar el flujo completo de pago**, no solo crear la orden — `POST /payment/create`
-   ya está verificado (v5, ver arriba), pero `obtenerEstadoPagoFlow()` (`getStatus`) y
-   `FLOW_ESTADO_PAGADO` siguen sin confirmarse contra un pago real completado. Requiere el punto 2
-   (URL pública) para que Flow pueda llamar de vuelta al webhook.
-7. **Credenciales de Chilexpress** (v6, reemplaza a Shipit — ver `docs/CHANGELOG-V06.md`). Mientras
-   no exista `CHILEXPRESS_API_KEY`, el checkout usa `COSTO_ENVIO_CHILEXPRESS_MOCK` (tarifa
-   referencial, pedido explícito del usuario). Cuando el usuario consiga las credenciales del
-   convenio corporativo: (a) configurar `CHILEXPRESS_ORIGIN_COUNTY_CODE`, (b) resolver el TODO de
-   `src/lib/chilexpress.ts` — mapear comuna → `countyCode` de destino necesita saber primero el
-   código de región de Chilexpress de esa comuna, sin acceso real a la API no se pudo verificar,
-   (c) validar el contrato completo contra `developers.wschilexpress.com` o soporte de Chilexpress
-   (se implementó a partir del código fuente de su plugin de WooCommerce, no de documentación
-   oficial). También falta confirmar que los datos de `peso_kg`/`alto_cm`/`ancho_cm`/
-   `profundidad_cm` de `productos_web` estén completos (la auditoría de la Fase 0 del POS,
-   `GET /api/productos/auditoria-envio`, diagnostica pero no corrige) — solo hace falta para
-   Chilexpress real, el mock no los usa.
-8. ~~OpenFactura~~ — ya no es un pendiente: deshabilitado a propósito por costo (ver v5 arriba).
-   ~~Shipit~~ — ya no es un pendiente: descartado por completo, reemplazado por Chilexpress (v6).
-
-## Pendiente (backlog, siguientes fases)
-- **Fase 5 — ✅ hecha, pero en el otro repo:** panel "Pedidos Web" (`sevelin-pos-oficial`
-  `docs/CHANGELOG-V26.md`). Sin cambios de código en este repo. El POS ahora tiene sus propias
-  credenciales `service_role` de este proyecto Supabase Web (mismas que usa `sevelin-tienda`) para
-  leer/actualizar `pedidos_web` directo — decisión confirmada con el usuario.
-- **Fase 6:** QA end-to-end + dominio `sevelin.cl`.
+## Pendiente (real, verificado al 28-08-2026 — no repetir lo ya hecho)
+1. **Chilexpress**: sigue sin API key real, el checkout usa `COSTO_ENVIO_CHILEXPRESS_MOCK` para todo
+   envío fuera de Arica. Cuando el usuario consiga las credenciales del convenio corporativo: (a)
+   configurar `CHILEXPRESS_API_KEY`/`CHILEXPRESS_API_BASE`/`CHILEXPRESS_ORIGIN_COUNTY_CODE` en
+   Vercel, (b) resolver el TODO de `src/lib/chilexpress.ts` (mapear comuna → `countyCode`, nunca
+   verificado contra la API real), (c) confirmar el contrato completo (se implementó a partir del
+   código fuente del plugin de WooCommerce de Chilexpress, no de documentación oficial).
+2. **Flow en producción**: `POST /payment/create` está verificado solo contra **sandbox**. Falta (a)
+   cambiar a credenciales de producción reales en Vercel cuando el usuario las tenga, (b) probar el
+   flujo completo con un pago real (`getStatus`/`FLOW_ESTADO_PAGADO` nunca se confirmaron contra un
+   pago completado de verdad, solo contra la creación de la orden).
+3. **28 productos sin SKU** en el POS quedan sin publicar (el receptor de sync exige SKU) — hay que
+   cargarles SKU desde el modal de producto del POS. Lista completa en
+   `sevelin-pos-oficial docs/CHANGELOG-V29.md` (o el changelog de la sesión que hizo la clasificación
+   masiva).
+4. **10 productos con SKU sin foto real** (no tenían coincidencia confiable en `sevelin.cl`) — subirles
+   foto a mano desde el modal del POS.
+5. **Banners de categoría del home siguen con placeholder** ("Foto de X pendiente") — subir fotos
+   reales de Monitores/Componentes PC/Periféricos (no hay mecanismo de carga todavía, hay que
+   decidir cómo: ¿reusar el pipeline de fotos de producto, o algo aparte?).
+6. **Dominio `sevelin.cl` sigue apuntando a Tiendanube**, no a esta tienda nueva (que vive en su URL
+   de Vercel) — decidir cuándo hacer el cambio de DNS, y qué pasa con la tienda Tiendanube vieja
+   (¿se da de baja, se deja como respaldo?).
+7. **Sistema de cuentas de cliente** (registro/login/"Mi Cuenta" con historial) — pedido
+   explícitamente, decisión consciente de dejarlo para una fase aparte, no empezado.
+8. Confirmar en el POS (Vercel) que `SUPABASE_WEB_URL`/`SUPABASE_WEB_SERVICE_ROLE_KEY` y
+   `SYNC_SECRET` están configurados — hubo un episodio de "fetch failed" en el panel Pedidos Web por
+   estas variables faltantes, se dieron instrucciones para agregarlas pero no se reconfirmó que
+   quedaran puestas.
+9. ~~OpenFactura~~, ~~Shipit~~, ~~migraciones SQL~~, ~~despliegue Vercel~~, ~~webhook del POS~~,
+   ~~primera carga del catálogo~~ — todo esto ya no es pendiente, quedó resuelto en sesiones
+   anteriores (ver versiones abajo).
 
 ## Cómo probar (mientras no haya Supabase Web real)
 - `npm run build`: compila TypeScript, corre el linter implícito, prerenderiza `/` (con manejo de
