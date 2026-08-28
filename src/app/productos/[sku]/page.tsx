@@ -49,7 +49,6 @@ export default async function FichaProducto({ params }: PropsPagina) {
         <GaleriaProducto imagenes={producto.imagen_urls || []} nombre={producto.nombre} />
 
         <div className="flex flex-col gap-4">
-          <span className="text-xs font-medium uppercase tracking-wider text-ink-faint">{producto.sku}</span>
           <h1 className="text-3xl font-semibold tracking-tight text-ink">{producto.nombre}</h1>
           <span className="text-2xl font-bold text-primary tabular-nums">{formatoCLP.format(producto.precio_web)}</span>
 

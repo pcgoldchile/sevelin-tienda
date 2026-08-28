@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { listarCatalogo } from "@/lib/catalogo";
 import { HeroCarrusel } from "@/components/hero-carrusel";
+import { BannersCategoria } from "@/components/banners-categoria";
 import { FranjaConfianza } from "@/components/franja-confianza";
 import { TarjetaProducto } from "@/components/tarjeta-producto";
 
@@ -31,6 +32,7 @@ export default async function Home() {
   return (
     <main className="flex flex-col">
       <HeroCarrusel />
+      <BannersCategoria />
 
       <section className="mx-auto w-full max-w-6xl px-4 py-14 sm:px-6 lg:px-8">
         <div className="flex items-baseline justify-between">

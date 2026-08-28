@@ -35,7 +35,6 @@ export function TarjetaProducto({ producto }: { producto: ProductoWeb }) {
         )}
       </Link>
       <div className="flex flex-1 flex-col gap-1 p-3.5">
-        <span className="text-xs text-ink-faint">{producto.sku}</span>
         <Link href={`/productos/${producto.sku}`} className="line-clamp-2 text-sm font-medium text-ink hover:text-primary">
           {producto.nombre}
         </Link>
