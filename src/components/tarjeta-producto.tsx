@@ -68,7 +68,12 @@ export function TarjetaProducto({ producto }: { producto: ProductoWeb }) {
             whileTap={{ scale: 0.95 }}
             onClick={() => {
               agregarItem(producto, cantidad);
-              mostrarToast(`${producto.nombre} agregado al carrito`);
+              mostrarToast({
+                imagen: producto.imagen_urls?.[0] ?? null,
+                nombre: producto.nombre,
+                precioUnitario: producto.precio_web,
+                cantidad,
+              });
               setCantidad(1);
               setAgregado(true);
               setTimeout(() => setAgregado(false), 1500);
