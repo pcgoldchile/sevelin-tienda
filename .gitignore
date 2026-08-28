@@ -42,3 +42,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Supabase CLI: estado local del `supabase link` (no es secreto, pero es
+# de esta máquina, no del repo).
+supabase/.temp/
