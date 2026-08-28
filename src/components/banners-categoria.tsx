@@ -7,8 +7,8 @@ import Link from "next/link";
 // productos_web.categoria) para que el link de filtro funcione.
 const CATEGORIAS_DESTACADAS = [
   { nombre: "Monitores", etiqueta: "Monitores" },
-  { nombre: "Gabinetes", etiqueta: "Gabinetes" },
-  { nombre: "Accesorios de PC", etiqueta: "Accesorios de PC" },
+  { nombre: "Componentes PC", etiqueta: "Componentes PC" },
+  { nombre: "Periféricos", etiqueta: "Periféricos" },
 ];
 
 export function BannersCategoria() {

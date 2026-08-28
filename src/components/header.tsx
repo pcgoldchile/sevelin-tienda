@@ -7,12 +7,29 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useCarrito } from "@/context/carrito-context";
 import { EASE_OUT } from "@/lib/motion";
 
+// Categorías que se muestran siempre visibles en la franja de navegación
+// (estilo Sipo Online: los rubros principales a la vista, el resto queda
+// en "Más categorías"). Es una preferencia de orden, no una lista fija —
+// si una de estas no existe todavía en el catálogo real, simplemente no
+// aparece (se arma la intersección con las categorías reales más abajo).
+const ORDEN_CATEGORIAS_PRINCIPALES = [
+  "Monitores",
+  "Componentes PC",
+  "Periféricos",
+  "Audio",
+  "Cables y Adaptadores",
+  "Energía Portátil",
+];
+
 export function Header({ categorias }: { categorias: string[] }) {
   const { cantidadTotal, abrirCarrito } = useCarrito();
   const router = useRouter();
   const [menuCategoriasAbierto, setMenuCategoriasAbierto] = useState(false);
   const [menuMovilAbierto, setMenuMovilAbierto] = useState(false);
   const [busqueda, setBusqueda] = useState("");
+
+  const categoriasPrincipales = ORDEN_CATEGORIAS_PRINCIPALES.filter((c) => categorias.includes(c));
+  const categoriasResto = categorias.filter((c) => !categoriasPrincipales.includes(c));
 
   function buscar(e: React.FormEvent) {
     e.preventDefault();
@@ -27,50 +44,6 @@ export function Header({ categorias }: { categorias: string[] }) {
         <Link href="/" className="group flex shrink-0 items-center gap-1.5">
           <span className="h-2 w-2 rounded-full bg-accent shadow-glow-accent transition-transform group-hover:scale-125" />
           <span className="font-display text-lg font-bold tracking-tight text-primary">Sevelin</span>
-        </Link>
-
-        <nav className="relative hidden md:block">
-          <button
-            type="button"
-            onClick={() => setMenuCategoriasAbierto((v) => !v)}
-            onBlur={() => setTimeout(() => setMenuCategoriasAbierto(false), 150)}
-            className="flex items-center gap-1 rounded-full px-3 py-2 text-sm font-medium text-ink-soft transition-colors hover:bg-surface-sunken hover:text-ink"
-          >
-            Categorías
-            <motion.span aria-hidden animate={{ rotate: menuCategoriasAbierto ? 180 : 0 }} transition={{ duration: 0.2 }}>
-              ▾
-            </motion.span>
-          </button>
-          <AnimatePresence>
-            {menuCategoriasAbierto && (
-              <motion.ul
-                initial={{ opacity: 0, y: -6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
-                transition={{ duration: 0.18, ease: EASE_OUT }}
-                className="absolute left-0 top-full z-10 mt-2 w-56 rounded-xl border border-border bg-surface py-2 shadow-lg"
-              >
-                {categorias.length === 0 ? (
-                  <li className="px-4 py-1.5 text-sm text-ink-faint">Sin categorías todavía</li>
-                ) : (
-                  categorias.map((categoria) => (
-                    <li key={categoria}>
-                      <Link
-                        href={`/productos?categoria=${encodeURIComponent(categoria)}`}
-                        className="block px-4 py-1.5 text-sm text-ink-soft transition-colors hover:bg-surface-sunken hover:text-ink"
-                      >
-                        {categoria}
-                      </Link>
-                    </li>
-                  ))
-                )}
-              </motion.ul>
-            )}
-          </AnimatePresence>
-        </nav>
-
-        <Link href="/productos" className="hidden text-sm font-medium text-ink-soft transition-colors hover:text-ink md:block">
-          Todos los productos
         </Link>
 
         <form onSubmit={buscar} className="ml-auto hidden flex-1 max-w-sm md:flex">
@@ -123,6 +96,66 @@ export function Header({ categorias }: { categorias: string[] }) {
           ☰
         </button>
       </div>
+
+      {/* Franja de categorías siempre visible (estilo Sipo Online): los
+          rubros principales quedan a un click, sin esconderlos en un
+          dropdown — el dropdown queda solo para el resto. */}
+      <nav className="hidden border-t border-border md:block">
+        <div className="mx-auto flex max-w-6xl items-center gap-1 px-4 py-1.5 sm:px-6 lg:px-8">
+          <Link
+            href="/productos"
+            className="rounded-full px-3 py-1.5 text-sm font-medium text-ink-soft transition-colors hover:bg-surface-sunken hover:text-ink"
+          >
+            Todos los productos
+          </Link>
+          {categoriasPrincipales.map((categoria) => (
+            <Link
+              key={categoria}
+              href={`/productos?categoria=${encodeURIComponent(categoria)}`}
+              className="rounded-full px-3 py-1.5 text-sm font-medium text-ink-soft transition-colors hover:bg-surface-sunken hover:text-ink"
+            >
+              {categoria}
+            </Link>
+          ))}
+          {categoriasResto.length > 0 && (
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setMenuCategoriasAbierto((v) => !v)}
+                onBlur={() => setTimeout(() => setMenuCategoriasAbierto(false), 150)}
+                className="flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium text-ink-soft transition-colors hover:bg-surface-sunken hover:text-ink"
+              >
+                Más categorías
+                <motion.span aria-hidden animate={{ rotate: menuCategoriasAbierto ? 180 : 0 }} transition={{ duration: 0.2 }}>
+                  ▾
+                </motion.span>
+              </button>
+              <AnimatePresence>
+                {menuCategoriasAbierto && (
+                  <motion.ul
+                    initial={{ opacity: 0, y: -6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    transition={{ duration: 0.18, ease: EASE_OUT }}
+                    className="absolute left-0 top-full z-10 mt-2 w-56 rounded-xl border border-border bg-surface py-2 shadow-lg"
+                  >
+                    {categoriasResto.map((categoria) => (
+                      <li key={categoria}>
+                        <Link
+                          href={`/productos?categoria=${encodeURIComponent(categoria)}`}
+                          className="block px-4 py-1.5 text-sm text-ink-soft transition-colors hover:bg-surface-sunken hover:text-ink"
+                        >
+                          {categoria}
+                        </Link>
+                      </li>
+                    ))}
+                  </motion.ul>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
+        </div>
+      </nav>
 
       <AnimatePresence>
         {menuMovilAbierto && (
