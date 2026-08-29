@@ -3,6 +3,8 @@ import { FLOW_ESTADO_PAGADO, obtenerEstadoPagoFlow } from '@/lib/flow';
 import { emitirBoleta, openFacturaHabilitada } from '@/lib/openfactura';
 import { ajustarStockPos } from '@/lib/pos-interno';
 import { guardarDatosBoleta, marcarPedidoPagado, obtenerPedidoPorNumero } from '@/lib/pedidos';
+import { correoConfirmacionPedido } from '@/lib/correo-pedido';
+import { enviarCorreo } from '@/lib/resend';
 
 // Regla dura de Flow (README sección 6, paso 3): responder 200 en menos de
 // 15s. maxDuration necesita plan Vercel Pro para superar los 10s del plan
@@ -73,6 +75,19 @@ export async function POST(req: NextRequest) {
     await ajustarStockPos(pedido.items);
   } catch (err) {
     console.error(`[flow-webhook] ${numeroPedido}: no se pudo ajustar stock en el POS:`, err instanceof Error ? err.message : err);
+  }
+
+  // Correo de confirmación — mejor esfuerzo, igual que el ajuste de stock
+  // de arriba: si Resend falla (sin dominio verificado, por ejemplo) no
+  // debe frenar el pedido ya pagado. Sin cliente_email (pedido antiguo o
+  // dato incompleto) simplemente no hay a quién mandarlo.
+  if (pedido.cliente_email) {
+    try {
+      const { subject, html } = correoConfirmacionPedido(pedido);
+      await enviarCorreo({ to: pedido.cliente_email, subject, html });
+    } catch (err) {
+      console.error(`[flow-webhook] ${numeroPedido}: no se pudo enviar el correo de confirmación:`, err instanceof Error ? err.message : err);
+    }
   }
 
   // OpenFactura está deshabilitado a propósito (costo mensual, decisión del
