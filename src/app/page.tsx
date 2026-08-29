@@ -4,6 +4,7 @@ import { HeroCarrusel } from "@/components/hero-carrusel";
 import { BannersCategoria } from "@/components/banners-categoria";
 import { FranjaConfianza } from "@/components/franja-confianza";
 import { TarjetaProducto } from "@/components/tarjeta-producto";
+import { ScrollReveal } from "@/components/fx/scroll-reveal";
 
 // ISR: el catálogo no cambia segundo a segundo (se sincroniza vía webhook
 // desde el POS), así que 60s de cache es suficiente para una navegación
@@ -35,12 +36,16 @@ export default async function Home() {
       <BannersCategoria />
 
       <section className="mx-auto w-full max-w-6xl px-4 py-14 sm:px-6 lg:px-8">
-        <div className="flex items-baseline justify-between">
-          <h2 className="text-2xl font-semibold tracking-tight text-ink">Destacados</h2>
-          <Link href="/productos" className="text-sm font-medium text-ink-soft transition-colors hover:text-accent">
-            Ver todos →
-          </Link>
-        </div>
+        <ScrollReveal>
+          <div className="flex items-baseline justify-between">
+            <h2 className="font-display text-2xl font-bold uppercase tracking-tight text-ink">
+              <span className="texto-glow-primary text-primary">/</span> Destacados
+            </h2>
+            <Link href="/productos" className="text-sm font-medium text-ink-soft transition-colors hover:text-primary">
+              Ver todos →
+            </Link>
+          </div>
+        </ScrollReveal>
 
         {errorCatalogo ? (
           <p className="mt-10 text-ink-soft">
@@ -55,8 +60,10 @@ export default async function Home() {
           </p>
         ) : (
           <div className="mt-8 grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4">
-            {destacados.map((producto) => (
-              <TarjetaProducto key={producto.id} producto={producto} />
+            {destacados.map((producto, i) => (
+              <ScrollReveal key={producto.id} delay={(i % 4) * 0.06} distancia={20}>
+                <TarjetaProducto producto={producto} />
+              </ScrollReveal>
             ))}
           </div>
         )}

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { ArrowRight, Zap } from "lucide-react";
 import { EASE_OUT } from "@/lib/motion";
 
 // Sin gestión de banners desde un panel (fuera de alcance a propósito, ver
@@ -36,39 +37,35 @@ export function HeroCarrusel() {
   const slide = SLIDES[indice];
 
   return (
-    <section className="relative overflow-hidden bg-surface-sunken">
-      {/* Resplandor cálido de fondo — el sol sobre el desierto de Arica,
-          sin caer en el cliché del gradiente morado-a-azul genérico. */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full bg-accent opacity-20 blur-[100px]"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -bottom-32 left-0 h-80 w-80 rounded-full bg-primary opacity-[0.14] blur-[100px]"
-      />
+    <section className="relative overflow-hidden">
+      <div className="relative mx-auto flex min-h-[380px] max-w-6xl flex-col justify-center gap-4 px-4 py-20 sm:px-6 lg:px-8">
+        <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.3em] text-primary">
+          <Zap className="h-3.5 w-3.5" aria-hidden />
+          Sevelin // sistema en línea
+        </div>
 
-      <div className="relative mx-auto flex min-h-[320px] max-w-6xl flex-col justify-center gap-4 px-4 py-16 sm:px-6 lg:px-8">
         <AnimatePresence mode="wait">
           <motion.div
             key={indice}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -12 }}
-            transition={{ duration: 0.45, ease: EASE_OUT }}
+            initial={{ opacity: 0, y: 16, filter: "blur(4px)" }}
+            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+            exit={{ opacity: 0, y: -16, filter: "blur(4px)" }}
+            transition={{ duration: 0.5, ease: EASE_OUT }}
             className="flex flex-col items-start gap-4"
           >
-            <h1 className="font-display max-w-xl text-4xl font-bold tracking-tight text-white sm:text-5xl">
-              {slide.titulo}
+            <h1 className="font-display max-w-2xl text-4xl font-bold uppercase tracking-tight text-white sm:text-6xl">
+              <span className="texto-glow-primary text-primary">{slide.titulo.split(" ")[0]}</span>{" "}
+              {slide.titulo.split(" ").slice(1).join(" ")}
             </h1>
             <p className="max-w-lg text-base text-white/70">{slide.texto}</p>
-            <Link href="/productos" className="group">
+            <Link href="/productos" className="group mt-2">
               <motion.span
                 whileHover={{ y: -2 }}
                 whileTap={{ scale: 0.97 }}
-                className="mt-2 inline-block rounded-full bg-accent px-6 py-3 text-sm font-semibold text-white shadow-glow-accent transition-shadow group-hover:shadow-[0_0_0_1px_rgba(255,106,61,0.25),0_16px_40px_-6px_rgba(255,106,61,0.6)]"
+                className="inline-flex items-center gap-2 rounded-md border border-primary/60 bg-primary/10 px-6 py-3 text-sm font-bold uppercase tracking-wider text-primary shadow-glow-primary transition-colors group-hover:bg-primary group-hover:text-surface-sunken"
               >
                 Ver catálogo
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden />
               </motion.span>
             </Link>
           </motion.div>
@@ -85,12 +82,20 @@ export function HeroCarrusel() {
             className="group py-2"
           >
             <span
-              className={`block h-1.5 rounded-full transition-all duration-300 ${
-                i === indice ? "w-8 bg-accent" : "w-4 bg-white/25 group-hover:bg-white/40"
+              className={`block h-1 rounded-full transition-all duration-300 ${
+                i === indice ? "w-10 bg-primary shadow-glow-primary" : "w-4 bg-white/20 group-hover:bg-white/40"
               }`}
             />
           </button>
         ))}
+      </div>
+
+      {/* Marco HUD — esquinas tipo visor, puramente decorativo */}
+      <div aria-hidden className="pointer-events-none absolute inset-4 hidden sm:block">
+        <span className="absolute left-0 top-0 h-6 w-6 border-l-2 border-t-2 border-primary/40" />
+        <span className="absolute right-0 top-0 h-6 w-6 border-r-2 border-t-2 border-accent/40" />
+        <span className="absolute bottom-0 left-0 h-6 w-6 border-b-2 border-l-2 border-accent/40" />
+        <span className="absolute bottom-0 right-0 h-6 w-6 border-b-2 border-r-2 border-primary/40" />
       </div>
     </section>
   );

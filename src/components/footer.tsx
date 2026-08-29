@@ -5,11 +5,11 @@ export function Footer() {
   const instagram = process.env.NEXT_PUBLIC_INSTAGRAM_URL;
 
   return (
-    <footer className="mt-auto bg-surface-sunken text-white/70">
+    <footer className="mt-auto border-t border-primary/15 bg-surface-sunken text-white/70">
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:px-6 sm:grid-cols-4 lg:px-8">
         <div>
-          <span className="font-display flex items-center gap-1.5 text-lg font-bold tracking-tight text-white">
-            <span className="h-2 w-2 rounded-full bg-accent" />
+          <span className="font-display flex items-center gap-1.5 text-lg font-bold uppercase tracking-tight text-white">
+            <span className="h-2 w-2 rounded-full bg-primary shadow-glow-primary" />
             Sevelin
           </span>
           <p className="mt-2 text-sm">Tienda de electrónica en Arica, Chile.</p>

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { buscarCatalogo, esOrdenCatalogoValido, listarCategorias } from "@/lib/catalogo";
 import { TarjetaProducto } from "@/components/tarjeta-producto";
 import { SelectorOrden } from "@/components/selector-orden";
+import { ScrollReveal } from "@/components/fx/scroll-reveal";
 
 export const revalidate = 60;
 
@@ -28,7 +29,7 @@ export default async function Productos({ searchParams }: PropsPagina) {
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
-      <h1 className="text-3xl font-semibold tracking-tight text-ink">
+      <h1 className="font-display text-3xl font-bold uppercase tracking-tight text-ink">
         {categoria || (q ? `Resultados para "${q}"` : "Todos los productos")}
       </h1>
       <p className="mt-1 text-sm text-ink-soft">
@@ -39,8 +40,10 @@ export default async function Productos({ searchParams }: PropsPagina) {
         <div className="flex flex-wrap gap-2">
           <Link
             href="/productos"
-            className={`rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors ${
-              !categoria ? "border-primary bg-primary text-white" : "border-border text-ink-soft hover:bg-surface-sunken"
+            className={`rounded-md border px-3.5 py-1.5 text-sm font-medium transition-colors ${
+              !categoria
+                ? "border-primary bg-primary text-surface-sunken shadow-glow-primary"
+                : "border-border text-ink-soft hover:border-primary/50 hover:text-primary"
             }`}
           >
             Todas
@@ -49,8 +52,10 @@ export default async function Productos({ searchParams }: PropsPagina) {
             <Link
               key={c}
               href={`/productos?categoria=${encodeURIComponent(c)}`}
-              className={`rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors ${
-                categoria === c ? "border-primary bg-primary text-white" : "border-border text-ink-soft hover:bg-surface-sunken"
+              className={`rounded-md border px-3.5 py-1.5 text-sm font-medium transition-colors ${
+                categoria === c
+                  ? "border-primary bg-primary text-surface-sunken shadow-glow-primary"
+                  : "border-border text-ink-soft hover:border-primary/50 hover:text-primary"
               }`}
             >
               {c}
@@ -66,8 +71,10 @@ export default async function Productos({ searchParams }: PropsPagina) {
         <p className="mt-10 text-ink-soft">No se encontraron productos con ese filtro.</p>
       ) : (
         <div className="mt-8 grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4">
-          {productos.map((producto) => (
-            <TarjetaProducto key={producto.id} producto={producto} />
+          {productos.map((producto, i) => (
+            <ScrollReveal key={producto.id} delay={(i % 8) * 0.05} distancia={18}>
+              <TarjetaProducto producto={producto} />
+            </ScrollReveal>
           ))}
         </div>
       )}

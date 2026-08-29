@@ -2,36 +2,36 @@
 
 /*
  * Sistema de diseño de Sevelin — tienda de electrónica en Arica.
- * Paleta de marca: azul eléctrico (tecnología, confianza) sobre un fondo
- * azul marino casi negro, más un acento cálido coral para CTAs de contraste.
+ * Rediseño cyberpunk/gamer estilo Razer / ROG: fondo casi-negro (#080811)
+ * con acentos neón cian + magenta, cristal translúcido y glow animado.
  * Un solo tema oscuro, deliberado — sin modo claro por ahora.
  */
 :root {
-  --color-ink: #f2f6ff;
-  --color-ink-soft: #aab8d6;
-  --color-ink-faint: #6b7a9e;
-  --color-paper: #0a1128;
-  --color-surface: #101b3d;
-  --color-surface-sunken: #070d1e;
-  --color-border: #22315c;
-  --color-border-strong: #3b4e85;
+  --color-ink: #f4f8ff;
+  --color-ink-soft: #a6b3d6;
+  --color-ink-faint: #626f96;
+  --color-paper: #080811;
+  --color-surface: #10101e;
+  --color-surface-sunken: #050509;
+  --color-border: #24243f;
+  --color-border-strong: #3d3d66;
 
-  --color-primary: #0ea5ff;
-  --color-primary-deep: #1e6fe8;
-  --color-primary-soft: #5fc5ff;
+  --color-primary: #00f0ff;
+  --color-primary-deep: #00a8c2;
+  --color-primary-soft: #7df9ff;
 
-  --color-accent: #ff6a3d;
-  --color-accent-deep: #e5502a;
-  --color-accent-soft: #ffe4d9;
+  --color-accent: #ff2ec4;
+  --color-accent-deep: #d4109c;
+  --color-accent-soft: #ffd6f4;
 
-  --color-success: #16a394;
-  --color-success-soft: #0e2e29;
+  --color-success: #29ffb0;
+  --color-success-soft: #06281f;
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.24);
-  --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.2), 0 10px 24px rgba(0, 0, 0, 0.28);
-  --shadow-lg: 0 8px 20px rgba(0, 0, 0, 0.32), 0 24px 56px rgba(0, 0, 0, 0.4);
-  --shadow-glow-primary: 0 0 0 1px rgba(14, 165, 255, 0.25), 0 10px 30px -6px rgba(14, 165, 255, 0.55);
-  --shadow-glow-accent: 0 0 0 1px rgba(255, 106, 61, 0.22), 0 10px 30px -6px rgba(255, 106, 61, 0.5);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.35), 0 10px 24px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 8px 20px rgba(0, 0, 0, 0.45), 0 24px 56px rgba(0, 0, 0, 0.55);
+  --shadow-glow-primary: 0 0 0 1px rgba(0, 240, 255, 0.35), 0 0 20px -2px rgba(0, 240, 255, 0.55), 0 10px 30px -6px rgba(0, 240, 255, 0.4);
+  --shadow-glow-accent: 0 0 0 1px rgba(255, 46, 196, 0.32), 0 0 20px -2px rgba(255, 46, 196, 0.55), 0 10px 30px -6px rgba(255, 46, 196, 0.4);
 }
 
 @theme inline {
@@ -51,7 +51,7 @@
   --color-accent-soft: var(--color-accent-soft);
   --color-success: var(--color-success);
   --color-success-soft: var(--color-success-soft);
-  --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-orbitron), ui-sans-serif, system-ui, sans-serif;
   --font-sans: var(--font-plex), ui-sans-serif, system-ui, sans-serif;
   --shadow-elevated-sm: var(--shadow-sm);
   --shadow-elevated-md: var(--shadow-md);
@@ -73,6 +73,7 @@ h3,
 h4 {
   font-family: var(--font-display);
   text-wrap: balance;
+  letter-spacing: 0.01em;
 }
 
 ::selection {
@@ -81,6 +82,86 @@ h4 {
 }
 
 :focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--color-primary);
   outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------------------
+ * Capa FX cyberpunk — usada por src/components/fx/*.
+ * Todo esto es puramente decorativo (aria-hidden en su uso), así que vive
+ * acá como utilidades compartidas en vez de repetir keyframes por archivo.
+ * ------------------------------------------------------------------- */
+
+@keyframes borde-neon-giro {
+  to {
+    --angulo: 360deg;
+  }
+}
+
+@property --angulo {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+/* Panel de cristal translúcido con borde de neón animado (conic-gradient
+   que gira vía @property --angulo). El borde real es un pseudo-elemento con
+   1px de padding simulado vía mask, así el interior queda con backdrop-blur
+   limpio sin que el gradiente se filtre al contenido. */
+.panel-hud {
+  position: relative;
+  background: color-mix(in oklab, var(--color-surface) 78%, transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: inherit;
+  isolation: isolate;
+}
+
+.panel-hud::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: conic-gradient(
+    from var(--angulo, 0deg),
+    var(--color-primary),
+    var(--color-accent),
+    var(--color-primary-soft),
+    var(--color-accent),
+    var(--color-primary)
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  animation: borde-neon-giro 6s linear infinite;
+  opacity: 0.55;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.panel-hud:hover::before,
+.panel-hud[data-activo="true"]::before {
+  opacity: 1;
+}
+
+.panel-hud > * {
+  position: relative;
+  z-index: 2;
+}
+
+.texto-glow-primary {
+  text-shadow: 0 0 12px color-mix(in oklab, var(--color-primary) 65%, transparent), 0 0 32px color-mix(in oklab, var(--color-primary) 35%, transparent);
+}
+
+.texto-glow-accent {
+  text-shadow: 0 0 12px color-mix(in oklab, var(--color-accent) 65%, transparent), 0 0 32px color-mix(in oklab, var(--color-accent) 35%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel-hud::before {
+    animation: none;
+  }
 }

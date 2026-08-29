@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Bricolage_Grotesque, IBM_Plex_Sans } from "next/font/google";
+import { IBM_Plex_Sans, Orbitron } from "next/font/google";
 import { MotionConfig } from "framer-motion";
 import "./globals.css";
 import { listarCategorias } from "@/lib/catalogo";
@@ -10,13 +10,15 @@ import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { CarritoDrawer } from "@/components/carrito-drawer";
 import { WhatsappFlotante } from "@/components/whatsapp-flotante";
+import { FondoCinematico } from "@/components/fx/fondo-cinematico";
 
-// Tipografía propia (ver src/app/globals.css): Bricolage Grotesque para
-// títulos (carácter, no es la típica Inter/Space Grotesk) + IBM Plex Sans
-// para el cuerpo (buen soporte de números tabulares, útil para precios CLP).
-const bricolage = Bricolage_Grotesque({
-  variable: "--font-bricolage",
+// Tipografía cyberpunk/HUD (ver src/app/globals.css): Orbitron para títulos
+// (geométrica, angular — el look "gamer" de Razer/ROG) + IBM Plex Sans para
+// el cuerpo (buen soporte de números tabulares, útil para precios CLP).
+const orbitron = Orbitron({
+  variable: "--font-orbitron",
   subsets: ["latin"],
+  weight: ["500", "600", "700", "800"],
 });
 
 const plexSans = IBM_Plex_Sans({
@@ -43,17 +45,21 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="es"
-      className={`${bricolage.variable} ${plexSans.variable} h-full antialiased`}
+      className={`${orbitron.variable} ${plexSans.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-paper text-ink">
         {/* Enlace de salto para teclado — invisible hasta que recibe foco.
             Apunta a #contenido, que envuelve el <main> de cada página. */}
         <a
           href="#contenido"
-          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-full focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-white"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-full focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-surface-sunken"
         >
           Saltar al contenido
         </a>
+        {/* Fondo cinemático fijo (canvas + CSS), detrás de todo el árbol —
+            se monta una sola vez acá para no reiniciar la animación al
+            navegar entre páginas. */}
+        <FondoCinematico />
         {/* reducedMotion="user": respeta prefers-reduced-motion del sistema
             para TODAS las animaciones de Framer Motion de una sola vez (ver
             .agents/skills/animate — "reduced motion ships con la animación,

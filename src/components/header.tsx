@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { ChevronDown, Menu, Search, ShoppingCart, User } from "lucide-react";
 import { useCarrito } from "@/context/carrito-context";
 import { useSesion } from "@/context/sesion-context";
 import { EASE_OUT } from "@/lib/motion";
@@ -41,11 +42,11 @@ export function Header({ categorias }: { categorias: string[] }) {
   }
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-surface/85 backdrop-blur-md">
+    <header className="sticky top-0 z-40 border-b border-primary/20 bg-surface/80 backdrop-blur-md">
       <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3 sm:px-6 lg:px-8">
         <Link href="/" className="group flex shrink-0 items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full bg-accent shadow-glow-accent transition-transform group-hover:scale-125" />
-          <span className="font-display text-lg font-bold tracking-tight text-primary">Sevelin</span>
+          <span className="h-2 w-2 rounded-full bg-primary shadow-glow-primary transition-transform group-hover:scale-125" />
+          <span className="font-display texto-glow-primary text-lg font-bold uppercase tracking-tight text-primary">Sevelin</span>
         </Link>
 
         <form onSubmit={buscar} className="ml-auto hidden flex-1 max-w-sm md:flex">
@@ -54,23 +55,23 @@ export function Header({ categorias }: { categorias: string[] }) {
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
             placeholder="Buscar productos…"
-            className="w-full rounded-l-full border border-border bg-surface-sunken/60 px-4 py-1.5 text-sm outline-none transition-colors focus:border-accent focus:bg-surface"
+            className="w-full rounded-l-md border border-border bg-surface-sunken/60 px-4 py-1.5 text-sm outline-none transition-colors focus:border-primary focus:bg-surface"
           />
           <button
             type="submit"
-            className="rounded-r-full border border-l-0 border-border px-3 text-sm text-ink-soft transition-colors hover:bg-surface-sunken"
+            className="rounded-r-md border border-l-0 border-border px-3 text-ink-soft transition-colors hover:bg-surface-sunken hover:text-primary"
             aria-label="Buscar"
           >
-            🔍
+            <Search className="h-4 w-4" aria-hidden />
           </button>
         </form>
 
         {!cargando && (
           <Link
             href={usuario ? "/cuenta" : "/cuenta/ingresar"}
-            className="ml-auto hidden items-center gap-1.5 rounded-full px-3 py-2 text-sm font-medium text-ink-soft transition-colors hover:bg-surface-sunken hover:text-ink md:ml-0 md:flex"
+            className="ml-auto hidden items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium text-ink-soft transition-colors hover:bg-surface-sunken hover:text-primary md:ml-0 md:flex"
           >
-            👤 {usuario ? perfil?.nombre || "Mi cuenta" : "Iniciar sesión"}
+            <User className="h-4 w-4" aria-hidden /> {usuario ? perfil?.nombre || "Mi cuenta" : "Iniciar sesión"}
           </Link>
         )}
 
@@ -78,10 +79,10 @@ export function Header({ categorias }: { categorias: string[] }) {
           type="button"
           onClick={abrirCarrito}
           whileTap={{ scale: 0.92 }}
-          className="relative ml-auto flex items-center gap-1 rounded-full px-3 py-2 text-sm font-medium text-ink-soft transition-colors hover:bg-surface-sunken hover:text-ink md:ml-0"
+          className="relative ml-auto flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-ink-soft transition-colors hover:bg-surface-sunken hover:text-primary md:ml-0"
           aria-label="Abrir carrito"
         >
-          🛒
+          <ShoppingCart className="h-4 w-4" aria-hidden />
           <AnimatePresence>
             {cantidadTotal > 0 && (
               <motion.span
@@ -101,10 +102,10 @@ export function Header({ categorias }: { categorias: string[] }) {
         <button
           type="button"
           onClick={() => setMenuMovilAbierto((v) => !v)}
-          className="text-ink-soft md:hidden"
+          className="text-ink-soft transition-colors hover:text-primary md:hidden"
           aria-label="Abrir menú"
         >
-          ☰
+          <Menu className="h-5 w-5" aria-hidden />
         </button>
       </div>
 
@@ -115,7 +116,7 @@ export function Header({ categorias }: { categorias: string[] }) {
         <div className="mx-auto flex max-w-6xl items-center gap-1 px-4 py-1.5 sm:px-6 lg:px-8">
           <Link
             href="/productos"
-            className="rounded-full px-3 py-1.5 text-sm font-medium text-ink-soft transition-colors hover:bg-surface-sunken hover:text-ink"
+            className="rounded-md px-3 py-1.5 text-sm font-medium text-ink-soft transition-colors hover:bg-surface-sunken hover:text-primary"
           >
             Todos los productos
           </Link>
@@ -123,7 +124,7 @@ export function Header({ categorias }: { categorias: string[] }) {
             <Link
               key={categoria}
               href={`/productos?categoria=${encodeURIComponent(categoria)}`}
-              className="rounded-full px-3 py-1.5 text-sm font-medium text-ink-soft transition-colors hover:bg-surface-sunken hover:text-ink"
+              className="rounded-md px-3 py-1.5 text-sm font-medium text-ink-soft transition-colors hover:bg-surface-sunken hover:text-primary"
             >
               {categoria}
             </Link>
@@ -134,11 +135,11 @@ export function Header({ categorias }: { categorias: string[] }) {
                 type="button"
                 onClick={() => setMenuCategoriasAbierto((v) => !v)}
                 onBlur={() => setTimeout(() => setMenuCategoriasAbierto(false), 150)}
-                className="flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium text-ink-soft transition-colors hover:bg-surface-sunken hover:text-ink"
+                className="flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium text-ink-soft transition-colors hover:bg-surface-sunken hover:text-primary"
               >
                 Más categorías
                 <motion.span aria-hidden animate={{ rotate: menuCategoriasAbierto ? 180 : 0 }} transition={{ duration: 0.2 }}>
-                  ▾
+                  <ChevronDown className="h-3.5 w-3.5" />
                 </motion.span>
               </button>
               <AnimatePresence>
@@ -148,13 +149,13 @@ export function Header({ categorias }: { categorias: string[] }) {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -6 }}
                     transition={{ duration: 0.18, ease: EASE_OUT }}
-                    className="absolute left-0 top-full z-10 mt-2 w-56 rounded-xl border border-border bg-surface py-2 shadow-lg"
+                    className="panel-hud absolute left-0 top-full z-10 mt-2 w-56 rounded-xl py-2"
                   >
                     {categoriasResto.map((categoria) => (
                       <li key={categoria}>
                         <Link
                           href={`/productos?categoria=${encodeURIComponent(categoria)}`}
-                          className="block px-4 py-1.5 text-sm text-ink-soft transition-colors hover:bg-surface-sunken hover:text-ink"
+                          className="block px-4 py-1.5 text-sm text-ink-soft transition-colors hover:bg-surface-sunken hover:text-primary"
                         >
                           {categoria}
                         </Link>
@@ -184,10 +185,10 @@ export function Header({ categorias }: { categorias: string[] }) {
                   value={busqueda}
                   onChange={(e) => setBusqueda(e.target.value)}
                   placeholder="Buscar productos…"
-                  className="w-full rounded-l-full border border-border px-4 py-1.5 text-sm outline-none focus:border-accent"
+                  className="w-full rounded-l-md border border-border px-4 py-1.5 text-sm outline-none focus:border-primary"
                 />
-                <button type="submit" className="rounded-r-full border border-l-0 border-border px-3 text-sm">
-                  🔍
+                <button type="submit" className="rounded-r-md border border-l-0 border-border px-3 text-sm" aria-label="Buscar">
+                  <Search className="h-4 w-4" aria-hidden />
                 </button>
               </form>
               <Link href="/productos" className="block py-1.5 text-sm font-medium text-ink-soft" onClick={() => setMenuMovilAbierto(false)}>
@@ -196,10 +197,10 @@ export function Header({ categorias }: { categorias: string[] }) {
               {!cargando && (
                 <Link
                   href={usuario ? "/cuenta" : "/cuenta/ingresar"}
-                  className="block py-1.5 text-sm font-medium text-ink-soft"
+                  className="flex items-center gap-1.5 py-1.5 text-sm font-medium text-ink-soft"
                   onClick={() => setMenuMovilAbierto(false)}
                 >
-                  👤 {usuario ? perfil?.nombre || "Mi cuenta" : "Iniciar sesión"}
+                  <User className="h-4 w-4" aria-hidden /> {usuario ? perfil?.nombre || "Mi cuenta" : "Iniciar sesión"}
                 </Link>
               )}
               {categorias.map((categoria) => (
