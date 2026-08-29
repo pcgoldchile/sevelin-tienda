@@ -19,6 +19,10 @@ export default function Registro() {
   // Desmarcada por defecto a propósito (Ley 21.719: consentimiento libre e
   // inequívoco, nunca una casilla premarcada).
   const [aceptaPrivacidad, setAceptaPrivacidad] = useState(false);
+  // Separado del consentimiento de privacidad a propósito (Ley 21.719):
+  // opcional, no bloquea el registro, se puede cambiar después desde
+  // /cuenta/privacidad.
+  const [aceptaMarketing, setAceptaMarketing] = useState(false);
 
   async function manejarSubmit(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
@@ -54,6 +58,8 @@ export default function Registro() {
           consentimiento_privacidad: true,
           fecha_consentimiento: new Date().toISOString(),
           version_politica: VERSION_POLITICA_PRIVACIDAD,
+          consentimiento_marketing: aceptaMarketing,
+          fecha_consentimiento_marketing: aceptaMarketing ? new Date().toISOString() : null,
         });
         if (errorPerfil) throw errorPerfil;
       }
@@ -120,6 +126,16 @@ export default function Registro() {
             </Link>
             .
           </span>
+        </label>
+
+        <label className="flex cursor-pointer items-start gap-2 text-sm text-ink-soft">
+          <input
+            type="checkbox"
+            checked={aceptaMarketing}
+            onChange={(e) => setAceptaMarketing(e.target.checked)}
+            className="mt-0.5 accent-accent"
+          />
+          <span>Quiero recibir promociones y novedades por correo (opcional, puedes cambiarlo cuando quieras).</span>
         </label>
 
         {error && <p className="text-sm text-red-600">{error}</p>}

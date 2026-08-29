@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { crearClienteServidor } from '@/lib/supabase-server';
 import { supabaseWeb } from '@/lib/supabase-web';
+import { registrarSolicitudArco } from '@/lib/solicitudes-arco';
 
 /**
  * POST /api/cuenta/eliminar — Derecho de Cancelación/Oposición (Ley 21.719).
@@ -41,6 +42,16 @@ export async function POST() {
   if (errorAnonimizar) {
     return NextResponse.json({ error: 'No se pudieron anonimizar tus pedidos: ' + errorAnonimizar.message }, { status: 500 });
   }
+
+  // Se registra ANTES de borrar al usuario (con la service_role, no con la
+  // sesión que está por dejar de existir) — así el registro de auditoría
+  // sobrevive aunque usuario_id quede en NULL después del DELETE CASCADE.
+  await registrarSolicitudArco(supabaseWeb, {
+    usuarioId: user.id,
+    email: user.email || '',
+    tipo: 'cancelacion',
+    detalle: 'El titular solicitó la eliminación de su cuenta. Pedidos anteriores anonimizados, cuenta eliminada de Supabase Auth.',
+  });
 
   // Requiere la service_role (supabaseWeb) — el navegador nunca puede
   // borrar un usuario de Supabase Auth por su cuenta.

@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { crearClienteNavegador } from "@/lib/supabase-browser";
 import { CODIGOS_PAIS, CODIGO_PAIS_POR_DEFECTO } from "@/lib/codigos-pais";
+import { registrarSolicitudArco } from "@/lib/solicitudes-arco";
 import type { PerfilCliente } from "@/lib/tipos";
 
 const CAMPO =
@@ -13,7 +14,7 @@ const CAMPO =
  * propios datos de contacto en cualquier momento. La política RLS "cliente
  * actualiza su propio perfil" (migración 06) ya limita esto a la fila
  * propia — no hace falta una API aparte. */
-export function EditarPerfilForm({ userId, perfil }: { userId: string; perfil: PerfilCliente | null }) {
+export function EditarPerfilForm({ userId, email, perfil }: { userId: string; email: string; perfil: PerfilCliente | null }) {
   const router = useRouter();
   const [editando, setEditando] = useState(false);
   const [guardando, setGuardando] = useState(false);
@@ -42,6 +43,15 @@ export function EditarPerfilForm({ userId, perfil }: { userId: string; perfil: P
         .update({ nombre, apellido, telefono })
         .eq("id", userId);
       if (errorGuardar) throw errorGuardar;
+
+      // Derecho de Rectificación (Ley 21.719) — trazabilidad de qué cambió.
+      await registrarSolicitudArco(supabase, {
+        usuarioId: userId,
+        email,
+        tipo: "rectificacion",
+        detalle: `nombre: "${perfil?.nombre || ""}" → "${nombre}", apellido: "${perfil?.apellido || ""}" → "${apellido}", teléfono: "${perfil?.telefono || ""}" → "${telefono}"`,
+      });
+
       setEditando(false);
       router.refresh();
     } catch (err) {

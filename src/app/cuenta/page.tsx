@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { crearClienteServidor } from "@/lib/supabase-server";
 import { CerrarSesionBoton } from "./cerrar-sesion-boton";
 import { EditarPerfilForm } from "./editar-perfil-form";
-import { EliminarCuentaBoton } from "./eliminar-cuenta-boton";
 
 export default async function Cuenta() {
   const supabase = await crearClienteServidor();
@@ -22,7 +21,7 @@ export default async function Cuenta() {
 
       {/* Derecho de Acceso + Rectificación (Ley 21.719). */}
       <div className="mt-6">
-        <EditarPerfilForm userId={user.id} perfil={perfil} />
+        <EditarPerfilForm userId={user.id} email={user.email || ""} perfil={perfil} />
       </div>
 
       <div className="mt-4 flex flex-col gap-2">
@@ -33,17 +32,12 @@ export default async function Cuenta() {
           📦 Mis pedidos
         </Link>
         <Link
-          href="/privacidad"
+          href="/cuenta/privacidad"
           className="rounded-xl bg-surface px-4 py-3 text-sm font-medium text-ink shadow-elevated-md transition-colors hover:bg-surface-sunken"
         >
-          📄 Política de Privacidad
+          🔒 Centro de Privacidad
         </Link>
         <CerrarSesionBoton />
-      </div>
-
-      {/* Derecho de Cancelación/Oposición (Ley 21.719). */}
-      <div className="mt-6">
-        <EliminarCuentaBoton />
       </div>
     </main>
   );

@@ -53,6 +53,23 @@ export interface PerfilCliente {
   consentimiento_privacidad: boolean;
   fecha_consentimiento: string | null;
   version_politica: string | null;
+  // Consentimiento de marketing — SEPARADO del de privacidad a propósito
+  // (Ley 21.719): opcional, no afecta la posibilidad de comprar, se puede
+  // cambiar en cualquier momento desde /cuenta/privacidad.
+  consentimiento_marketing: boolean;
+  fecha_consentimiento_marketing: string | null;
+  creado_en: string;
+}
+
+/** Espejo de `solicitudes_arco` — registro auditable de cada vez que un
+ * titular ejerce un derecho ARCO (no solo el consentimiento inicial de
+ * compra/registro). Sobrevive a la eliminación de la cuenta a propósito. */
+export interface SolicitudArco {
+  id: string;
+  usuario_id: string | null;
+  email_snapshot: string;
+  tipo: 'acceso' | 'rectificacion' | 'cancelacion' | 'oposicion' | 'portabilidad';
+  detalle: string | null;
   creado_en: string;
 }
 
