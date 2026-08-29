@@ -4,22 +4,23 @@
 > arquitectura completo (todas las fases) vive en `README-ECOMMERCE-SEVELIN.md`, en el repo del POS
 > (`sevelin-pos-oficial`) — este documento es el estado de ESTE repo (`sevelin-tienda`) nada más.
 
-**Fecha:** 29-08-2026 · **Versión activa:** v15 (cierre de brechas Art. 14 ter + documentos de
-seguridad e incidentes — ver "v12-v15" abajo) ·
+**Fecha:** 29-08-2026 · **Versión activa:** v16 (rediseño gamer completo, catálogo sin bloqueo de
+SKU, subcategorías, descripción enriquecida, correo transaccional — ver "v16" abajo) ·
 **En producción:** desplegado en Vercel, dominio `sevelin.cl` **todavía apunta a Tiendanube** (la
 tienda nueva vive en la URL de Vercel por ahora — decidir cuándo migrar el DNS, ver "Pendiente").
 
 **Estado real (verificado en producción, no de memoria):** Supabase Web real
-(`ekxwavsnocwxtzxqxbbi`) con las **8 migraciones** aplicadas, catálogo con **86 productos reales**
-publicados y categorizados en 12 categorías, **75 de esos 86 con fotos reales**, header con
-categorías principales fijas + "Más categorías", carrito con toast de confirmación (foto+precio),
-paleta de marca azul eléctrico. Flow: `POST /payment/create` **verificado contra sandbox real** (no
-producción todavía). Chilexpress: **sigue en mock**, sin API key real. **Cuentas de cliente reales**
-(Supabase Auth, `/cuenta/**`) YA IMPLEMENTADAS — revierte la decisión anterior de "sin cuentas".
-**Cumplimiento Ley 21.719**: consentimiento explícito + trazabilidad + ARCO + Centro de Privacidad
-construidos y probados contra Supabase real, y en v15 se cerraron las brechas del Art. 14 ter
-(política v1.2) + se documentaron 14 quáter/quinquies/sexies. Lo que queda es operativo, no de
-código (ver "Pendiente" #1-3).
+(`ekxwavsnocwxtzxqxbbi`) con **9 migraciones** aplicadas, catálogo con **86+ productos reales**
+publicados y categorizados en 12 categorías (más subcategorías reales expuestas como filtro, ver
+v16), **75+ con fotos reales**. **Rediseño visual completo cyberpunk/gamer** (paleta cian/magenta,
+coherente con el POS que también se rediseñó esta sesión) reemplaza la paleta azul eléctrico
+anterior. Flow: `POST /payment/create` **verificado contra sandbox real** (no producción todavía).
+Chilexpress: **sigue en mock**, sin API key real. Cuentas de cliente reales (Supabase Auth,
+`/cuenta/**`) funcionando. **Cumplimiento Ley 21.719**: brechas del Art. 14 ter cerradas (política
+v1.2), 14 quáter/quinquies/sexies documentados — lo que queda es operativo (ver "Pendiente" #4-6).
+**Correo transaccional con Resend integrado y probado con un envío real** — confirmación de pedido
+al pagar, cancelación desde el POS — pero sin dominio propio verificado en Resend todavía: los
+envíos a clientes reales fallan en silencio hasta verificarlo (ver "Pendiente" #1).
 
 ---
 
@@ -94,6 +95,48 @@ Next.js 16 (App Router) · TypeScript · Tailwind v4 · `@supabase/supabase-js`.
   control → evidencia del 14 quinquies, decisiones de diseño del 14 quáter, y la justificación
   escrita de por qué **no** corresponde EIPD) y `docs/PROCEDIMIENTO-INCIDENTES-DATOS.md` (los 9
   pasos del 14 sexies + bitácora con los campos exactos que exige el inciso 2º).
+
+## Estado: qué está HECHO (v16 — rediseño gamer, catálogo sin bloqueo de SKU, correo — 29-08-2026)
+- **Rediseño visual completo cyberpunk/gamer** (paleta cian/magenta estilo Razer/ROG, coherente con
+  el mismo rediseño hecho al POS en la misma sesión): tarjeta de producto con aureola de neón
+  giratoria SOLO en hover (se sacó la inclinación 3D + brillo que seguía el mouse que tenía antes,
+  quedaba compitiendo), precio en tono neutro (`--color-ink`, casi blanco) en vez de neón — pedido
+  explícito para que no compitiera visualmente ni se leyera "fosforescente". Fondo cyberpunk
+  ESTÁTICO (rejilla hexagonal + líneas de escaneo sutiles, CSS puro sin canvas/JS — antes era un
+  canvas animado con nodos). Banners de categoría con foto real de un producto propio (no genérica)
+  y título en su propia franja de altura fija arriba de la foto (antes se superponía a la imagen y
+  quedaba ilegible con fotos de empaque con su propio texto).
+- **Productos sin SKU/código de barras ya pueden sincronizarse** — antes `POST /api/sync/producto`
+  los rechazaba (`productos_web.sku` es NOT NULL). Ahora, sin SKU, se genera un slug de respaldo
+  desde el nombre + el `producto_pos_id` (único garantizado) — el SKU nunca se muestra al cliente,
+  solo se usa como URL, así que un slug generado cumple la misma función.
+- **Subcategorías reales expuestas como filtro** en `/productos` — el POS ya administraba un árbol
+  de 2 niveles (categoría → subcategoría, `producto_categorias.parent_id`) desde hacía tiempo, pero
+  nunca sincronizaba esa relación a la tienda (`productos_web.categoria` solo guardaba el nombre de
+  nivel superior). Columna `subcategoria` nueva (`supabase/09-subcategoria.sql`); chips de
+  refinamiento SOLO aparecen dentro de una categoría que de verdad tenga subcategorías en el
+  catálogo publicado — no es un mega-menú del header, sigue siendo el filtro plano de siempre. De
+  paso se corrigió un producto real mal clasificado ("Fuentes de poder", huérfano de 1 producto,
+  invisible en el menú principal) que resultó ser justo este bug.
+- **Descripción con HTML enriquecido** — el editor del POS pasó a Quill (negrita, listas, links);
+  la ficha de producto ahora sanitiza (`isomorphic-dompurify`, whitelist mínima) y renderiza ese
+  HTML en vez de tratarlo como texto plano. Las descripciones viejas (texto plano) se siguen viendo
+  igual (se mantiene `whitespace-pre-line` para sus saltos de línea).
+- **Correo de contacto real**: pasó de `pcgoldchile@gmail.com` → `contacto@sevelin.cl` (nunca
+  confirmado que existiera) → **`sevelin.contacto@gmail.com`** (Gmail real creado el 29-08-2026).
+  **Pendiente real**: confirmar que `NEXT_PUBLIC_PRIVACIDAD_EMAIL` en Vercel no siga con el valor
+  viejo (`pcgoldchile@gmail.com`), que pisaría este default nuevo del código.
+- **Correo transaccional con Resend**: `src/lib/resend.ts` (fetch directo a la API REST, sin el SDK)
+  + `src/lib/correo-pedido.ts` (plantillas de confirmación/cancelación). `POST /api/flow-webhook`
+  manda la confirmación al pagar (mejor esfuerzo, no bloquea el pedido). `POST /api/pos/notificar-
+  cancelacion` (nuevo, protegido con `SYNC_SECRET`) — el POS lo llama al cancelar un pedido, porque
+  el POS no tiene la API key de Resend ni la plantilla. **Probado con un envío real** (id de mensaje
+  real devuelto por Resend). **Sin dominio propio verificado en Resend**: mientras se use el dominio
+  de prueba (`onboarding@resend.dev`), solo entrega a la cuenta que creó la API key — los correos a
+  clientes reales fallan en silencio hasta verificar `sevelin.cl` (o un subdominio) en Resend.
+- **WhatsApp**: decidido NO implementarlo todavía con automatización "no oficial" (viola los
+  términos de servicio de WhatsApp, riesgo real de que baneen el número) — requiere pasar por la
+  verificación de Meta Business Manager (API oficial), sin decisión tomada sobre cuándo.
 
 ## Arquitectura (resumen — ver README-ECOMMERCE-SEVELIN.md para el detalle completo)
 - Proyecto **separado** del POS (`sevelin-pos-oficial`), repo Git propio, deploy Vercel propio.
@@ -243,69 +286,62 @@ Next.js 16 (App Router) · TypeScript · Tailwind v4 · `@supabase/supabase-js`.
 
 ## Pendiente (real, verificado al 29-08-2026 — no repetir lo ya hecho)
 
-**Ley 21.719 — lo que queda es operativo, no de código (v15, 29-08-2026):**
-1. **Resuelto en parte:** el correo de contacto de `/privacidad` pasó de `contacto@sevelin.cl`
-   (dirección de dominio que nunca se confirmó si existía) a **`sevelin.contacto@gmail.com`**, Gmail
-   real creado el 29-08-2026 específicamente para esto — ya es el valor por defecto en el código
-   (`src/app/privacidad/page.tsx`) y en `.env.local`. **Pendiente real:** confirmar que
-   `NEXT_PUBLIC_PRIVACIDAD_EMAIL` en Vercel (producción) no siga apuntando a la dirección vieja
-   (`pcgoldchile@gmail.com`) — si esa variable sigue puesta ahí, pisa el valor nuevo del código y la
-   página en producción sigue mostrando el correo anterior hasta que se actualice o se borre esa
-   variable en el dashboard de Vercel.
-2. **Este mismo Gmail (`sevelin.contacto@gmail.com`) es también el que se va a usar para crear la
-   cuenta de Resend** (correo transaccional — confirmación de pedido / cancelación, en progreso,
-   ver sesión 29-08-2026 sobre notificaciones).
-3. **Prueba de restauración de respaldo, documentada.** La letra c) del Art. 14 quinquies exige la
+**Notificaciones (correo/WhatsApp) — lo más reciente, v16:**
+1. **Verificar un dominio propio en Resend** (dashboard.resend.com, cuenta con
+   `sevelin.contacto@gmail.com`). Mientras se use el dominio de prueba (`onboarding@resend.dev`),
+   **los correos a clientes reales fallan en silencio** — ese dominio solo entrega a la cuenta que
+   creó la API key. Agregar 2-3 registros DNS donde esté administrado `sevelin.cl` (no requiere
+   mover el dominio ni tocar que hoy apunte a Tiendanube).
+2. **Confirmar que `NEXT_PUBLIC_PRIVACIDAD_EMAIL` en Vercel no siga con el valor viejo**
+   (`pcgoldchile@gmail.com`) — pisaría el default nuevo del código (`sevelin.contacto@gmail.com`).
+3. **Decisión sobre WhatsApp** (notificar cancelación/confirmación también por ahí): requiere
+   verificación de Meta Business Manager, sin atajo gratis — no confundir con automatizar un
+   WhatsApp Web personal, que viola los términos de servicio y arriesga que baneen el número.
+
+**Ley 21.719 — lo que queda es operativo, no de código:**
+4. **Prueba de restauración de respaldo, documentada.** La letra c) del Art. 14 quinquies exige la
    *capacidad* de restaurar, y una capacidad nunca probada no se puede acreditar. Restaurar un
    respaldo de Supabase a un proyecto de prueba, verificar que las tablas vuelven completas, y
    anotar fecha y resultado en la bitácora de `docs/POLITICA-SEGURIDAD-DATOS.md`. Es el único
    requisito técnico del cumplimiento que sigue abierto.
-4. **Antes del 01-12-2026:** revisar en qué canal concreto la Agencia recibirá los reportes del
+5. **Antes del 01-12-2026:** revisar en qué canal concreto la Agencia recibirá los reportes del
    Art. 14 sexies (a la fecha de redacción no los ha publicado) y anotarlo en
    `docs/PROCEDIMIENTO-INCIDENTES-DATOS.md`. Revisión anual de seguridad agendada para el
    29-08-2027 (lista de chequeo ya escrita en ese mismo documento).
-5. **Validación jurídica externa** — todo lo de Ley 21.719 es implementación técnica de buena fe
+6. **Validación jurídica externa** — todo lo de Ley 21.719 es implementación técnica de buena fe
    contra el texto de la BCN, no asesoría legal. Conviene que un abogado revise el texto final de
    `/privacidad` y `/terminos`, y un contador confirme el criterio de conservación tributaria que
    se publicó ("mientras esté pendiente el plazo de revisión del SII, por regla general tres
    años"). **Ya verificado y NO pendiente:** no existe obligación de inscribirse ante la Agencia
-   para un responsable privado común (el Registro Nacional de Sanciones y Cumplimiento anota
-   modelos de prevención voluntarios y sanciones, no responsables).
-6. **Cuando se implemente la creación real de envíos con Chilexpress**: hoy la política declara que
+   para un responsable privado común.
+7. **Cuando se implemente la creación real de envíos con Chilexpress**: hoy la política declara que
    solo se le consulta la tarifa de la comuna, lo cual es cierto. Al crear envíos de verdad pasará
    a recibir nombre, dirección y teléfono → hay que actualizar `/privacidad` y subir la versión de
    la política **antes** de ese cambio, no después.
 
-**Resto de pendientes (sin cambios desde sesiones anteriores):**
-7. **Chilexpress**: sigue sin API key real, el checkout usa `COSTO_ENVIO_CHILEXPRESS_MOCK` para todo
+**Resto de pendientes:**
+8. **Chilexpress**: sigue sin API key real, el checkout usa `COSTO_ENVIO_CHILEXPRESS_MOCK` para todo
    envío fuera de Arica. Cuando el usuario consiga las credenciales del convenio corporativo: (a)
    configurar `CHILEXPRESS_API_KEY`/`CHILEXPRESS_API_BASE`/`CHILEXPRESS_ORIGIN_COUNTY_CODE` en
    Vercel, (b) resolver el TODO de `src/lib/chilexpress.ts` (mapear comuna → `countyCode`, nunca
    verificado contra la API real), (c) confirmar el contrato completo (se implementó a partir del
    código fuente del plugin de WooCommerce de Chilexpress, no de documentación oficial).
-8. **Flow en producción**: `POST /payment/create` está verificado solo contra **sandbox**. Falta (a)
+9. **Flow en producción**: `POST /payment/create` está verificado solo contra **sandbox**. Falta (a)
    cambiar a credenciales de producción reales en Vercel cuando el usuario las tenga, (b) probar el
    flujo completo con un pago real (`getStatus`/`FLOW_ESTADO_PAGADO` nunca se confirmaron contra un
    pago completado de verdad, solo contra la creación de la orden).
-9. **28 productos sin SKU** en el POS quedan sin publicar (el receptor de sync exige SKU) — hay que
-   cargarles SKU desde el modal de producto del POS. Lista completa en
-   `sevelin-pos-oficial docs/CHANGELOG-V29.md` (o el changelog de la sesión que hizo la clasificación
-   masiva).
-10. **10 productos con SKU sin foto real** (no tenían coincidencia confiable en `sevelin.cl`) — subirles
-   foto a mano desde el modal del POS.
-11. **Banners de categoría del home siguen con placeholder** ("Foto de X pendiente") — subir fotos
-   reales de Monitores/Componentes PC/Periféricos (no hay mecanismo de carga todavía, hay que
-   decidir cómo: ¿reusar el pipeline de fotos de producto, o algo aparte?).
+10. **Productos que llegaron sin SKU YA se pueden publicar** (v16, sync ya no lo exige) — sigue
+    pendiente curar el catálogo: clasificarlos/marcarlos `publicado_web=true` desde el modal del POS
+    si se quiere que se vean en la tienda. Ya no es un bloqueo técnico.
+11. **Algunos productos con SKU sin foto real** (no tenían coincidencia confiable en `sevelin.cl`) —
+    subirles foto a mano desde el modal del POS.
 12. **Dominio `sevelin.cl` sigue apuntando a Tiendanube**, no a esta tienda nueva (que vive en su URL
     de Vercel) — decidir cuándo hacer el cambio de DNS, y qué pasa con la tienda Tiendanube vieja
     (¿se da de baja, se deja como respaldo?).
-13. Confirmar en el POS (Vercel) que `SUPABASE_WEB_URL`/`SUPABASE_WEB_SERVICE_ROLE_KEY` y
-    `SYNC_SECRET` están configurados — hubo un episodio de "fetch failed" en el panel Pedidos Web por
-    estas variables faltantes, se dieron instrucciones para agregarlas pero no se reconfirmó que
-    quedaran puestas.
-14. ~~OpenFactura~~, ~~Shipit~~, ~~migraciones SQL~~, ~~despliegue Vercel~~, ~~webhook del POS~~,
-    ~~primera carga del catálogo~~, ~~sistema de cuentas de cliente~~ — todo esto ya no es
-    pendiente, quedó resuelto en sesiones anteriores (ver versiones abajo).
+13. ~~OpenFactura~~, ~~Shipit~~, ~~migraciones SQL~~, ~~despliegue Vercel~~, ~~webhook del POS~~,
+    ~~primera carga del catálogo~~, ~~sistema de cuentas de cliente~~, ~~confirmar SUPABASE_WEB_URL
+    en el POS~~, ~~banners de categoría con placeholder~~ — todo esto ya no es pendiente, quedó
+    resuelto en sesiones anteriores (ver versiones abajo).
 
 ## Cómo probar (mientras no haya Supabase Web real)
 - `npm run build`: compila TypeScript, corre el linter implícito, prerenderiza `/` (con manejo de
@@ -379,3 +415,18 @@ Next.js 16 (App Router) · TypeScript · Tailwind v4 · `@supabase/supabase-js`.
 - `SUPABASE_WEB_URL` necesita la URL completa (`https://<ref>.supabase.co`), no solo el project
   ref — con solo el ref, `createClient()` no puede conectarse y falla con `TypeError: fetch failed`,
   un error genérico que no deja claro cuál es el problema real.
+- **Resend con el dominio de prueba (`onboarding@resend.dev`) solo entrega a la cuenta que creó la
+  API key** — un envío a cualquier otro correo devuelve 200 igual pero nunca llega, hasta verificar
+  un dominio propio. No confundir "el código funciona" (probado con un envío real) con "ya le llega
+  a los clientes" (no, hasta verificar dominio).
+- El POS administraba un árbol de categoría→subcategoría (`producto_categorias.parent_id`) desde
+  antes de que la tienda supiera nada de eso — un producto con SUBcategoría elegida guardaba el
+  nombre de la subcategoría directo en `categoria_web` (texto plano), no el de la categoría padre,
+  así que quedaba huérfano del filtro plano de categorías principales. La resolución (subir hasta
+  el ancestro de nivel superior para `categoria_web`, y mandar la subcategoría aparte) tiene que
+  pasar en el POS al guardar, no asumir que `categoria_web` siempre es de nivel superior.
+- El contenido de la Descripción ahora puede traer HTML real (Quill) en vez de solo texto plano —
+  cualquier lugar que lo renderice tiene que sanitizar antes de `dangerouslySetInnerHTML` (ver
+  `src/lib/sanitizar-html.ts`). Las descripciones viejas (texto plano, de antes de Quill) siguen
+  siendo válidas: no tienen tags que sanitizar, y `whitespace-pre-line` les preserva los saltos de
+  línea igual que antes.
