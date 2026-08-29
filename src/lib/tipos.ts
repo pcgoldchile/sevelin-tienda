@@ -48,6 +48,11 @@ export interface PerfilCliente {
   nombre: string | null;
   apellido: string | null;
   telefono: string | null;
+  // Trazabilidad del consentimiento (Ley 21.719) — ver
+  // supabase/07-consentimiento-privacidad.sql y src/lib/politica-privacidad.ts.
+  consentimiento_privacidad: boolean;
+  fecha_consentimiento: string | null;
+  version_politica: string | null;
   creado_en: string;
 }
 
@@ -88,6 +93,11 @@ export interface PedidoWeb {
   factura_razon_social: string | null;
   factura_rut: string | null;
   factura_giro: string | null;
+  // Trazabilidad del consentimiento (Ley 21.719) — ver
+  // supabase/07-consentimiento-privacidad.sql.
+  consentimiento_privacidad: boolean;
+  fecha_consentimiento: string | null;
+  version_politica: string | null;
   direccion_envio: DireccionEnvio;
   items: ItemPedido[];
   // 'RETIRO' (gratis, en tienda) | 'LOCAL' (despacho a domicilio en Arica,

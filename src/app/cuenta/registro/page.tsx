@@ -7,6 +7,7 @@ import { crearClienteNavegador } from "@/lib/supabase-browser";
 import { CampoPassword } from "@/components/campo-password";
 import { CODIGOS_PAIS, CODIGO_PAIS_POR_DEFECTO } from "@/lib/codigos-pais";
 import { traducirErrorAuth } from "@/lib/errores-auth";
+import { VERSION_POLITICA_PRIVACIDAD } from "@/lib/politica-privacidad";
 
 const CAMPO =
   "rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm outline-none transition-colors focus:border-accent";
@@ -15,9 +16,16 @@ export default function Registro() {
   const router = useRouter();
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Desmarcada por defecto a propósito (Ley 21.719: consentimiento libre e
+  // inequívoco, nunca una casilla premarcada).
+  const [aceptaPrivacidad, setAceptaPrivacidad] = useState(false);
 
   async function manejarSubmit(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
+    if (!aceptaPrivacidad) {
+      setError("Debes aceptar los Términos y la Política de Privacidad para continuar.");
+      return;
+    }
     setError(null);
 
     const datos = new FormData(evento.currentTarget);
@@ -38,9 +46,15 @@ export default function Registro() {
       // política RLS "cliente escribe su propio perfil" (migración 06) solo
       // deja insertar la fila propia, así que es seguro hacerlo directo acá.
       if (data.user) {
-        const { error: errorPerfil } = await supabase
-          .from("perfiles_clientes")
-          .insert({ id: data.user.id, nombre, apellido, telefono });
+        const { error: errorPerfil } = await supabase.from("perfiles_clientes").insert({
+          id: data.user.id,
+          nombre,
+          apellido,
+          telefono,
+          consentimiento_privacidad: true,
+          fecha_consentimiento: new Date().toISOString(),
+          version_politica: VERSION_POLITICA_PRIVACIDAD,
+        });
         if (errorPerfil) throw errorPerfil;
       }
 
@@ -87,11 +101,32 @@ export default function Registro() {
         <input name="email" type="email" required placeholder="Correo electrónico" className={CAMPO} />
         <CampoPassword name="password" required minLength={6} placeholder="Contraseña (mínimo 6 caracteres)" className={CAMPO} />
 
+        <label className="flex cursor-pointer items-start gap-2 text-sm text-ink-soft">
+          <input
+            type="checkbox"
+            required
+            checked={aceptaPrivacidad}
+            onChange={(e) => setAceptaPrivacidad(e.target.checked)}
+            className="mt-0.5 accent-accent"
+          />
+          <span>
+            Acepto los{" "}
+            <Link href="/terminos" target="_blank" className="text-accent hover:underline">
+              Términos y Condiciones
+            </Link>{" "}
+            y la{" "}
+            <Link href="/privacidad" target="_blank" className="text-accent hover:underline">
+              Política de Privacidad
+            </Link>
+            .
+          </span>
+        </label>
+
         {error && <p className="text-sm text-red-600">{error}</p>}
 
         <button
           type="submit"
-          disabled={enviando}
+          disabled={enviando || !aceptaPrivacidad}
           className="mt-2 rounded-full bg-accent px-5 py-3 text-sm font-semibold text-white shadow-glow-accent transition-colors hover:bg-accent-deep disabled:cursor-not-allowed disabled:opacity-70"
         >
           {enviando ? "Creando cuenta…" : "Crear cuenta"}

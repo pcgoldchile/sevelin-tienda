@@ -1,4 +1,5 @@
 import { supabaseWeb } from './supabase-web';
+import { VERSION_POLITICA_PRIVACIDAD } from './politica-privacidad';
 import type { DatosFactura, DireccionEnvio, ItemPedido, PedidoWeb } from './tipos';
 import type { MetodoEnvio } from './envio';
 
@@ -32,7 +33,15 @@ export async function crearPedido(datos: {
   // null = invitado. Se resuelve en POST /api/checkout leyendo la sesión
   // desde la cookie (src/lib/supabase-server.ts) — nunca desde el body.
   clienteUserId: string | null;
+  // POST /api/checkout ya validó que venga en true (checkbox obligatoria);
+  // se revalida acá también, defensa en profundidad — nunca se guarda un
+  // pedido sin consentimiento explícito (Ley 21.719).
+  consentimiento: boolean;
 }): Promise<PedidoWeb> {
+  if (!datos.consentimiento) {
+    throw new Error('Falta aceptar la Política de Privacidad');
+  }
+
   const { data: numeroPedido, error: errorNumero } = await supabaseWeb.rpc('generar_numero_pedido');
   if (errorNumero) throw new Error(errorNumero.message);
 
@@ -53,6 +62,9 @@ export async function crearPedido(datos: {
       factura_razon_social: datos.factura?.razonSocial ?? null,
       factura_rut: datos.factura?.rut ?? null,
       factura_giro: datos.factura?.giro ?? null,
+      consentimiento_privacidad: true,
+      fecha_consentimiento: new Date().toISOString(),
+      version_politica: VERSION_POLITICA_PRIVACIDAD,
       direccion_envio: datos.direccion,
       items: datos.items,
       metodo_envio: datos.metodoEnvio,

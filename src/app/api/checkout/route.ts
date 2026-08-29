@@ -23,6 +23,9 @@ interface CuerpoCheckout {
   metodoEnvio?: string;
   nota?: string;
   factura?: Partial<DatosFactura>;
+  // Checkbox obligatoria "Acepto los Términos y la Política de Privacidad"
+  // (ver formulario-checkout.tsx) — sin esto en true, no hay pedido.
+  consentimientoPrivacidad?: boolean;
 }
 
 /**
@@ -51,6 +54,13 @@ export async function POST(req: NextRequest) {
   const direccion = cuerpo.direccion;
   if (!direccion?.calle || !direccion?.numero || !direccion?.comuna || !direccion?.region) {
     return NextResponse.json({ error: 'Falta la dirección de envío (calle, número, comuna, región)' }, { status: 400 });
+  }
+
+  // El checkbox ya bloquea el submit en el formulario (ver
+  // formulario-checkout.tsx) — se revalida acá porque el frontend nunca es
+  // la autoridad real, mismo criterio que precio/stock/envío.
+  if (!cuerpo.consentimientoPrivacidad) {
+    return NextResponse.json({ error: 'Debes aceptar los Términos y la Política de Privacidad para continuar' }, { status: 400 });
   }
 
   // "Solicitar factura" es todo o nada: si viene marcado, los 3 datos de
@@ -140,6 +150,7 @@ export async function POST(req: NextRequest) {
       nota: cuerpo.nota?.trim() || null,
       factura,
       clienteUserId: user?.id ?? null,
+      consentimiento: true,
     });
     numeroPedido = pedido.numero_pedido;
     total = pedido.total;

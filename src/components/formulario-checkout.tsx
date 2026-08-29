@@ -29,6 +29,10 @@ export function FormularioCheckout() {
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [quiereFactura, setQuiereFactura] = useState(false);
+  // Desmarcada por defecto a propósito (Ley 21.719: consentimiento libre e
+  // inequívoco, nunca una casilla premarcada) — el submit queda bloqueado
+  // mientras no se acepte a propósito.
+  const [aceptaPrivacidad, setAceptaPrivacidad] = useState(false);
 
   const opcionElegida = opciones?.find((o) => o.metodo === metodoElegido) ?? null;
   const total = subtotal + (opcionElegida?.costo ?? 0);
@@ -87,6 +91,10 @@ export function FormularioCheckout() {
       setErrorEnvio("Elige una forma de envío antes de pagar.");
       return;
     }
+    if (!aceptaPrivacidad) {
+      setError("Debes aceptar los Términos y la Política de Privacidad para continuar.");
+      return;
+    }
     setError(null);
 
     const datos = new FormData(evento.currentTarget);
@@ -114,6 +122,7 @@ export function FormularioCheckout() {
           items: items.map((item) => ({ sku: item.sku, cantidad: item.cantidad })),
           metodoEnvio: metodoElegido,
           nota: datos.get("nota"),
+          consentimientoPrivacidad: aceptaPrivacidad,
           factura: quiereFactura
             ? {
                 razonSocial: datos.get("facturaRazonSocial"),
@@ -303,13 +312,34 @@ export function FormularioCheckout() {
           </AnimatePresence>
         </fieldset>
 
+        <label className="flex cursor-pointer items-start gap-2 text-sm text-ink-soft">
+          <input
+            type="checkbox"
+            required
+            checked={aceptaPrivacidad}
+            onChange={(e) => setAceptaPrivacidad(e.target.checked)}
+            className="mt-0.5 accent-accent"
+          />
+          <span>
+            Acepto los{" "}
+            <Link href="/terminos" target="_blank" className="text-accent hover:underline">
+              Términos y Condiciones
+            </Link>{" "}
+            y la{" "}
+            <Link href="/privacidad" target="_blank" className="text-accent hover:underline">
+              Política de Privacidad
+            </Link>
+            .
+          </span>
+        </label>
+
         {error && <p className="text-sm text-red-600">{error}</p>}
 
         <motion.button
           type="submit"
-          disabled={enviando || !metodoElegido}
+          disabled={enviando || !metodoElegido || !aceptaPrivacidad}
           whileTap={{ scale: 0.98 }}
-          title={!metodoElegido ? "Calcula y elige el envío primero" : undefined}
+          title={!metodoElegido ? "Calcula y elige el envío primero" : !aceptaPrivacidad ? "Acepta los términos y la política de privacidad" : undefined}
           className="mt-2 rounded-full bg-accent px-5 py-3.5 text-sm font-semibold text-white shadow-glow-accent transition-colors hover:bg-accent-deep disabled:cursor-not-allowed disabled:bg-border-strong disabled:text-ink-faint disabled:shadow-none"
         >
           {enviando ? "Redirigiendo a Flow…" : `Pagar ${formatoCLP.format(total)}`}
