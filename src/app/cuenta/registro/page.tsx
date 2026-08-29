@@ -4,6 +4,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { crearClienteNavegador } from "@/lib/supabase-browser";
+import { CampoPassword } from "@/components/campo-password";
+import { CODIGOS_PAIS, CODIGO_PAIS_POR_DEFECTO } from "@/lib/codigos-pais";
+import { traducirErrorAuth } from "@/lib/errores-auth";
 
 const CAMPO =
   "rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm outline-none transition-colors focus:border-accent";
@@ -20,7 +23,8 @@ export default function Registro() {
     const datos = new FormData(evento.currentTarget);
     const nombre = String(datos.get("nombre") || "").trim();
     const apellido = String(datos.get("apellido") || "").trim();
-    const telefono = String(datos.get("telefono") || "").trim();
+    const numeroTelefono = String(datos.get("telefono") || "").trim();
+    const telefono = numeroTelefono ? `${datos.get("codigoPais")} ${numeroTelefono}` : "";
     const email = String(datos.get("email") || "").trim();
     const password = String(datos.get("password") || "");
 
@@ -48,7 +52,7 @@ export default function Registro() {
       }
       router.push("/cuenta");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo crear la cuenta");
+      setError(err instanceof Error ? traducirErrorAuth(err.message) : "No se pudo crear la cuenta");
     } finally {
       setEnviando(false);
     }
@@ -70,9 +74,18 @@ export default function Registro() {
           <input name="nombre" required placeholder="Nombre" className={`${CAMPO} flex-1`} />
           <input name="apellido" required placeholder="Apellido" className={`${CAMPO} flex-1`} />
         </div>
-        <input name="telefono" placeholder="Teléfono (opcional)" className={CAMPO} />
+        <div className="flex gap-3">
+          <select name="codigoPais" defaultValue={CODIGO_PAIS_POR_DEFECTO} className={`${CAMPO} w-32 shrink-0`}>
+            {CODIGOS_PAIS.map((c) => (
+              <option key={c.codigo} value={c.codigo}>
+                {c.codigo} {c.pais}
+              </option>
+            ))}
+          </select>
+          <input name="telefono" placeholder="Teléfono (opcional)" className={`${CAMPO} flex-1`} />
+        </div>
         <input name="email" type="email" required placeholder="Correo electrónico" className={CAMPO} />
-        <input name="password" type="password" required minLength={6} placeholder="Contraseña (mínimo 6 caracteres)" className={CAMPO} />
+        <CampoPassword name="password" required minLength={6} placeholder="Contraseña (mínimo 6 caracteres)" className={CAMPO} />
 
         {error && <p className="text-sm text-red-600">{error}</p>}
 

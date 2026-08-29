@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { crearClienteNavegador } from "@/lib/supabase-browser";
+import { traducirErrorAuth } from "@/lib/errores-auth";
 
 const CAMPO =
   "rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm outline-none transition-colors focus:border-accent";
@@ -27,7 +28,7 @@ export default function Recuperar() {
       if (errorRecuperar) throw errorRecuperar;
       setEnviado(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo enviar el correo de recuperación");
+      setError(err instanceof Error ? traducirErrorAuth(err.message) : "No se pudo enviar el correo de recuperación");
     } finally {
       setEnviando(false);
     }

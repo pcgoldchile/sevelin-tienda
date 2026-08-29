@@ -3,6 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { crearClienteNavegador } from "@/lib/supabase-browser";
+import { CampoPassword } from "@/components/campo-password";
+import { traducirErrorAuth } from "@/lib/errores-auth";
 
 const CAMPO =
   "rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm outline-none transition-colors focus:border-accent";
@@ -34,7 +36,7 @@ export default function Restablecer() {
       if (errorActualizar) throw errorActualizar;
       router.push("/cuenta");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo actualizar la contraseña");
+      setError(err instanceof Error ? traducirErrorAuth(err.message) : "No se pudo actualizar la contraseña");
     } finally {
       setEnviando(false);
     }
@@ -45,8 +47,8 @@ export default function Restablecer() {
       <h1 className="text-2xl font-semibold tracking-tight text-ink">Elegir nueva contraseña</h1>
 
       <form onSubmit={manejarSubmit} className="mt-6 flex flex-col gap-3">
-        <input name="password" type="password" required minLength={6} placeholder="Nueva contraseña" className={CAMPO} />
-        <input name="confirmar" type="password" required minLength={6} placeholder="Confirmar contraseña" className={CAMPO} />
+        <CampoPassword name="password" required minLength={6} placeholder="Nueva contraseña" className={CAMPO} />
+        <CampoPassword name="confirmar" required minLength={6} placeholder="Confirmar contraseña" className={CAMPO} />
 
         {error && <p className="text-sm text-red-600">{error}</p>}
 

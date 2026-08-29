@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState, type FormEvent } from "react";
 import { crearClienteNavegador } from "@/lib/supabase-browser";
+import { CampoPassword } from "@/components/campo-password";
+import { traducirErrorAuth } from "@/lib/errores-auth";
 
 const CAMPO =
   "rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm outline-none transition-colors focus:border-accent";
@@ -31,7 +33,7 @@ function FormularioIngreso() {
       router.push("/cuenta");
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo iniciar sesión");
+      setError(err instanceof Error ? traducirErrorAuth(err.message) : "No se pudo iniciar sesión");
     } finally {
       setEnviando(false);
     }
@@ -56,7 +58,7 @@ function FormularioIngreso() {
 
       <form onSubmit={manejarSubmit} className="mt-6 flex flex-col gap-3">
         <input name="email" type="email" required placeholder="Correo electrónico" className={CAMPO} />
-        <input name="password" type="password" required placeholder="Contraseña" className={CAMPO} />
+        <CampoPassword name="password" required placeholder="Contraseña" className={CAMPO} />
 
         {error && <p className="text-sm text-red-600">{error}</p>}
 
