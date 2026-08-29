@@ -88,7 +88,8 @@ Next.js 16 (App Router) · TypeScript · Tailwind v4 · `@supabase/supabase-js`.
   exija la ley" por el criterio real del SII. Dos correcciones de hecho: se declaraba una cesión a
   Chilexpress **que hoy no ocurre** (solo se cotiza tarifa por comuna, sin datos personales), y el
   bloque de contacto desaparecía entero si faltaba `NEXT_PUBLIC_PRIVACIDAD_EMAIL` — ahora tiene
-  `contacto@sevelin.cl` como valor por defecto en el código, la variable solo lo sobreescribe.
+  `sevelin.contacto@gmail.com` (Gmail real creado el 29-08-2026 para este fin) como valor por
+  defecto en el código, la variable solo lo sobreescribe.
   Documentos internos nuevos (no se publican): `docs/POLITICA-SEGURIDAD-DATOS.md` (mapeo requisito →
   control → evidencia del 14 quinquies, decisiones de diseño del 14 quáter, y la justificación
   escrita de por qué **no** corresponde EIPD) y `docs/PROCEDIMIENTO-INCIDENTES-DATOS.md` (los 9
@@ -243,17 +244,17 @@ Next.js 16 (App Router) · TypeScript · Tailwind v4 · `@supabase/supabase-js`.
 ## Pendiente (real, verificado al 29-08-2026 — no repetir lo ya hecho)
 
 **Ley 21.719 — lo que queda es operativo, no de código (v15, 29-08-2026):**
-1. **Verificar que el buzón `contacto@sevelin.cl` exista y se lea de verdad.** Es el canal que el
-   Art. 11 exige para recibir solicitudes sobre datos personales, y ahora está publicado en
-   `/privacidad`. El dominio `sevelin.cl` todavía apunta a Tiendanube (pendiente #12), así que hay
-   que confirmar que el correo llega. **Un canal publicado que nadie lee es peor que no tenerlo.**
-   Si el buzón no existe, la salida rápida es apuntar la política a un correo que sí se lea (ver
-   #2), no dejarla apuntando a uno muerto.
-2. **`NEXT_PUBLIC_PRIVACIDAD_EMAIL` NO está configurada en Vercel** (confirmado por el usuario el
-   29-08-2026). No es un bug ni bloquea nada: desde v15 el código trae `contacto@sevelin.cl` como
-   valor por defecto, así que producción muestra ese correo igual — justamente para que la página
-   nunca quede sin canal de contacto. Solo hay que agregar la variable si se quiere publicar una
-   dirección distinta (por ejemplo, seguir con la de Gmail mientras el dominio no migre).
+1. **Resuelto en parte:** el correo de contacto de `/privacidad` pasó de `contacto@sevelin.cl`
+   (dirección de dominio que nunca se confirmó si existía) a **`sevelin.contacto@gmail.com`**, Gmail
+   real creado el 29-08-2026 específicamente para esto — ya es el valor por defecto en el código
+   (`src/app/privacidad/page.tsx`) y en `.env.local`. **Pendiente real:** confirmar que
+   `NEXT_PUBLIC_PRIVACIDAD_EMAIL` en Vercel (producción) no siga apuntando a la dirección vieja
+   (`pcgoldchile@gmail.com`) — si esa variable sigue puesta ahí, pisa el valor nuevo del código y la
+   página en producción sigue mostrando el correo anterior hasta que se actualice o se borre esa
+   variable en el dashboard de Vercel.
+2. **Este mismo Gmail (`sevelin.contacto@gmail.com`) es también el que se va a usar para crear la
+   cuenta de Resend** (correo transaccional — confirmación de pedido / cancelación, en progreso,
+   ver sesión 29-08-2026 sobre notificaciones).
 3. **Prueba de restauración de respaldo, documentada.** La letra c) del Art. 14 quinquies exige la
    *capacidad* de restaurar, y una capacidad nunca probada no se puede acreditar. Restaurar un
    respaldo de Supabase a un proyecto de prueba, verificar que las tablas vuelven completas, y

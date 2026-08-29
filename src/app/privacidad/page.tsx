@@ -10,7 +10,7 @@ export const metadata = {
  * faltaba en Vercel, el bloque de contacto entero desaparecía del render —
  * es decir, la página quedaba sin ningún canal. Ahora la variable solo
  * permite cambiarlo sin tocar código; si no está, cae al valor real. */
-const CORREO_PRIVACIDAD = process.env.NEXT_PUBLIC_PRIVACIDAD_EMAIL || "contacto@sevelin.cl";
+const CORREO_PRIVACIDAD = process.env.NEXT_PUBLIC_PRIVACIDAD_EMAIL || "sevelin.contacto@gmail.com";
 const WHATSAPP = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER;
 
 /* Contenido descriptivo del tratamiento de datos REAL que hace la tienda.
