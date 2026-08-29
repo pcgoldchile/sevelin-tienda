@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { obtenerProductoPorSku } from "@/lib/catalogo";
 import { formatoCLP } from "@/lib/formato";
+import { sanitizarDescripcionHtml } from "@/lib/sanitizar-html";
 import { GaleriaProducto } from "@/components/galeria-producto";
 import { AccionesProducto } from "@/components/acciones-producto";
 
@@ -53,7 +54,16 @@ export default async function FichaProducto({ params }: PropsPagina) {
           <span className="precio-gamer text-3xl text-ink">{formatoCLP.format(producto.precio_web)}</span>
 
           {producto.descripcion_web && (
-            <p className="whitespace-pre-line text-sm leading-relaxed text-ink-soft">{producto.descripcion_web}</p>
+            // El editor del POS guarda HTML (Quill: negrita, cursiva,
+            // listas, links) — se sanitiza antes de inyectarlo. Las
+            // descripciones de ANTES de ese editor eran texto plano, por
+            // eso whitespace-pre-line sigue puesto: no tiene costo para el
+            // HTML nuevo (ya trae sus propios <p>) y evita que las
+            // descripciones viejas pierdan sus saltos de línea.
+            <div
+              className="whitespace-pre-line text-sm leading-relaxed text-ink-soft [&_a]:text-accent [&_a]:underline [&_a:hover]:text-accent-deep [&_ol]:list-decimal [&_ol]:pl-5 [&_p+p]:mt-3 [&_strong]:font-semibold [&_strong]:text-ink [&_ul]:list-disc [&_ul]:pl-5"
+              dangerouslySetInnerHTML={{ __html: sanitizarDescripcionHtml(producto.descripcion_web) }}
+            />
           )}
 
           <div className="mt-2">
