@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, type FormEvent } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { formatoCLP } from "@/lib/formato";
@@ -8,6 +9,7 @@ import { useCarrito } from "@/context/carrito-context";
 import { useSesion } from "@/context/sesion-context";
 import { CODIGOS_PAIS, CODIGO_PAIS_POR_DEFECTO } from "@/lib/codigos-pais";
 import { REGIONES_CHILE } from "@/lib/regiones-chile";
+import { COMUNAS_POR_REGION } from "@/lib/comunas-chile";
 import type { OpcionEnvio } from "@/lib/envio";
 
 const CAMPO =
@@ -29,6 +31,22 @@ export function FormularioCheckout() {
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [quiereFactura, setQuiereFactura] = useState(false);
+  // La comuna depende de la región elegida (ver src/lib/comunas-chile.ts) —
+  // se resetea si la región cambia, para no dejar seleccionada una comuna
+  // que ya no corresponde.
+  const [regionElegida, setRegionElegida] = useState("");
+  const [comunaElegida, setComunaElegida] = useState("");
+  const comunasDisponibles = regionElegida ? COMUNAS_POR_REGION[regionElegida as keyof typeof COMUNAS_POR_REGION] ?? [] : [];
+  // Advertencia visible, no bloqueante (ver punto 4 del pedido): un celular
+  // chileno tiene 9 dígitos, pero el dato se manda tal cual lo escribió el
+  // cliente aunque supere ese largo.
+  const [codigoPaisElegido, setCodigoPaisElegido] = useState(CODIGO_PAIS_POR_DEFECTO);
+  const [telefonoTexto, setTelefonoTexto] = useState("");
+  // El teléfono es un input no controlado (defaultValue) — mientras el
+  // cliente no lo toque, la advertencia se calcula sobre el valor
+  // precargado del perfil; en cuanto escribe algo, `telefonoTexto` manda.
+  const telefonoEfectivo = telefonoTexto || perfil?.telefono || "";
+  const telefonoLargoInesperado = codigoPaisElegido === "+56" && telefonoEfectivo.replace(/\D/g, "").length > 9;
   // Desmarcada por defecto a propósito (Ley 21.719: consentimiento libre e
   // inequívoco, nunca una casilla premarcada) — el submit queda bloqueado
   // mientras no se acepte a propósito.
@@ -188,7 +206,12 @@ export function FormularioCheckout() {
             className={CAMPO}
           />
           <div className="flex gap-3">
-            <select name="codigoPais" defaultValue={CODIGO_PAIS_POR_DEFECTO} className={`${CAMPO} w-32 shrink-0`}>
+            <select
+              name="codigoPais"
+              defaultValue={CODIGO_PAIS_POR_DEFECTO}
+              onChange={(e) => setCodigoPaisElegido(e.target.value)}
+              className={`${CAMPO} w-32 shrink-0`}
+            >
               {CODIGOS_PAIS.map((c) => (
                 <option key={c.codigo} value={c.codigo}>
                   {c.codigo} {c.pais}
@@ -200,10 +223,16 @@ export function FormularioCheckout() {
               name="telefono"
               required
               defaultValue={perfil?.telefono || ""}
+              onChange={(e) => setTelefonoTexto(e.target.value)}
               placeholder="Número de teléfono"
               className={`${CAMPO} flex-1`}
             />
           </div>
+          {/* Solo avisa, no bloquea: el dato se manda tal cual lo escribió
+              el cliente aunque supere los 9 dígitos esperados para +56. */}
+          {telefonoLargoInesperado && (
+            <p className="text-xs text-accent">Ingresaste más de 9 dígitos — revisa que el número esté correcto.</p>
+          )}
         </fieldset>
 
         <fieldset className="flex flex-col gap-3">
@@ -212,14 +241,43 @@ export function FormularioCheckout() {
             <input name="calle" required placeholder="Calle" className={`${CAMPO} flex-[2]`} onChange={invalidarEnvio} />
             <input name="numero" required placeholder="Número" className={`${CAMPO} flex-1`} onChange={invalidarEnvio} />
           </div>
-          <input name="comuna" required placeholder="Comuna" className={CAMPO} onChange={invalidarEnvio} />
-          <select name="region" required defaultValue="" className={CAMPO} onChange={invalidarEnvio}>
+          <select
+            name="region"
+            required
+            value={regionElegida}
+            className={CAMPO}
+            onChange={(e) => {
+              setRegionElegida(e.target.value);
+              setComunaElegida("");
+              invalidarEnvio();
+            }}
+          >
             <option value="" disabled>
               Región
             </option>
             {REGIONES_CHILE.map((region) => (
               <option key={region} value={region}>
                 {region}
+              </option>
+            ))}
+          </select>
+          <select
+            name="comuna"
+            required
+            value={comunaElegida}
+            disabled={!regionElegida}
+            className={`${CAMPO} disabled:cursor-not-allowed disabled:opacity-50`}
+            onChange={(e) => {
+              setComunaElegida(e.target.value);
+              invalidarEnvio();
+            }}
+          >
+            <option value="" disabled>
+              {regionElegida ? "Comuna" : "Elige una región primero"}
+            </option>
+            {comunasDisponibles.map((comuna) => (
+              <option key={comuna} value={comuna}>
+                {comuna}
               </option>
             ))}
           </select>
@@ -348,10 +406,17 @@ export function FormularioCheckout() {
 
       <aside className="h-fit rounded-2xl bg-surface p-5 shadow-elevated-lg sm:col-span-2">
         <h2 className="font-display text-sm font-semibold text-ink">Tu pedido</h2>
-        <ul className="mt-3 flex flex-col gap-2">
+        <ul className="mt-3 flex flex-col gap-3">
           {items.map((item) => (
-            <li key={item.sku} className="flex justify-between text-sm text-ink-soft">
-              <span>
+            <li key={item.sku} className="flex items-center gap-3 text-sm text-ink-soft">
+              <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-surface-sunken">
+                {item.imagen ? (
+                  <Image src={item.imagen} alt={item.nombre} fill className="object-cover" sizes="48px" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-[9px] text-ink-faint">Sin foto</div>
+                )}
+              </div>
+              <span className="flex-1">
                 {item.nombre} × {item.cantidad}
               </span>
               <span className="tabular-nums">{formatoCLP.format(item.precio_web * item.cantidad)}</span>

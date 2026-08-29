@@ -60,7 +60,7 @@ export function TarjetaProducto({ producto }: { producto: ProductoWeb }) {
             src={producto.imagen_urls[0]}
             alt={producto.nombre}
             fill
-            className="object-cover transition-transform duration-300 group-hover:scale-105"
+            className="object-cover"
             sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
           />
         ) : (
@@ -75,7 +75,7 @@ export function TarjetaProducto({ producto }: { producto: ProductoWeb }) {
         >
           {producto.nombre}
         </Link>
-        <span className="precio-gamer mt-1 inline-flex w-fit items-center rounded-md border border-primary/40 bg-primary/5 px-2 py-0.5 text-lg text-primary shadow-[0_0_14px_-6px_rgba(0,240,255,0.7)] transition-colors duration-200 group-hover:border-primary group-hover:bg-primary/10">
+        <span className="precio-gamer mt-1 text-2xl text-primary texto-glow-primary">
           {formatoCLP.format(producto.precio_web)}
         </span>
 

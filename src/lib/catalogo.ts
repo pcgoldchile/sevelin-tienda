@@ -34,6 +34,27 @@ export async function obtenerProductoPorSku(sku: string): Promise<ProductoWeb | 
 }
 
 /**
+ * Productos puntuales por SKU exacto, para los banners de categoría del home
+ * (ver banners-categoria.tsx) — no es un buscador genérico, solo resuelve la
+ * foto real de 3 productos fijos elegidos a mano. Devuelve un mapa por SKU
+ * (no un array) para que el llamador pueda hacer `mapa[sku]` sin depender del
+ * orden que devuelva Supabase.
+ */
+export async function obtenerProductosPorSku(skus: string[]): Promise<Record<string, ProductoWeb>> {
+  const { data, error } = await supabaseWeb
+    .from('productos_web')
+    .select('*')
+    .in('sku', skus)
+    .eq('publicado_web', true)
+    .gt('stock_web', 0);
+
+  if (error) throw new Error(error.message);
+  const porSku: Record<string, ProductoWeb> = {};
+  for (const producto of data || []) porSku[producto.sku] = producto;
+  return porSku;
+}
+
+/**
  * Categorías distintas del catálogo publicado, para el filtro del header
  * (ver README-ECOMMERCE-SEVELIN.md sección 7 — no hay subcategoría en el
  * schema, así que esto es un filtro plano, no un mega-menú jerárquico).

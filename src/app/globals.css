@@ -93,14 +93,25 @@ h4 {
  * acá como utilidades compartidas en vez de repetir keyframes por archivo.
  * ------------------------------------------------------------------- */
 
-/* Panel de cristal translúcido con borde de neón — SIN animación continua
-   (versión anterior giraba un conic-gradient sin parar; se sintió poco
-   sofisticada). Ahora el borde es un degradado diagonal fijo que solo
-   "recorre" el marco al interactuar (hover/focus), vía background-position,
-   más una intensificación de opacidad y glow — sutil en reposo, vivo al
-   tocar. El borde real es un pseudo-elemento con 1.5px simulados por mask,
-   así el interior mantiene el backdrop-blur limpio sin que el gradiente se
-   filtre al contenido. */
+/* Panel de cristal translúcido con borde de neón — quieto en reposo (nada
+   gira solo, ver feedback anterior), y SOLO al pasar el mouse el borde
+   cobra vida: un conic-gradient cian/magenta que rota alrededor del
+   perímetro mientras dura el hover, más un glow que se intensifica. Al
+   salir del hover, se detiene y vuelve a quedar estático. El borde real es
+   un pseudo-elemento con 1.5px simulados por mask, así el interior mantiene
+   el backdrop-blur limpio sin que el gradiente se filtre al contenido. */
+@property --angulo {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes borde-neon-giro {
+  to {
+    --angulo: 360deg;
+  }
+}
+
 .panel-hud {
   position: relative;
   background: color-mix(in oklab, var(--color-surface) 78%, transparent);
@@ -117,15 +128,20 @@ h4 {
   inset: 0;
   border-radius: inherit;
   padding: 1.5px;
-  background: linear-gradient(115deg, var(--color-primary) 0%, var(--color-accent) 50%, var(--color-primary-soft) 100%);
-  background-size: 200% 200%;
-  background-position: 0% 50%;
+  background: conic-gradient(
+    from var(--angulo, 0deg),
+    var(--color-primary),
+    var(--color-accent),
+    var(--color-primary-soft),
+    var(--color-accent),
+    var(--color-primary)
+  );
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   mask-composite: exclude;
-  opacity: 0.4;
-  transition: opacity 0.4s ease, background-position 1s cubic-bezier(0.22, 1, 0.36, 1);
+  opacity: 0.35;
+  transition: opacity 0.35s ease;
   pointer-events: none;
   z-index: 1;
 }
@@ -138,7 +154,17 @@ h4 {
 .panel-hud:hover::before,
 .panel-hud[data-activo="true"]::before {
   opacity: 1;
-  background-position: 100% 50%;
+  animation: borde-neon-giro 2.4s linear infinite;
+}
+
+/* prefers-reduced-motion: el borde igual se intensifica al hover (avisa que
+   la tarjeta es interactiva) pero sin el giro — solo un fade, como pide
+   MotionConfig reducedMotion="user" en layout.tsx para el resto de la app. */
+@media (prefers-reduced-motion: reduce) {
+  .panel-hud:hover::before,
+  .panel-hud[data-activo="true"]::before {
+    animation: none;
+  }
 }
 
 .panel-hud > * {
@@ -162,10 +188,4 @@ h4 {
   font-weight: 700;
   letter-spacing: 0.02em;
   font-variant-numeric: tabular-nums;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .panel-hud::before {
-    transition: opacity 0.2s ease;
-  }
 }
