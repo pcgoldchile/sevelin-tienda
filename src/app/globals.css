@@ -53,6 +53,7 @@
   --color-success-soft: var(--color-success-soft);
   --font-display: var(--font-orbitron), ui-sans-serif, system-ui, sans-serif;
   --font-sans: var(--font-plex), ui-sans-serif, system-ui, sans-serif;
+  --font-precio: var(--font-rajdhani), ui-sans-serif, system-ui, sans-serif;
   --shadow-elevated-sm: var(--shadow-sm);
   --shadow-elevated-md: var(--shadow-md);
   --shadow-elevated-lg: var(--shadow-lg);
@@ -92,22 +93,14 @@ h4 {
  * acá como utilidades compartidas en vez de repetir keyframes por archivo.
  * ------------------------------------------------------------------- */
 
-@keyframes borde-neon-giro {
-  to {
-    --angulo: 360deg;
-  }
-}
-
-@property --angulo {
-  syntax: "<angle>";
-  initial-value: 0deg;
-  inherits: false;
-}
-
-/* Panel de cristal translúcido con borde de neón animado (conic-gradient
-   que gira vía @property --angulo). El borde real es un pseudo-elemento con
-   1px de padding simulado vía mask, así el interior queda con backdrop-blur
-   limpio sin que el gradiente se filtre al contenido. */
+/* Panel de cristal translúcido con borde de neón — SIN animación continua
+   (versión anterior giraba un conic-gradient sin parar; se sintió poco
+   sofisticada). Ahora el borde es un degradado diagonal fijo que solo
+   "recorre" el marco al interactuar (hover/focus), vía background-position,
+   más una intensificación de opacidad y glow — sutil en reposo, vivo al
+   tocar. El borde real es un pseudo-elemento con 1.5px simulados por mask,
+   así el interior mantiene el backdrop-blur limpio sin que el gradiente se
+   filtre al contenido. */
 .panel-hud {
   position: relative;
   background: color-mix(in oklab, var(--color-surface) 78%, transparent);
@@ -115,6 +108,7 @@ h4 {
   -webkit-backdrop-filter: blur(16px);
   border-radius: inherit;
   isolation: isolate;
+  transition: box-shadow 0.4s ease;
 }
 
 .panel-hud::before {
@@ -123,28 +117,28 @@ h4 {
   inset: 0;
   border-radius: inherit;
   padding: 1.5px;
-  background: conic-gradient(
-    from var(--angulo, 0deg),
-    var(--color-primary),
-    var(--color-accent),
-    var(--color-primary-soft),
-    var(--color-accent),
-    var(--color-primary)
-  );
+  background: linear-gradient(115deg, var(--color-primary) 0%, var(--color-accent) 50%, var(--color-primary-soft) 100%);
+  background-size: 200% 200%;
+  background-position: 0% 50%;
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   mask-composite: exclude;
-  animation: borde-neon-giro 6s linear infinite;
-  opacity: 0.55;
-  transition: opacity 0.25s ease;
+  opacity: 0.4;
+  transition: opacity 0.4s ease, background-position 1s cubic-bezier(0.22, 1, 0.36, 1);
   pointer-events: none;
   z-index: 1;
+}
+
+.panel-hud:hover,
+.panel-hud[data-activo="true"] {
+  box-shadow: var(--shadow-glow-primary);
 }
 
 .panel-hud:hover::before,
 .panel-hud[data-activo="true"]::before {
   opacity: 1;
+  background-position: 100% 50%;
 }
 
 .panel-hud > * {
@@ -160,8 +154,18 @@ h4 {
   text-shadow: 0 0 12px color-mix(in oklab, var(--color-accent) 65%, transparent), 0 0 32px color-mix(in oklab, var(--color-accent) 35%, transparent);
 }
 
+/* Precio estilo HUD/gamer: tipografía Rajdhani (más clara que Orbitron para
+   números), chip con borde de neón fijo — sin depender de .panel-hud, así
+   no hereda su glow de hover pensado para tarjetas completas. */
+.precio-gamer {
+  font-family: var(--font-precio);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .panel-hud::before {
-    animation: none;
+    transition: opacity 0.2s ease;
   }
 }

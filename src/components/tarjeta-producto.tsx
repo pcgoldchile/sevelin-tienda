@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { Check, Minus, Plus } from "lucide-react";
 import confetti from "canvas-confetti";
 import { formatoCLP } from "@/lib/formato";
@@ -32,8 +32,25 @@ function dispararConfetti(origen: { x: number; y: number }) {
 export function TarjetaProducto({ producto }: { producto: ProductoWeb }) {
   const { agregarItem } = useCarrito();
   const { mostrarToast } = useToast();
-  const [cantidad, setCantidad] = useState(1);
+  // Cantidad como texto, no número: así se puede escribir libremente (ej.
+  // borrar y tipear "15") sin que cada tecla la fuerce a un valor válido.
+  // El tope real de stock solo se aplica al presionar "Agregar" (abajo),
+  // no mientras se escribe.
+  const [cantidadTexto, setCantidadTexto] = useState("1");
   const [agregado, setAgregado] = useState(false);
+  const [avisoStock, setAvisoStock] = useState<string | null>(null);
+
+  const sinStock = producto.stock_web <= 0;
+
+  function cantidadEscrita() {
+    return Math.max(1, parseInt(cantidadTexto, 10) || 1);
+  }
+
+  function ajustarCantidad(delta: number) {
+    const siguiente =
+      delta > 0 ? Math.min(producto.stock_web, cantidadEscrita() + delta) : Math.max(1, cantidadEscrita() - 1);
+    setCantidadTexto(String(siguiente));
+  }
 
   return (
     <TiltCard className="group flex flex-col overflow-hidden transition-shadow duration-200">
@@ -58,7 +75,7 @@ export function TarjetaProducto({ producto }: { producto: ProductoWeb }) {
         >
           {producto.nombre}
         </Link>
-        <span className="mt-1 font-display text-base font-semibold text-primary-soft tabular-nums">
+        <span className="precio-gamer mt-1 inline-flex w-fit items-center rounded-md border border-primary/40 bg-primary/5 px-2 py-0.5 text-lg text-primary shadow-[0_0_14px_-6px_rgba(0,240,255,0.7)] transition-colors duration-200 group-hover:border-primary group-hover:bg-primary/10">
           {formatoCLP.format(producto.precio_web)}
         </span>
 
@@ -66,58 +83,101 @@ export function TarjetaProducto({ producto }: { producto: ProductoWeb }) {
             cuánto texto haya arriba — así todas las tarjetas de una misma
             fila quedan con el selector de cantidad y "Agregar" a la misma
             altura, tengan nombre corto o largo. */}
-        <div className="mt-auto flex items-center gap-2 pt-3">
-          <div className="flex items-center rounded-md border border-border">
-            <button
+        <div className="mt-auto flex flex-col gap-1.5 pt-3">
+          <div className="flex items-center gap-2">
+            <div className="flex items-center rounded-md border border-border">
+              <button
+                type="button"
+                onClick={() => ajustarCantidad(-1)}
+                disabled={sinStock}
+                className="px-2 py-1 text-ink-soft transition-colors hover:text-primary disabled:pointer-events-none disabled:opacity-40"
+                aria-label="Restar cantidad"
+              >
+                <Minus className="h-3.5 w-3.5" aria-hidden />
+              </button>
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                value={cantidadTexto}
+                disabled={sinStock}
+                onChange={(e) => setCantidadTexto(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                onBlur={() => {
+                  if (!cantidadTexto || parseInt(cantidadTexto, 10) < 1) setCantidadTexto("1");
+                }}
+                className="w-9 bg-transparent text-center text-sm tabular-nums text-ink outline-none disabled:opacity-40"
+                aria-label="Cantidad a agregar"
+              />
+              <button
+                type="button"
+                onClick={() => ajustarCantidad(1)}
+                disabled={sinStock}
+                className="px-2 py-1 text-ink-soft transition-colors hover:text-primary disabled:pointer-events-none disabled:opacity-40"
+                aria-label="Sumar cantidad"
+              >
+                <Plus className="h-3.5 w-3.5" aria-hidden />
+              </button>
+            </div>
+            <motion.button
               type="button"
-              onClick={() => setCantidad((c) => Math.max(1, c - 1))}
-              className="px-2 py-1 text-ink-soft transition-colors hover:text-primary"
-              aria-label="Restar cantidad"
+              whileTap={{ scale: 0.95 }}
+              disabled={sinStock}
+              onClick={(e) => {
+                const cantidadDeseada = cantidadEscrita();
+                const cantidadFinal = Math.min(cantidadDeseada, producto.stock_web);
+
+                const rect = e.currentTarget.getBoundingClientRect();
+                dispararConfetti({
+                  x: (rect.left + rect.width / 2) / window.innerWidth,
+                  y: (rect.top + rect.height / 2) / window.innerHeight,
+                });
+                agregarItem(producto, cantidadFinal);
+                mostrarToast({
+                  imagen: producto.imagen_urls?.[0] ?? null,
+                  nombre: producto.nombre,
+                  precioUnitario: producto.precio_web,
+                  cantidad: cantidadFinal,
+                });
+
+                setAvisoStock(
+                  cantidadFinal < cantidadDeseada
+                    ? `No había ${cantidadDeseada} disponibles — se agregaron ${cantidadFinal}.`
+                    : null
+                );
+                setCantidadTexto("1");
+                setAgregado(true);
+                setTimeout(() => {
+                  setAgregado(false);
+                  setAvisoStock(null);
+                }, 2800);
+              }}
+              className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-semibold uppercase tracking-wide transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                agregado ? "bg-success text-surface-sunken" : "bg-primary text-surface-sunken hover:bg-primary-soft"
+              }`}
             >
-              <Minus className="h-3.5 w-3.5" aria-hidden />
-            </button>
-            <span className="min-w-6 text-center text-sm tabular-nums">{cantidad}</span>
-            <button
-              type="button"
-              onClick={() => setCantidad((c) => Math.min(producto.stock_web, c + 1))}
-              className="px-2 py-1 text-ink-soft transition-colors hover:text-primary"
-              aria-label="Sumar cantidad"
-            >
-              <Plus className="h-3.5 w-3.5" aria-hidden />
-            </button>
+              {sinStock ? "Sin stock" : agregado ? (
+                <>
+                  <Check className="h-3.5 w-3.5" aria-hidden /> Listo
+                </>
+              ) : (
+                "Agregar"
+              )}
+            </motion.button>
           </div>
-          <motion.button
-            type="button"
-            whileTap={{ scale: 0.95 }}
-            onClick={(e) => {
-              const rect = e.currentTarget.getBoundingClientRect();
-              dispararConfetti({
-                x: (rect.left + rect.width / 2) / window.innerWidth,
-                y: (rect.top + rect.height / 2) / window.innerHeight,
-              });
-              agregarItem(producto, cantidad);
-              mostrarToast({
-                imagen: producto.imagen_urls?.[0] ?? null,
-                nombre: producto.nombre,
-                precioUnitario: producto.precio_web,
-                cantidad,
-              });
-              setCantidad(1);
-              setAgregado(true);
-              setTimeout(() => setAgregado(false), 1500);
-            }}
-            className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-semibold uppercase tracking-wide transition-colors ${
-              agregado ? "bg-success text-surface-sunken" : "bg-primary text-surface-sunken hover:bg-primary-soft"
-            }`}
-          >
-            {agregado ? (
-              <>
-                <Check className="h-3.5 w-3.5" aria-hidden /> Listo
-              </>
-            ) : (
-              "Agregar"
+
+          <AnimatePresence>
+            {avisoStock && (
+              <motion.p
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.2 }}
+                className="text-xs leading-snug text-accent"
+              >
+                {avisoStock}
+              </motion.p>
             )}
-          </motion.button>
+          </AnimatePresence>
         </div>
       </div>
     </TiltCard>

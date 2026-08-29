@@ -144,24 +144,33 @@ export function Header({ categorias }: { categorias: string[] }) {
               </button>
               <AnimatePresence>
                 {menuCategoriasAbierto && (
-                  <motion.ul
+                  <motion.div
                     initial={{ opacity: 0, y: -6 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -6 }}
                     transition={{ duration: 0.18, ease: EASE_OUT }}
-                    className="panel-hud absolute left-0 top-full z-10 mt-2 w-56 rounded-xl py-2"
+                    className="absolute left-0 top-full z-10 mt-2 w-[22rem] overflow-hidden rounded-xl border border-border bg-surface/97 shadow-2xl backdrop-blur-xl"
                   >
-                    {categoriasResto.map((categoria) => (
-                      <li key={categoria}>
-                        <Link
-                          href={`/productos?categoria=${encodeURIComponent(categoria)}`}
-                          className="block px-4 py-1.5 text-sm text-ink-soft transition-colors hover:bg-surface-sunken hover:text-primary"
-                        >
-                          {categoria}
-                        </Link>
-                      </li>
-                    ))}
-                  </motion.ul>
+                    {/* Filo superior de acento — reemplaza el borde de neón
+                        completo de .panel-hud, que acá se sentía recargado
+                        para un menú funcional en vez de una tarjeta. */}
+                    <div aria-hidden className="h-0.5 w-full bg-gradient-to-r from-primary via-accent to-primary-soft" />
+                    <p className="px-4 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-wider text-ink-faint">
+                      Otras categorías
+                    </p>
+                    <ul className="grid grid-cols-2 gap-x-1 gap-y-0.5 p-2">
+                      {categoriasResto.map((categoria) => (
+                        <li key={categoria}>
+                          <Link
+                            href={`/productos?categoria=${encodeURIComponent(categoria)}`}
+                            className="block rounded-md border-l-2 border-transparent px-3 py-2 text-sm text-ink-soft transition-colors hover:border-primary hover:bg-primary/10 hover:text-primary"
+                          >
+                            {categoria}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </motion.div>
                 )}
               </AnimatePresence>
             </div>

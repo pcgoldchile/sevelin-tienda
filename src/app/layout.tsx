@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Sans, Orbitron } from "next/font/google";
+import { IBM_Plex_Sans, Orbitron, Rajdhani } from "next/font/google";
 import { MotionConfig } from "framer-motion";
 import "./globals.css";
 import { listarCategorias } from "@/lib/catalogo";
@@ -27,6 +27,14 @@ const plexSans = IBM_Plex_Sans({
   weight: ["400", "500", "600", "700"],
 });
 
+// Rajdhani: números más claros al ojo que Orbitron para precios (misma
+// familia "gamer/HUD" pero legible en tamaños chicos, estilo esports).
+const rajdhani = Rajdhani({
+  variable: "--font-rajdhani",
+  subsets: ["latin"],
+  weight: ["600", "700"],
+});
+
 export const metadata: Metadata = {
   title: "Sevelin",
   description: "Tienda online de Sevelin (Arica)",
@@ -45,7 +53,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="es"
-      className={`${orbitron.variable} ${plexSans.variable} h-full antialiased`}
+      className={`${orbitron.variable} ${plexSans.variable} ${rajdhani.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-paper text-ink">
         {/* Enlace de salto para teclado — invisible hasta que recibe foco.
