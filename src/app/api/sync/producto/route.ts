@@ -25,6 +25,27 @@ interface WebhookPayload {
   old_record: ProductoPOS | null;
 }
 
+/**
+ * Slug de respaldo para productos sin SKU/código de barras — el POS los
+ * permite (venta rápida sin catalogar), pero productos_web.sku es NOT NULL
+ * y es lo único que se usa como URL de producto (nunca se muestra al
+ * cliente, ver CLAUDE.md). Se arma con el nombre + el id del POS: el id es
+ * la única pieza garantizada única (UNIQUE en producto_pos_id), así que
+ * dos productos sin SKU nunca pueden chocar aunque tengan el mismo nombre.
+ * Si el producto más adelante SÍ recibe un SKU real en el POS, la próxima
+ * sincronización lo reemplaza por ese SKU real (cambia la URL — aceptado,
+ * ver docs/SNAPSHOT.md).
+ */
+function slugDeRespaldo(nombre: string, productoPosId: number): string {
+  const base = (nombre || 'producto')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // quita tildes
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60);
+  return `${base || 'producto'}-${productoPosId}`;
+}
+
 function verificarSecreto(req: NextRequest): boolean {
   const secreto = process.env.SYNC_SECRET;
   if (!secreto) return false; // sin secreto configurado, se rechaza todo por defecto
@@ -60,16 +81,13 @@ export async function POST(req: NextRequest) {
   const producto = payload.record;
   if (!producto) return NextResponse.json({ error: 'Falta el producto en el payload' }, { status: 400 });
 
-  // productos_web.sku es NOT NULL (ver README sección 4.2); el POS permite
-  // sku vacío. Sin SKU no hay forma de publicarlo en la tienda todavía: se
-  // avisa en vez de fallar silenciosamente o inventar un valor.
-  const sku = (producto.sku || '').trim();
-  if (!sku) {
-    return NextResponse.json(
-      { ok: false, motivo: 'sin_sku', mensaje: 'El producto no tiene SKU: no se puede sincronizar a la tienda.' },
-      { status: 200 } // 200 a propósito: no es un error del webhook, es un producto que no aplica todavía
-    );
-  }
+  // productos_web.sku es NOT NULL, y es lo único que se usa como URL de
+  // producto — pero el POS permite vender productos sin SKU/código de
+  // barras (venta rápida sin catalogar). Antes esto bloqueaba la
+  // sincronización entera; ahora se genera un slug de respaldo (ver
+  // slugDeRespaldo arriba) para que igual se pueda publicar.
+  const skuOriginal = (producto.sku || '').trim();
+  const sku = skuOriginal || slugDeRespaldo(producto.nombre, producto.id);
 
   const fila = {
     producto_pos_id: producto.id,
