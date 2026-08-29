@@ -124,23 +124,35 @@ export default function Privacidad() {
           <p className="mt-2">
             Desde <a href="/cuenta" className="text-accent hover:underline">tu cuenta</a> puedes ver y editar
             tus datos, descargar una copia, y solicitar la eliminación definitiva sin necesidad de
-            escribirnos. Si prefieres hacerlo directamente, puedes contactarnos
-            {CORREO_PRIVACIDAD && (
+            escribirnos.
+            {" "}
+            {CORREO_PRIVACIDAD && WHATSAPP && (
               <>
-                {" "}por correo a{" "}
+                Si prefieres hacerlo directamente, puedes contactarnos por correo a{" "}
                 <a href={`mailto:${CORREO_PRIVACIDAD}`} className="text-accent hover:underline">{CORREO_PRIVACIDAD}</a>
-              </>
-            )}
-            {CORREO_PRIVACIDAD && WHATSAPP && " o "}
-            {WHATSAPP && (
-              <>
-                por{" "}
+                {" "}o por{" "}
                 <a href={`https://wa.me/${WHATSAPP}`} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
                   WhatsApp
                 </a>
+                .
               </>
             )}
-            . También puedes presentar un reclamo ante la Agencia de Protección de Datos Personales si
+            {CORREO_PRIVACIDAD && !WHATSAPP && (
+              <>
+                Si prefieres hacerlo directamente, puedes contactarnos por correo a{" "}
+                <a href={`mailto:${CORREO_PRIVACIDAD}`} className="text-accent hover:underline">{CORREO_PRIVACIDAD}</a>.
+              </>
+            )}
+            {!CORREO_PRIVACIDAD && WHATSAPP && (
+              <>
+                Si prefieres hacerlo directamente, puedes contactarnos por{" "}
+                <a href={`https://wa.me/${WHATSAPP}`} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
+                  WhatsApp
+                </a>
+                .
+              </>
+            )}
+            {" "}También puedes presentar un reclamo ante la Agencia de Protección de Datos Personales si
             consideras que tus derechos no fueron respetados.
           </p>
           <p className="mt-2 text-xs text-ink-faint">
