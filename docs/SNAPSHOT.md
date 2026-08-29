@@ -4,21 +4,22 @@
 > arquitectura completo (todas las fases) vive en `README-ECOMMERCE-SEVELIN.md`, en el repo del POS
 > (`sevelin-pos-oficial`) — este documento es el estado de ESTE repo (`sevelin-tienda`) nada más.
 
-**Fecha:** 28-08-2026 · **Versión activa:** v11 (categorización real del catálogo + fotos importadas
-+ header con categorías fijas — ver "v09-v11" abajo) · **En producción:** desplegado en Vercel,
-dominio `sevelin.cl` **todavía apunta a Tiendanube** (la tienda nueva vive en la URL de Vercel por
-ahora — decidir cuándo migrar el DNS, ver "Pendiente").
+**Fecha:** 29-08-2026 · **Versión activa:** v15 (cierre de brechas Art. 14 ter + documentos de
+seguridad e incidentes — ver "v12-v15" abajo) ·
+**En producción:** desplegado en Vercel, dominio `sevelin.cl` **todavía apunta a Tiendanube** (la
+tienda nueva vive en la URL de Vercel por ahora — decidir cuándo migrar el DNS, ver "Pendiente").
 
 **Estado real (verificado en producción, no de memoria):** Supabase Web real
-(`ekxwavsnocwxtzxqxbbi`) con las 4 migraciones aplicadas, catálogo con **86 productos reales**
-publicados y categorizados en 12 categorías (Monitores/Computadores/Componentes PC/Almacenamiento/
-Periféricos/Audio/Cables y Adaptadores/Energía Portátil/Accesorios Móviles/Hogar y Estilo de
-Vida/Herramientas/Servicios Técnicos), **75 de esos 86 con fotos reales** (importadas desde
-`sevelin.cl` en Tiendanube, propiedad del mismo negocio — ver v11 abajo), header con categorías
-principales fijas + "Más categorías", carrito con toast de confirmación (foto+precio), paleta de
-marca azul eléctrico. Flow: `POST /payment/create` **verificado contra sandbox real** (no
-producción todavía). Chilexpress: **sigue en mock**, sin API key real. Cuentas de cliente: **no
-implementadas**, decisión explícita de dejarlo para una fase aparte.
+(`ekxwavsnocwxtzxqxbbi`) con las **8 migraciones** aplicadas, catálogo con **86 productos reales**
+publicados y categorizados en 12 categorías, **75 de esos 86 con fotos reales**, header con
+categorías principales fijas + "Más categorías", carrito con toast de confirmación (foto+precio),
+paleta de marca azul eléctrico. Flow: `POST /payment/create` **verificado contra sandbox real** (no
+producción todavía). Chilexpress: **sigue en mock**, sin API key real. **Cuentas de cliente reales**
+(Supabase Auth, `/cuenta/**`) YA IMPLEMENTADAS — revierte la decisión anterior de "sin cuentas".
+**Cumplimiento Ley 21.719**: consentimiento explícito + trazabilidad + ARCO + Centro de Privacidad
+construidos y probados contra Supabase real, y en v15 se cerraron las brechas del Art. 14 ter
+(política v1.2) + se documentaron 14 quáter/quinquies/sexies. Lo que queda es operativo, no de
+código (ver "Pendiente" #1-3).
 
 ---
 
@@ -37,6 +38,61 @@ Next.js 16 (App Router) · TypeScript · Tailwind v4 · `@supabase/supabase-js`.
   directo, se descargan y realojan en Supabase Storage del POS). `header.tsx` rediseñado: franja de
   categorías principales siempre visible (inspirada en la estructura de sipoonline.cl, no en su
   diseño/branding) + "Más categorías" como overflow, reemplaza el dropdown único de antes.
+
+## Estado: qué está HECHO (v12-v15 — cuentas de cliente, checkout ampliado, Ley 21.719)
+- **v12 — fix de alineación + checkout ampliado + carrito compartible:**
+  `tarjeta-producto.tsx` reserva 2 líneas para el nombre y usa `mt-auto` para que
+  cantidad/"Agregar" queden siempre a la misma altura entre tarjetas. Checkout: nombre/apellido
+  separados, teléfono con código de país independiente del número (`src/lib/codigos-pais.ts`),
+  región de Chile (`src/lib/regiones-chile.ts`, va dentro de `direccion_envio` JSONB, sin
+  migración), nota/observación opcional, "Solicitar factura" con razón social/RUT/giro
+  (`supabase/05-checkout-datos-adicionales.sql`). Carrito compartible SIN base de datos
+  (`src/lib/compartir-carrito.ts`, codifica sku+cantidad en la URL) — `/carrito-compartido`
+  revalida cada producto contra el catálogo real antes de agregarlo.
+- **v13 — cuentas de cliente reales (Supabase Auth):** registro/login/recuperar-restablecer
+  contraseña + "Mis pedidos" en `/cuenta/**`, usando la **anon key pública**
+  (`NEXT_PUBLIC_SUPABASE_WEB_URL`/`NEXT_PUBLIC_SUPABASE_WEB_ANON_KEY`, YA CONFIGURADAS en Vercel)
+  vía `@supabase/ssr` (`src/lib/supabase-browser.ts`, `supabase-server.ts`, `middleware.ts`) — la
+  `service_role` (`supabase-web.ts`) sigue siendo server-only sin cambios, `pedidos_web` sigue sin
+  política pública de escritura (el checkout sigue creando pedidos solo vía
+  `POST /api/checkout`). `perfiles_clientes` + RLS + `cliente_user_id` nullable en `pedidos_web`
+  (`supabase/06-clientes-web.sql`). El checkout sigue funcionando 100% como invitado.
+  `CampoPassword` (mostrar/ocultar con estado propio, no el nativo del navegador) y
+  `errores-auth.ts` (traduce mensajes de Supabase Auth al español) en `/cuenta/**`.
+- **v14 — Ley 21.719 (Protección de Datos Personales):** checkbox de consentimiento desmarcada por
+  defecto en checkout y registro (bloquea envío en frontend Y servidor), consentimiento de
+  marketing SEPARADO y opcional, trazabilidad completa
+  (`supabase/07-consentimiento-privacidad.sql`, `08-solicitudes-arco-marketing.sql`: columnas
+  `consentimiento_privacidad`/`fecha_consentimiento`/`version_politica` en `pedidos_web` y
+  `perfiles_clientes`, tabla `solicitudes_arco` que sobrevive a la eliminación de la cuenta).
+  Módulo ARCO completo en `/cuenta/privacidad` ("Centro de Privacidad"): editar perfil
+  (rectificación, con log de qué cambió), descargar datos en JSON
+  (`GET /api/cuenta/exportar`, portabilidad), eliminar cuenta con confirmación en dos pasos
+  (`POST /api/cuenta/eliminar` — anonimiza pedidos pasados, borra el usuario de Supabase Auth de
+  verdad vía Admin API), toggle de marketing (oposición), historial de solicitudes ARCO propias.
+  `/privacidad` y `/terminos` nuevas, enlazadas desde el footer. Todo probado de punta a punta con
+  cuentas de prueba reales contra Supabase de producción (creadas y eliminadas en la misma
+  sesión). **Auditoría letra por letra del Art. 14 ter contra el texto oficial de la BCN
+  (leychile.cl, versión vigente 01-dic-2026)**: 3/12 letras cumplen, 4 parciales, 5 no cumplen
+  (~42%) — ver "Pendiente" #1-3, son las brechas concretas a cerrar en la próxima sesión. 14
+  quáter/quinquies parciales (hay medidas técnicas reales — RLS, minimización — pero nada
+  documentado como política formal). 14 sexies (reporte de vulneraciones) sin empezar: es un
+  procedimiento operativo, no algo que se resuelva con código.
+
+- **v15 — cierre de las brechas del Art. 14 ter + documentos de 14 quáter/quinquies/sexies:**
+  `/privacidad` pasa a **versión 1.2** (con fecha visible: la letra a) exige "fecha y versión", antes
+  solo estaba la versión — `FECHA_POLITICA_PRIVACIDAD` en `src/lib/politica-privacidad.ts`).
+  Secciones nuevas: universo de titulares (d), fuente de los datos (j), transferencia internacional
+  (h), decisiones automatizadas — declaración negativa (l), retiro del consentimiento (k), y plazos
+  del Art. 11 ligados al reclamo ante la Agencia (g). Conservación (i) reemplaza "el tiempo que
+  exija la ley" por el criterio real del SII. Dos correcciones de hecho: se declaraba una cesión a
+  Chilexpress **que hoy no ocurre** (solo se cotiza tarifa por comuna, sin datos personales), y el
+  bloque de contacto desaparecía entero si faltaba `NEXT_PUBLIC_PRIVACIDAD_EMAIL` — ahora tiene
+  `contacto@sevelin.cl` como valor por defecto en el código, la variable solo lo sobreescribe.
+  Documentos internos nuevos (no se publican): `docs/POLITICA-SEGURIDAD-DATOS.md` (mapeo requisito →
+  control → evidencia del 14 quinquies, decisiones de diseño del 14 quáter, y la justificación
+  escrita de por qué **no** corresponde EIPD) y `docs/PROCEDIMIENTO-INCIDENTES-DATOS.md` (los 9
+  pasos del 14 sexies + bitácora con los campos exactos que exige el inciso 2º).
 
 ## Arquitectura (resumen — ver README-ECOMMERCE-SEVELIN.md para el detalle completo)
 - Proyecto **separado** del POS (`sevelin-pos-oficial`), repo Git propio, deploy Vercel propio.
@@ -184,38 +240,66 @@ Next.js 16 (App Router) · TypeScript · Tailwind v4 · `@supabase/supabase-js`.
 - `docs/README-SUPABASE-WEB.md`, `docs/README-WEBHOOK-POS.md`: pasos manuales para crear el proyecto
   Supabase Web y configurar el webhook.
 
-## Pendiente (real, verificado al 28-08-2026 — no repetir lo ya hecho)
-1. **Chilexpress**: sigue sin API key real, el checkout usa `COSTO_ENVIO_CHILEXPRESS_MOCK` para todo
+## Pendiente (real, verificado al 29-08-2026 — no repetir lo ya hecho)
+
+**Ley 21.719 — lo que queda es operativo, no de código (v15, 29-08-2026):**
+1. **Verificar que el buzón `contacto@sevelin.cl` exista y se lea de verdad.** Es el canal que el
+   Art. 11 exige para recibir solicitudes sobre datos personales, y ahora está publicado en
+   `/privacidad`. El dominio `sevelin.cl` todavía apunta a Tiendanube (pendiente #11), así que hay
+   que confirmar que el correo llega. **Un canal publicado que nadie lee es peor que no tenerlo.**
+   Además, agregar `NEXT_PUBLIC_PRIVACIDAD_EMAIL` en Vercel si se quiere una dirección distinta a
+   la que trae el código por defecto.
+2. **Prueba de restauración de respaldo, documentada.** La letra c) del Art. 14 quinquies exige la
+   *capacidad* de restaurar, y una capacidad nunca probada no se puede acreditar. Restaurar un
+   respaldo de Supabase a un proyecto de prueba, verificar que las tablas vuelven completas, y
+   anotar fecha y resultado en la bitácora de `docs/POLITICA-SEGURIDAD-DATOS.md`. Es el único
+   requisito técnico del cumplimiento que sigue abierto.
+3. **Antes del 01-12-2026:** revisar en qué canal concreto la Agencia recibirá los reportes del
+   Art. 14 sexies (a la fecha de redacción no los ha publicado) y anotarlo en
+   `docs/PROCEDIMIENTO-INCIDENTES-DATOS.md`. Revisión anual de seguridad agendada para el
+   29-08-2027 (lista de chequeo ya escrita en ese mismo documento).
+4. **Validación jurídica externa** — todo lo de Ley 21.719 es implementación técnica de buena fe
+   contra el texto de la BCN, no asesoría legal. Conviene que un abogado revise el texto final de
+   `/privacidad` y `/terminos`, y un contador confirme el criterio de conservación tributaria que
+   se publicó ("mientras esté pendiente el plazo de revisión del SII, por regla general tres
+   años"). **Ya verificado y NO pendiente:** no existe obligación de inscribirse ante la Agencia
+   para un responsable privado común (el Registro Nacional de Sanciones y Cumplimiento anota
+   modelos de prevención voluntarios y sanciones, no responsables).
+5. **Cuando se implemente la creación real de envíos con Chilexpress**: hoy la política declara que
+   solo se le consulta la tarifa de la comuna, lo cual es cierto. Al crear envíos de verdad pasará
+   a recibir nombre, dirección y teléfono → hay que actualizar `/privacidad` y subir la versión de
+   la política **antes** de ese cambio, no después.
+
+**Resto de pendientes (sin cambios desde sesiones anteriores):**
+6. **Chilexpress**: sigue sin API key real, el checkout usa `COSTO_ENVIO_CHILEXPRESS_MOCK` para todo
    envío fuera de Arica. Cuando el usuario consiga las credenciales del convenio corporativo: (a)
    configurar `CHILEXPRESS_API_KEY`/`CHILEXPRESS_API_BASE`/`CHILEXPRESS_ORIGIN_COUNTY_CODE` en
    Vercel, (b) resolver el TODO de `src/lib/chilexpress.ts` (mapear comuna → `countyCode`, nunca
    verificado contra la API real), (c) confirmar el contrato completo (se implementó a partir del
    código fuente del plugin de WooCommerce de Chilexpress, no de documentación oficial).
-2. **Flow en producción**: `POST /payment/create` está verificado solo contra **sandbox**. Falta (a)
+7. **Flow en producción**: `POST /payment/create` está verificado solo contra **sandbox**. Falta (a)
    cambiar a credenciales de producción reales en Vercel cuando el usuario las tenga, (b) probar el
    flujo completo con un pago real (`getStatus`/`FLOW_ESTADO_PAGADO` nunca se confirmaron contra un
    pago completado de verdad, solo contra la creación de la orden).
-3. **28 productos sin SKU** en el POS quedan sin publicar (el receptor de sync exige SKU) — hay que
+8. **28 productos sin SKU** en el POS quedan sin publicar (el receptor de sync exige SKU) — hay que
    cargarles SKU desde el modal de producto del POS. Lista completa en
    `sevelin-pos-oficial docs/CHANGELOG-V29.md` (o el changelog de la sesión que hizo la clasificación
    masiva).
-4. **10 productos con SKU sin foto real** (no tenían coincidencia confiable en `sevelin.cl`) — subirles
+9. **10 productos con SKU sin foto real** (no tenían coincidencia confiable en `sevelin.cl`) — subirles
    foto a mano desde el modal del POS.
-5. **Banners de categoría del home siguen con placeholder** ("Foto de X pendiente") — subir fotos
+10. **Banners de categoría del home siguen con placeholder** ("Foto de X pendiente") — subir fotos
    reales de Monitores/Componentes PC/Periféricos (no hay mecanismo de carga todavía, hay que
    decidir cómo: ¿reusar el pipeline de fotos de producto, o algo aparte?).
-6. **Dominio `sevelin.cl` sigue apuntando a Tiendanube**, no a esta tienda nueva (que vive en su URL
-   de Vercel) — decidir cuándo hacer el cambio de DNS, y qué pasa con la tienda Tiendanube vieja
-   (¿se da de baja, se deja como respaldo?).
-7. **Sistema de cuentas de cliente** (registro/login/"Mi Cuenta" con historial) — pedido
-   explícitamente, decisión consciente de dejarlo para una fase aparte, no empezado.
-8. Confirmar en el POS (Vercel) que `SUPABASE_WEB_URL`/`SUPABASE_WEB_SERVICE_ROLE_KEY` y
-   `SYNC_SECRET` están configurados — hubo un episodio de "fetch failed" en el panel Pedidos Web por
-   estas variables faltantes, se dieron instrucciones para agregarlas pero no se reconfirmó que
-   quedaran puestas.
-9. ~~OpenFactura~~, ~~Shipit~~, ~~migraciones SQL~~, ~~despliegue Vercel~~, ~~webhook del POS~~,
-   ~~primera carga del catálogo~~ — todo esto ya no es pendiente, quedó resuelto en sesiones
-   anteriores (ver versiones abajo).
+11. **Dominio `sevelin.cl` sigue apuntando a Tiendanube**, no a esta tienda nueva (que vive en su URL
+    de Vercel) — decidir cuándo hacer el cambio de DNS, y qué pasa con la tienda Tiendanube vieja
+    (¿se da de baja, se deja como respaldo?).
+12. Confirmar en el POS (Vercel) que `SUPABASE_WEB_URL`/`SUPABASE_WEB_SERVICE_ROLE_KEY` y
+    `SYNC_SECRET` están configurados — hubo un episodio de "fetch failed" en el panel Pedidos Web por
+    estas variables faltantes, se dieron instrucciones para agregarlas pero no se reconfirmó que
+    quedaran puestas.
+13. ~~OpenFactura~~, ~~Shipit~~, ~~migraciones SQL~~, ~~despliegue Vercel~~, ~~webhook del POS~~,
+    ~~primera carga del catálogo~~, ~~sistema de cuentas de cliente~~ — todo esto ya no es
+    pendiente, quedó resuelto en sesiones anteriores (ver versiones abajo).
 
 ## Cómo probar (mientras no haya Supabase Web real)
 - `npm run build`: compila TypeScript, corre el linter implícito, prerenderiza `/` (con manejo de
