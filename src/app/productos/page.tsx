@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { buscarCatalogo, esOrdenCatalogoValido, listarCategorias } from "@/lib/catalogo";
+import { buscarCatalogo, esOrdenCatalogoValido, listarCategorias, listarSubcategorias } from "@/lib/catalogo";
 import { TarjetaProducto } from "@/components/tarjeta-producto";
 import { SelectorOrden } from "@/components/selector-orden";
 import { ScrollReveal } from "@/components/fx/scroll-reveal";
@@ -7,20 +7,25 @@ import { ScrollReveal } from "@/components/fx/scroll-reveal";
 export const revalidate = 60;
 
 interface PropsPagina {
-  searchParams: Promise<{ categoria?: string; q?: string; orden?: string }>;
+  searchParams: Promise<{ categoria?: string; subcategoria?: string; q?: string; orden?: string }>;
 }
 
 export default async function Productos({ searchParams }: PropsPagina) {
-  const { categoria, q, orden } = await searchParams;
+  const { categoria, subcategoria, q, orden } = await searchParams;
   const ordenActual = esOrdenCatalogoValido(orden) ? orden : "relevancia";
 
   let productos: Awaited<ReturnType<typeof buscarCatalogo>> = [];
   let categorias: string[] = [];
+  let subcategorias: string[] = [];
   let error = false;
   try {
-    [productos, categorias] = await Promise.all([
-      buscarCatalogo({ categoria, q, orden: ordenActual }),
+    [productos, categorias, subcategorias] = await Promise.all([
+      buscarCatalogo({ categoria, subcategoria, q, orden: ordenActual }),
       listarCategorias(),
+      // Solo tiene sentido consultar subcategorías dentro de una categoría
+      // elegida — fuera de una categoría no hay "la misma subcategoría" que
+      // filtrar (el nombre no es único entre categorías distintas).
+      categoria ? listarSubcategorias(categoria) : Promise.resolve([]),
     ]);
   } catch (err) {
     console.error("[Productos] No se pudo cargar el catálogo:", err instanceof Error ? err.message : err);
@@ -30,7 +35,7 @@ export default async function Productos({ searchParams }: PropsPagina) {
   return (
     <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
       <h1 className="font-display text-3xl font-bold uppercase tracking-tight text-ink">
-        {categoria || (q ? `Resultados para "${q}"` : "Todos los productos")}
+        {subcategoria || categoria || (q ? `Resultados para "${q}"` : "Todos los productos")}
       </h1>
       <p className="mt-1 text-sm text-ink-soft">
         {productos.length} producto{productos.length === 1 ? "" : "s"} disponible{productos.length === 1 ? "" : "s"}
@@ -62,8 +67,42 @@ export default async function Productos({ searchParams }: PropsPagina) {
             </Link>
           ))}
         </div>
-        <SelectorOrden ordenActual={ordenActual} categoria={categoria} q={q} />
+        <SelectorOrden ordenActual={ordenActual} categoria={categoria} subcategoria={subcategoria} q={q} />
       </div>
+
+      {/* Segunda fila de chips, más chica: solo aparece dentro de una
+          categoría que de verdad tenga subcategorías en el catálogo
+          publicado (ver listarSubcategorias). No es un mega-menú del
+          header — es un refinamiento dentro de la categoría, a propósito
+          (ver decisión de "filtro plano" en el header, sevelin-tienda
+          CLAUDE.md). */}
+      {categoria && subcategorias.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          <Link
+            href={`/productos?categoria=${encodeURIComponent(categoria)}`}
+            className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+              !subcategoria
+                ? "border-accent bg-accent/15 text-accent"
+                : "border-border text-ink-faint hover:border-accent/50 hover:text-accent"
+            }`}
+          >
+            Todo en {categoria}
+          </Link>
+          {subcategorias.map((s) => (
+            <Link
+              key={s}
+              href={`/productos?categoria=${encodeURIComponent(categoria)}&subcategoria=${encodeURIComponent(s)}`}
+              className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                subcategoria === s
+                  ? "border-accent bg-accent/15 text-accent"
+                  : "border-border text-ink-faint hover:border-accent/50 hover:text-accent"
+              }`}
+            >
+              {s}
+            </Link>
+          ))}
+        </div>
+      )}
 
       {error ? (
         <p className="mt-10 text-ink-soft">El catálogo no está disponible en este momento.</p>

@@ -73,6 +73,28 @@ export async function listarCategorias(): Promise<string[]> {
 }
 
 /**
+ * Subcategorías distintas dentro de UNA categoría, del catálogo publicado
+ * — para los chips de refinamiento de /productos (ver
+ * sevelin-pos-oficial/sql/25-subcategoria-web-sync.sql: el POS ya
+ * administraba un árbol de 2 niveles, esto solo lo expone en el filtro).
+ * Vacío si esa categoría no tiene ningún producto subcategorizado — la
+ * página simplemente no muestra la fila de chips en ese caso.
+ */
+export async function listarSubcategorias(categoria: string): Promise<string[]> {
+  const { data, error } = await supabaseWeb
+    .from('productos_web')
+    .select('subcategoria')
+    .eq('publicado_web', true)
+    .gt('stock_web', 0)
+    .eq('categoria', categoria)
+    .not('subcategoria', 'is', null);
+
+  if (error) throw new Error(error.message);
+  const subcategorias = new Set((data || []).map((fila) => fila.subcategoria as string));
+  return Array.from(subcategorias).sort((a, b) => a.localeCompare(b, 'es'));
+}
+
+/**
  * Whitelist de orden para /productos — nunca se interpola el query param
  * crudo en .order(), siempre se pasa por este mapa (valor no reconocido o
  * ausente cae en 'relevancia', el orden por defecto de siempre).
@@ -94,6 +116,7 @@ export function esOrdenCatalogoValido(valor: string | undefined): valor is Orden
 /** Catálogo publicado filtrado por categoría y/o texto libre, para /productos. */
 export async function buscarCatalogo(filtros: {
   categoria?: string;
+  subcategoria?: string;
   q?: string;
   orden?: string;
 }): Promise<ProductoWeb[]> {
@@ -108,6 +131,10 @@ export async function buscarCatalogo(filtros: {
     .order(columna, { ascending });
 
   if (filtros.categoria) query = query.eq('categoria', filtros.categoria);
+  // Solo tiene sentido junto con categoria (los nombres de subcategoría no
+  // son únicos entre categorías distintas) — filtros.categoria siempre va
+  // presente cuando el llamador manda subcategoria (ver /productos/page.tsx).
+  if (filtros.subcategoria) query = query.eq('subcategoria', filtros.subcategoria);
   if (filtros.q) {
     // Sanitizado: la sintaxis de filtros de PostgREST usa coma/paréntesis/punto
     // como separadores estructurales — si el texto de búsqueda los trae tal

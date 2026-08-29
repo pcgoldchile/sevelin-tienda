@@ -103,6 +103,7 @@ export async function POST(req: NextRequest) {
     stock_web: producto.stock_ilimitado ? 999999 : Math.max(0, producto.stock),
     imagen_urls: producto.imagen_urls || [],
     categoria: producto.categoria_web || null,
+    subcategoria: producto.subcategoria_web || null,
     publicado_web: !!producto.publicado_web,
     peso_kg: producto.peso_kg,
     alto_cm: producto.alto_cm,

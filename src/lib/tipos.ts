@@ -9,6 +9,11 @@ export interface ProductoWeb {
   stock_web: number;
   imagen_urls: string[];
   categoria: string | null;
+  // Subcategoría dentro de `categoria` (ej. "Fuentes de poder" dentro de
+  // "Componentes PC") — viene del árbol de 2 niveles que ya administraba el
+  // POS en producto_categorias (nunca sincronizaba hasta ahora). Null si el
+  // producto está en una categoría de nivel superior sin subcategoría.
+  subcategoria: string | null;
   publicado_web: boolean;
   peso_kg: number | null;
   alto_cm: number | null;
@@ -142,6 +147,9 @@ export interface ProductoPOS {
   stock_ilimitado: boolean;
   descripcion_web: string | null;
   categoria_web: string | null;
+  // Ver el comentario de `subcategoria` en ProductoWeb — mismo dato, tal
+  // como lo resuelve el POS al guardar (js/productos.js::resolverCategoriaWebYSubcategoria).
+  subcategoria_web: string | null;
   imagen_urls: string[] | null;
   publicado_web: boolean;
   peso_kg: number | null;

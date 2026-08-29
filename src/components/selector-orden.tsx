@@ -15,15 +15,17 @@ const OPCIONES_ORDEN: { valor: OrdenCatalogo; etiqueta: string }[] = [
 interface PropsSelectorOrden {
   ordenActual: OrdenCatalogo;
   categoria?: string;
+  subcategoria?: string;
   q?: string;
 }
 
-export function SelectorOrden({ ordenActual, categoria, q }: PropsSelectorOrden) {
+export function SelectorOrden({ ordenActual, categoria, subcategoria, q }: PropsSelectorOrden) {
   const router = useRouter();
 
   function construirHref(orden: OrdenCatalogo) {
     const params = new URLSearchParams();
     if (categoria) params.set("categoria", categoria);
+    if (subcategoria) params.set("subcategoria", subcategoria);
     if (q) params.set("q", q);
     if (orden !== "relevancia") params.set("orden", orden);
     const query = params.toString();
