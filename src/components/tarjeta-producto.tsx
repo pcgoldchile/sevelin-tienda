@@ -9,7 +9,6 @@ import confetti from "canvas-confetti";
 import { formatoCLP } from "@/lib/formato";
 import { useCarrito } from "@/context/carrito-context";
 import { useToast } from "@/context/toast-context";
-import { TiltCard } from "@/components/fx/tilt-card";
 import type { ProductoWeb } from "@/lib/tipos";
 
 // Confetti cian/magenta al agregar al carrito — un pequeño "loot get" gamer.
@@ -53,7 +52,11 @@ export function TarjetaProducto({ producto }: { producto: ProductoWeb }) {
   }
 
   return (
-    <TiltCard className="group flex flex-col overflow-hidden transition-shadow duration-200">
+    // Solo la aureola giratoria de .panel-hud (definida en globals.css) —
+    // nada de inclinación 3D ni brillo que siga al mouse. Es puro CSS
+    // reaccionando a :hover, sin JS ni mousemove: la tarjeta queda plana en
+    // todo momento, incluido touch, y respeta prefers-reduced-motion sola.
+    <div className="panel-hud group relative flex flex-col overflow-hidden rounded-2xl transition-shadow duration-200">
       <Link href={`/productos/${producto.sku}`} className="relative aspect-square w-full overflow-hidden bg-surface-sunken">
         {producto.imagen_urls?.[0] ? (
           <Image
@@ -75,7 +78,7 @@ export function TarjetaProducto({ producto }: { producto: ProductoWeb }) {
         >
           {producto.nombre}
         </Link>
-        <span className="precio-gamer mt-1 text-2xl text-primary texto-glow-primary">
+        <span className="precio-gamer mt-1 text-2xl text-ink">
           {formatoCLP.format(producto.precio_web)}
         </span>
 
@@ -180,6 +183,6 @@ export function TarjetaProducto({ producto }: { producto: ProductoWeb }) {
           </AnimatePresence>
         </div>
       </div>
-    </TiltCard>
+    </div>
   );
 }

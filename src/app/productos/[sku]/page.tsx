@@ -50,7 +50,7 @@ export default async function FichaProducto({ params }: PropsPagina) {
 
         <div className="flex flex-col gap-4">
           <h1 className="text-3xl font-semibold tracking-tight text-ink">{producto.nombre}</h1>
-          <span className="text-2xl font-bold text-primary tabular-nums">{formatoCLP.format(producto.precio_web)}</span>
+          <span className="precio-gamer text-3xl text-ink">{formatoCLP.format(producto.precio_web)}</span>
 
           {producto.descripcion_web && (
             <p className="whitespace-pre-line text-sm leading-relaxed text-ink-soft">{producto.descripcion_web}</p>
