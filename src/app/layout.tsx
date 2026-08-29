@@ -5,6 +5,7 @@ import "./globals.css";
 import { listarCategorias } from "@/lib/catalogo";
 import { CarritoProvider } from "@/context/carrito-context";
 import { ToastProvider } from "@/context/toast-context";
+import { SesionProvider } from "@/context/sesion-context";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { CarritoDrawer } from "@/components/carrito-drawer";
@@ -58,15 +59,17 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             .agents/skills/animate — "reduced motion ships con la animación,
             no como un follow-up"). */}
         <MotionConfig reducedMotion="user">
-          <ToastProvider>
-            <CarritoProvider>
-              <Header categorias={categorias} />
-              <div id="contenido">{children}</div>
-              <Footer />
-              <CarritoDrawer />
-              <WhatsappFlotante />
-            </CarritoProvider>
-          </ToastProvider>
+          <SesionProvider>
+            <ToastProvider>
+              <CarritoProvider>
+                <Header categorias={categorias} />
+                <div id="contenido">{children}</div>
+                <Footer />
+                <CarritoDrawer />
+                <WhatsappFlotante />
+              </CarritoProvider>
+            </ToastProvider>
+          </SesionProvider>
         </MotionConfig>
       </body>
     </html>

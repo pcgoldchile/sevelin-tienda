@@ -1,9 +1,10 @@
 import { supabaseWeb } from './supabase-web';
-import type { DireccionEnvio, ItemPedido, PedidoWeb } from './tipos';
+import type { DatosFactura, DireccionEnvio, ItemPedido, PedidoWeb } from './tipos';
 import type { MetodoEnvio } from './envio';
 
 interface DatosCliente {
   nombre: string;
+  apellido: string;
   email: string;
   telefono: string;
 }
@@ -26,6 +27,11 @@ export async function crearPedido(datos: {
   items: ItemPedido[];
   metodoEnvio: MetodoEnvio;
   costoEnvio: number;
+  nota: string | null;
+  factura: DatosFactura | null;
+  // null = invitado. Se resuelve en POST /api/checkout leyendo la sesión
+  // desde la cookie (src/lib/supabase-server.ts) — nunca desde el body.
+  clienteUserId: string | null;
 }): Promise<PedidoWeb> {
   const { data: numeroPedido, error: errorNumero } = await supabaseWeb.rpc('generar_numero_pedido');
   if (errorNumero) throw new Error(errorNumero.message);
@@ -38,8 +44,15 @@ export async function crearPedido(datos: {
       numero_pedido: numeroPedido,
       estado: 'CREADO',
       cliente_nombre: datos.cliente.nombre,
+      cliente_apellido: datos.cliente.apellido,
       cliente_email: datos.cliente.email,
       cliente_telefono: datos.cliente.telefono,
+      cliente_user_id: datos.clienteUserId,
+      nota_cliente: datos.nota,
+      quiere_factura: !!datos.factura,
+      factura_razon_social: datos.factura?.razonSocial ?? null,
+      factura_rut: datos.factura?.rut ?? null,
+      factura_giro: datos.factura?.giro ?? null,
       direccion_envio: datos.direccion,
       items: datos.items,
       metodo_envio: datos.metodoEnvio,

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCarrito } from "@/context/carrito-context";
+import { useSesion } from "@/context/sesion-context";
 import { EASE_OUT } from "@/lib/motion";
 
 // Categorías que se muestran siempre visibles en la franja de navegación
@@ -23,6 +24,7 @@ const ORDEN_CATEGORIAS_PRINCIPALES = [
 
 export function Header({ categorias }: { categorias: string[] }) {
   const { cantidadTotal, abrirCarrito } = useCarrito();
+  const { usuario, perfil, cargando } = useSesion();
   const router = useRouter();
   const [menuCategoriasAbierto, setMenuCategoriasAbierto] = useState(false);
   const [menuMovilAbierto, setMenuMovilAbierto] = useState(false);
@@ -62,6 +64,15 @@ export function Header({ categorias }: { categorias: string[] }) {
             🔍
           </button>
         </form>
+
+        {!cargando && (
+          <Link
+            href={usuario ? "/cuenta" : "/cuenta/ingresar"}
+            className="ml-auto hidden items-center gap-1.5 rounded-full px-3 py-2 text-sm font-medium text-ink-soft transition-colors hover:bg-surface-sunken hover:text-ink md:ml-0 md:flex"
+          >
+            👤 {usuario ? perfil?.nombre || "Mi cuenta" : "Iniciar sesión"}
+          </Link>
+        )}
 
         <motion.button
           type="button"
@@ -182,6 +193,15 @@ export function Header({ categorias }: { categorias: string[] }) {
               <Link href="/productos" className="block py-1.5 text-sm font-medium text-ink-soft" onClick={() => setMenuMovilAbierto(false)}>
                 Todos los productos
               </Link>
+              {!cargando && (
+                <Link
+                  href={usuario ? "/cuenta" : "/cuenta/ingresar"}
+                  className="block py-1.5 text-sm font-medium text-ink-soft"
+                  onClick={() => setMenuMovilAbierto(false)}
+                >
+                  👤 {usuario ? perfil?.nombre || "Mi cuenta" : "Iniciar sesión"}
+                </Link>
+              )}
               {categorias.map((categoria) => (
                 <Link
                   key={categoria}

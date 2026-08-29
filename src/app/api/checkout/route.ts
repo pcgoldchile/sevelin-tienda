@@ -3,16 +3,26 @@ import { obtenerProductoPorSku } from '@/lib/catalogo';
 import { crearPedido, guardarPagoFlow, marcarPedidoFallido } from '@/lib/pedidos';
 import { crearPagoFlow } from '@/lib/flow';
 import { confirmarEnvio } from '@/lib/envio';
-import type { DireccionEnvio, ItemPedido } from '@/lib/tipos';
+import { crearClienteServidor } from '@/lib/supabase-server';
+import type { DatosFactura, DireccionEnvio, ItemPedido } from '@/lib/tipos';
 
 interface CuerpoCheckout {
-  cliente?: { nombre?: string; email?: string; telefono?: string };
+  cliente?: {
+    nombre?: string;
+    apellido?: string;
+    email?: string;
+    // Código de país y número ya vienen concatenados por el formulario
+    // (ver formulario-checkout.tsx) — acá solo se guarda como un string.
+    telefono?: string;
+  };
   direccion?: Partial<DireccionEnvio>;
   items?: { sku?: string; cantidad?: number }[];
   // Solo aplica dentro de la comuna de la tienda: 'RETIRO' o 'LOCAL' — una
   // elección legítima del cliente (ver src/lib/envio.ts). Fuera de esa
   // comuna se ignora: siempre se cotiza con Chilexpress.
   metodoEnvio?: string;
+  nota?: string;
+  factura?: Partial<DatosFactura>;
 }
 
 /**
@@ -31,15 +41,29 @@ export async function POST(req: NextRequest) {
   }
 
   const nombre = (cuerpo.cliente?.nombre || '').trim();
+  const apellido = (cuerpo.cliente?.apellido || '').trim();
   const email = (cuerpo.cliente?.email || '').trim();
   const telefono = (cuerpo.cliente?.telefono || '').trim();
-  if (!nombre || !email || !telefono) {
-    return NextResponse.json({ error: 'Faltan datos del cliente (nombre, email, teléfono)' }, { status: 400 });
+  if (!nombre || !apellido || !email || !telefono) {
+    return NextResponse.json({ error: 'Faltan datos del cliente (nombre, apellido, email, teléfono)' }, { status: 400 });
   }
 
   const direccion = cuerpo.direccion;
-  if (!direccion?.calle || !direccion?.numero || !direccion?.comuna) {
-    return NextResponse.json({ error: 'Falta la dirección de envío (calle, número, comuna)' }, { status: 400 });
+  if (!direccion?.calle || !direccion?.numero || !direccion?.comuna || !direccion?.region) {
+    return NextResponse.json({ error: 'Falta la dirección de envío (calle, número, comuna, región)' }, { status: 400 });
+  }
+
+  // "Solicitar factura" es todo o nada: si viene marcado, los 3 datos de
+  // empresa son obligatorios (sin eso no se puede emitir nada después).
+  let factura: DatosFactura | null = null;
+  if (cuerpo.factura) {
+    const razonSocial = (cuerpo.factura.razonSocial || '').trim();
+    const rut = (cuerpo.factura.rut || '').trim();
+    const giro = (cuerpo.factura.giro || '').trim();
+    if (!razonSocial || !rut || !giro) {
+      return NextResponse.json({ error: 'Faltan datos de facturación (razón social, RUT, giro)' }, { status: 400 });
+    }
+    factura = { razonSocial, rut, giro };
   }
 
   const itemsSolicitados = cuerpo.items || [];
@@ -76,6 +100,7 @@ export async function POST(req: NextRequest) {
     calle: direccion.calle,
     numero: direccion.numero,
     comuna: direccion.comuna,
+    region: direccion.region,
     referencia: direccion.referencia?.trim() || null,
   };
 
@@ -95,15 +120,26 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: mensaje }, { status: 409 });
   }
 
+  // Sesión leída de la cookie, nunca de algo que mande el cliente en el
+  // body — mismo principio que precio/stock/envío de más arriba. Un pedido
+  // de invitado (sin sesión) sigue funcionando exactamente igual que antes.
+  const supabaseSesion = await crearClienteServidor();
+  const {
+    data: { user },
+  } = await supabaseSesion.auth.getUser();
+
   let numeroPedido: string;
   let total: number;
   try {
     const pedido = await crearPedido({
-      cliente: { nombre, email, telefono },
+      cliente: { nombre, apellido, email, telefono },
       direccion: direccionCompleta,
       items,
       metodoEnvio: cotizacion.metodo,
       costoEnvio: cotizacion.costo,
+      nota: cuerpo.nota?.trim() || null,
+      factura,
+      clienteUserId: user?.id ?? null,
     });
     numeroPedido = pedido.numero_pedido;
     total = pedido.total;

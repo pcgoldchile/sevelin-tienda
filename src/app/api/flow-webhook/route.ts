@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
     try {
       const boleta = await emitirBoleta({
         numeroPedido,
-        clienteNombre: pedido.cliente_nombre || 'Cliente',
+        clienteNombre: [pedido.cliente_nombre, pedido.cliente_apellido].filter(Boolean).join(' ') || 'Cliente',
         items: pedido.items,
         costoEnvio: pedido.costo_envio,
         total: pedido.total,

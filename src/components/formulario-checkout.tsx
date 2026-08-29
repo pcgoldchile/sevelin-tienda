@@ -5,6 +5,9 @@ import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { formatoCLP } from "@/lib/formato";
 import { useCarrito } from "@/context/carrito-context";
+import { useSesion } from "@/context/sesion-context";
+import { CODIGOS_PAIS, CODIGO_PAIS_POR_DEFECTO } from "@/lib/codigos-pais";
+import { REGIONES_CHILE } from "@/lib/regiones-chile";
 import type { OpcionEnvio } from "@/lib/envio";
 
 const CAMPO =
@@ -12,6 +15,12 @@ const CAMPO =
 
 export function FormularioCheckout() {
   const { items, subtotal, vaciarCarrito } = useCarrito();
+  // Con sesión, se precargan nombre/apellido/email/teléfono desde el perfil
+  // (siguen siendo editables) — sin sesión, el checkout de invitado sigue
+  // funcionando exactamente igual que siempre. `cargando` alterna la `key`
+  // de estos campos para que React los remonte con el defaultValue correcto
+  // una vez que la sesión resuelve (los inputs son no controlados).
+  const { usuario, perfil, cargando: cargandoSesion } = useSesion();
   const formRef = useRef<HTMLFormElement>(null);
   const [opciones, setOpciones] = useState<OpcionEnvio[] | null>(null);
   const [metodoElegido, setMetodoElegido] = useState<string | null>(null);
@@ -19,6 +28,7 @@ export function FormularioCheckout() {
   const [errorEnvio, setErrorEnvio] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [quiereFactura, setQuiereFactura] = useState(false);
 
   const opcionElegida = opciones?.find((o) => o.metodo === metodoElegido) ?? null;
   const total = subtotal + (opcionElegida?.costo ?? 0);
@@ -80,6 +90,8 @@ export function FormularioCheckout() {
     setError(null);
 
     const datos = new FormData(evento.currentTarget);
+    const telefono = `${datos.get("codigoPais")} ${String(datos.get("telefono") || "").trim()}`.trim();
+
     setEnviando(true);
     try {
       const respuesta = await fetch("/api/checkout", {
@@ -88,17 +100,27 @@ export function FormularioCheckout() {
         body: JSON.stringify({
           cliente: {
             nombre: datos.get("nombre"),
+            apellido: datos.get("apellido"),
             email: datos.get("email"),
-            telefono: datos.get("telefono"),
+            telefono,
           },
           direccion: {
             calle: datos.get("calle"),
             numero: datos.get("numero"),
             comuna: datos.get("comuna"),
+            region: datos.get("region"),
             referencia: datos.get("referencia"),
           },
           items: items.map((item) => ({ sku: item.sku, cantidad: item.cantidad })),
           metodoEnvio: metodoElegido,
+          nota: datos.get("nota"),
+          factura: quiereFactura
+            ? {
+                razonSocial: datos.get("facturaRazonSocial"),
+                rut: datos.get("facturaRut"),
+                giro: datos.get("facturaGiro"),
+              }
+            : undefined,
         }),
       });
 
@@ -129,9 +151,50 @@ export function FormularioCheckout() {
       <form ref={formRef} onSubmit={manejarSubmit} className="flex flex-col gap-6 sm:col-span-3">
         <fieldset className="flex flex-col gap-3">
           <legend className="mb-1 text-xs font-semibold uppercase tracking-wider text-ink-faint">Tus datos</legend>
-          <input name="nombre" required placeholder="Nombre completo" className={CAMPO} />
-          <input name="email" type="email" required placeholder="Correo electrónico" className={CAMPO} />
-          <input name="telefono" required placeholder="Teléfono (con +56)" className={CAMPO} />
+          <div className="flex gap-3">
+            <input
+              key={`nombre-${cargandoSesion}`}
+              name="nombre"
+              required
+              defaultValue={perfil?.nombre || ""}
+              placeholder="Nombre"
+              className={`${CAMPO} flex-1`}
+            />
+            <input
+              key={`apellido-${cargandoSesion}`}
+              name="apellido"
+              required
+              defaultValue={perfil?.apellido || ""}
+              placeholder="Apellido"
+              className={`${CAMPO} flex-1`}
+            />
+          </div>
+          <input
+            key={`email-${cargandoSesion}`}
+            name="email"
+            type="email"
+            required
+            defaultValue={usuario?.email || ""}
+            placeholder="Correo electrónico"
+            className={CAMPO}
+          />
+          <div className="flex gap-3">
+            <select name="codigoPais" defaultValue={CODIGO_PAIS_POR_DEFECTO} className={`${CAMPO} w-32 shrink-0`}>
+              {CODIGOS_PAIS.map((c) => (
+                <option key={c.codigo} value={c.codigo}>
+                  {c.codigo} {c.pais}
+                </option>
+              ))}
+            </select>
+            <input
+              key={`telefono-${cargandoSesion}`}
+              name="telefono"
+              required
+              defaultValue={perfil?.telefono || ""}
+              placeholder="Número de teléfono"
+              className={`${CAMPO} flex-1`}
+            />
+          </div>
         </fieldset>
 
         <fieldset className="flex flex-col gap-3">
@@ -141,6 +204,16 @@ export function FormularioCheckout() {
             <input name="numero" required placeholder="Número" className={`${CAMPO} flex-1`} onChange={invalidarEnvio} />
           </div>
           <input name="comuna" required placeholder="Comuna" className={CAMPO} onChange={invalidarEnvio} />
+          <select name="region" required defaultValue="" className={CAMPO} onChange={invalidarEnvio}>
+            <option value="" disabled>
+              Región
+            </option>
+            {REGIONES_CHILE.map((region) => (
+              <option key={region} value={region}>
+                {region}
+              </option>
+            ))}
+          </select>
           <input name="referencia" placeholder="Referencia (opcional)" className={CAMPO} />
 
           <motion.button
@@ -191,6 +264,43 @@ export function FormularioCheckout() {
           </AnimatePresence>
 
           {errorEnvio && <p className="text-sm text-red-600">{errorEnvio}</p>}
+        </fieldset>
+
+        <fieldset className="flex flex-col gap-3">
+          <legend className="mb-1 text-xs font-semibold uppercase tracking-wider text-ink-faint">Detalles adicionales</legend>
+          <textarea
+            name="nota"
+            rows={2}
+            placeholder="Nota u observación (opcional)"
+            className={`${CAMPO} resize-none`}
+          />
+
+          <label className="flex cursor-pointer items-center gap-2 text-sm text-ink-soft">
+            <input
+              type="checkbox"
+              checked={quiereFactura}
+              onChange={(e) => setQuiereFactura(e.target.checked)}
+              className="accent-accent"
+            />
+            Solicitar factura
+          </label>
+
+          <AnimatePresence>
+            {quiereFactura && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="flex flex-col gap-3 overflow-hidden"
+              >
+                <input name="facturaRazonSocial" required={quiereFactura} placeholder="Razón social" className={CAMPO} />
+                <div className="flex gap-3">
+                  <input name="facturaRut" required={quiereFactura} placeholder="RUT empresa" className={`${CAMPO} flex-1`} />
+                  <input name="facturaGiro" required={quiereFactura} placeholder="Giro" className={`${CAMPO} flex-1`} />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </fieldset>
 
         {error && <p className="text-sm text-red-600">{error}</p>}

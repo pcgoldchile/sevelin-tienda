@@ -2,13 +2,39 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { formatoCLP } from "@/lib/formato";
 import { useCarrito } from "@/context/carrito-context";
 import { EASE_DRAWER } from "@/lib/motion";
+import { codificarCarrito } from "@/lib/compartir-carrito";
 
 export function CarritoDrawer() {
   const { items, abierto, cerrarCarrito, cambiarCantidad, quitarItem, subtotal } = useCarrito();
+  const [linkCopiado, setLinkCopiado] = useState(false);
+
+  async function compartirCarrito() {
+    const url = `${window.location.origin}/carrito-compartido?c=${codificarCarrito(items)}`;
+    // En mobile, el share nativo (WhatsApp, etc.) es lo que la gente espera;
+    // en desktop no siempre existe, ahí se cae a copiar al portapapeles.
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: "Mi carrito en Sevelin", url });
+        return;
+      } catch {
+        // El usuario canceló el share nativo — no es un error, no hace nada más.
+        return;
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setLinkCopiado(true);
+      setTimeout(() => setLinkCopiado(false), 2000);
+    } catch {
+      // Portapapeles bloqueado (permisos del navegador) — no hay mucho más
+      // que hacer sin exponer la URL en un prompt() feo.
+    }
+  }
 
   return (
     <AnimatePresence>
@@ -124,6 +150,15 @@ export function CarritoDrawer() {
               >
                 Ir a pagar
               </Link>
+              {items.length > 0 && (
+                <button
+                  type="button"
+                  onClick={compartirCarrito}
+                  className="mt-2 block w-full rounded-full border border-border px-4 py-2.5 text-center text-sm font-medium text-ink-soft transition-colors hover:border-border-strong hover:text-ink"
+                >
+                  {linkCopiado ? "✓ Link copiado" : "🔗 Compartir carrito"}
+                </button>
+              )}
             </footer>
           </motion.aside>
         </div>

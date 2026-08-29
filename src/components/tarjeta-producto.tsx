@@ -35,14 +35,21 @@ export function TarjetaProducto({ producto }: { producto: ProductoWeb }) {
         )}
       </Link>
       <div className="flex flex-1 flex-col gap-1 p-3.5">
-        <Link href={`/productos/${producto.sku}`} className="line-clamp-2 text-sm font-medium text-ink hover:text-primary">
+        <Link
+          href={`/productos/${producto.sku}`}
+          className="line-clamp-2 min-h-[2.5rem] text-sm font-medium leading-tight text-ink hover:text-primary"
+        >
           {producto.nombre}
         </Link>
         <span className="mt-1 text-base font-semibold text-ink tabular-nums">
           {formatoCLP.format(producto.precio_web)}
         </span>
 
-        <div className="mt-3 flex items-center gap-2">
+        {/* mt-auto empuja este bloque al fondo de la tarjeta sin importar
+            cuánto texto haya arriba — así todas las tarjetas de una misma
+            fila quedan con el selector de cantidad y "Agregar" a la misma
+            altura, tengan nombre corto o largo. */}
+        <div className="mt-auto flex items-center gap-2 pt-3">
           <div className="flex items-center rounded-full border border-border">
             <button
               type="button"

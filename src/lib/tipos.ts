@@ -20,12 +20,35 @@ export interface ProductoWeb {
   sincronizado_en: string;
 }
 
-/** Dirección de envío del checkout de invitado — se guarda tal cual en `pedidos_web.direccion_envio`. */
+/** Dirección de envío del checkout de invitado — se guarda tal cual en `pedidos_web.direccion_envio`
+ * (columna JSONB, por eso `region` no necesitó una migración aparte). */
 export interface DireccionEnvio {
   calle: string;
   numero: string;
   comuna: string;
+  // Opcional a nivel de tipo porque la cotización previa (POST
+  // /api/cotizar-envio) no la necesita — el cálculo de envío sigue siendo
+  // por comuna (ver src/lib/envio.ts). El checkout real (POST /api/checkout)
+  // SÍ la exige, con su propia validación.
+  region?: string;
   referencia: string | null;
+}
+
+/** Datos de facturación cuando el cliente marca "Solicitar factura" en el checkout. */
+export interface DatosFactura {
+  razonSocial: string;
+  rut: string;
+  giro: string;
+}
+
+/** Espejo de `perfiles_clientes` — datos propios de la tienda que Supabase
+ * Auth (auth.users) no trae (ese solo tiene email/contraseña). */
+export interface PerfilCliente {
+  id: string;
+  nombre: string | null;
+  apellido: string | null;
+  telefono: string | null;
+  creado_en: string;
 }
 
 /** Ítem dentro de `pedidos_web.items` — snapshot de precio/nombre al momento de la compra, no
@@ -55,8 +78,16 @@ export interface PedidoWeb {
   numero_pedido: string;
   estado: EstadoPedido;
   cliente_nombre: string | null;
+  cliente_apellido: string | null;
   cliente_email: string | null;
   cliente_telefono: string | null;
+  // null = pedido de invitado (sin sesión al momento de pagar).
+  cliente_user_id: string | null;
+  nota_cliente: string | null;
+  quiere_factura: boolean;
+  factura_razon_social: string | null;
+  factura_rut: string | null;
+  factura_giro: string | null;
   direccion_envio: DireccionEnvio;
   items: ItemPedido[];
   // 'RETIRO' (gratis, en tienda) | 'LOCAL' (despacho a domicilio en Arica,
