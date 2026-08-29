@@ -245,59 +245,64 @@ Next.js 16 (App Router) · TypeScript · Tailwind v4 · `@supabase/supabase-js`.
 **Ley 21.719 — lo que queda es operativo, no de código (v15, 29-08-2026):**
 1. **Verificar que el buzón `contacto@sevelin.cl` exista y se lea de verdad.** Es el canal que el
    Art. 11 exige para recibir solicitudes sobre datos personales, y ahora está publicado en
-   `/privacidad`. El dominio `sevelin.cl` todavía apunta a Tiendanube (pendiente #11), así que hay
+   `/privacidad`. El dominio `sevelin.cl` todavía apunta a Tiendanube (pendiente #12), así que hay
    que confirmar que el correo llega. **Un canal publicado que nadie lee es peor que no tenerlo.**
-   Además, agregar `NEXT_PUBLIC_PRIVACIDAD_EMAIL` en Vercel si se quiere una dirección distinta a
-   la que trae el código por defecto.
-2. **Prueba de restauración de respaldo, documentada.** La letra c) del Art. 14 quinquies exige la
+   Si el buzón no existe, la salida rápida es apuntar la política a un correo que sí se lea (ver
+   #2), no dejarla apuntando a uno muerto.
+2. **`NEXT_PUBLIC_PRIVACIDAD_EMAIL` NO está configurada en Vercel** (confirmado por el usuario el
+   29-08-2026). No es un bug ni bloquea nada: desde v15 el código trae `contacto@sevelin.cl` como
+   valor por defecto, así que producción muestra ese correo igual — justamente para que la página
+   nunca quede sin canal de contacto. Solo hay que agregar la variable si se quiere publicar una
+   dirección distinta (por ejemplo, seguir con la de Gmail mientras el dominio no migre).
+3. **Prueba de restauración de respaldo, documentada.** La letra c) del Art. 14 quinquies exige la
    *capacidad* de restaurar, y una capacidad nunca probada no se puede acreditar. Restaurar un
    respaldo de Supabase a un proyecto de prueba, verificar que las tablas vuelven completas, y
    anotar fecha y resultado en la bitácora de `docs/POLITICA-SEGURIDAD-DATOS.md`. Es el único
    requisito técnico del cumplimiento que sigue abierto.
-3. **Antes del 01-12-2026:** revisar en qué canal concreto la Agencia recibirá los reportes del
+4. **Antes del 01-12-2026:** revisar en qué canal concreto la Agencia recibirá los reportes del
    Art. 14 sexies (a la fecha de redacción no los ha publicado) y anotarlo en
    `docs/PROCEDIMIENTO-INCIDENTES-DATOS.md`. Revisión anual de seguridad agendada para el
    29-08-2027 (lista de chequeo ya escrita en ese mismo documento).
-4. **Validación jurídica externa** — todo lo de Ley 21.719 es implementación técnica de buena fe
+5. **Validación jurídica externa** — todo lo de Ley 21.719 es implementación técnica de buena fe
    contra el texto de la BCN, no asesoría legal. Conviene que un abogado revise el texto final de
    `/privacidad` y `/terminos`, y un contador confirme el criterio de conservación tributaria que
    se publicó ("mientras esté pendiente el plazo de revisión del SII, por regla general tres
    años"). **Ya verificado y NO pendiente:** no existe obligación de inscribirse ante la Agencia
    para un responsable privado común (el Registro Nacional de Sanciones y Cumplimiento anota
    modelos de prevención voluntarios y sanciones, no responsables).
-5. **Cuando se implemente la creación real de envíos con Chilexpress**: hoy la política declara que
+6. **Cuando se implemente la creación real de envíos con Chilexpress**: hoy la política declara que
    solo se le consulta la tarifa de la comuna, lo cual es cierto. Al crear envíos de verdad pasará
    a recibir nombre, dirección y teléfono → hay que actualizar `/privacidad` y subir la versión de
    la política **antes** de ese cambio, no después.
 
 **Resto de pendientes (sin cambios desde sesiones anteriores):**
-6. **Chilexpress**: sigue sin API key real, el checkout usa `COSTO_ENVIO_CHILEXPRESS_MOCK` para todo
+7. **Chilexpress**: sigue sin API key real, el checkout usa `COSTO_ENVIO_CHILEXPRESS_MOCK` para todo
    envío fuera de Arica. Cuando el usuario consiga las credenciales del convenio corporativo: (a)
    configurar `CHILEXPRESS_API_KEY`/`CHILEXPRESS_API_BASE`/`CHILEXPRESS_ORIGIN_COUNTY_CODE` en
    Vercel, (b) resolver el TODO de `src/lib/chilexpress.ts` (mapear comuna → `countyCode`, nunca
    verificado contra la API real), (c) confirmar el contrato completo (se implementó a partir del
    código fuente del plugin de WooCommerce de Chilexpress, no de documentación oficial).
-7. **Flow en producción**: `POST /payment/create` está verificado solo contra **sandbox**. Falta (a)
+8. **Flow en producción**: `POST /payment/create` está verificado solo contra **sandbox**. Falta (a)
    cambiar a credenciales de producción reales en Vercel cuando el usuario las tenga, (b) probar el
    flujo completo con un pago real (`getStatus`/`FLOW_ESTADO_PAGADO` nunca se confirmaron contra un
    pago completado de verdad, solo contra la creación de la orden).
-8. **28 productos sin SKU** en el POS quedan sin publicar (el receptor de sync exige SKU) — hay que
+9. **28 productos sin SKU** en el POS quedan sin publicar (el receptor de sync exige SKU) — hay que
    cargarles SKU desde el modal de producto del POS. Lista completa en
    `sevelin-pos-oficial docs/CHANGELOG-V29.md` (o el changelog de la sesión que hizo la clasificación
    masiva).
-9. **10 productos con SKU sin foto real** (no tenían coincidencia confiable en `sevelin.cl`) — subirles
+10. **10 productos con SKU sin foto real** (no tenían coincidencia confiable en `sevelin.cl`) — subirles
    foto a mano desde el modal del POS.
-10. **Banners de categoría del home siguen con placeholder** ("Foto de X pendiente") — subir fotos
+11. **Banners de categoría del home siguen con placeholder** ("Foto de X pendiente") — subir fotos
    reales de Monitores/Componentes PC/Periféricos (no hay mecanismo de carga todavía, hay que
    decidir cómo: ¿reusar el pipeline de fotos de producto, o algo aparte?).
-11. **Dominio `sevelin.cl` sigue apuntando a Tiendanube**, no a esta tienda nueva (que vive en su URL
+12. **Dominio `sevelin.cl` sigue apuntando a Tiendanube**, no a esta tienda nueva (que vive en su URL
     de Vercel) — decidir cuándo hacer el cambio de DNS, y qué pasa con la tienda Tiendanube vieja
     (¿se da de baja, se deja como respaldo?).
-12. Confirmar en el POS (Vercel) que `SUPABASE_WEB_URL`/`SUPABASE_WEB_SERVICE_ROLE_KEY` y
+13. Confirmar en el POS (Vercel) que `SUPABASE_WEB_URL`/`SUPABASE_WEB_SERVICE_ROLE_KEY` y
     `SYNC_SECRET` están configurados — hubo un episodio de "fetch failed" en el panel Pedidos Web por
     estas variables faltantes, se dieron instrucciones para agregarlas pero no se reconfirmó que
     quedaran puestas.
-13. ~~OpenFactura~~, ~~Shipit~~, ~~migraciones SQL~~, ~~despliegue Vercel~~, ~~webhook del POS~~,
+14. ~~OpenFactura~~, ~~Shipit~~, ~~migraciones SQL~~, ~~despliegue Vercel~~, ~~webhook del POS~~,
     ~~primera carga del catálogo~~, ~~sistema de cuentas de cliente~~ — todo esto ya no es
     pendiente, quedó resuelto en sesiones anteriores (ver versiones abajo).
 
