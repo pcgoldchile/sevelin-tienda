@@ -37,6 +37,15 @@ export interface DireccionEnvio {
   // SÍ la exige, con su propia validación.
   region?: string;
   referencia: string | null;
+  /**
+   * Valle rural (Azapa / Lluta) y su kilómetro declarado. En los valles la
+   * "numeración" es un marcador de km, no una dirección: el geocodificador
+   * la ignora y ancla el punto al inicio del camino, así que el cliente
+   * declara el km y la distancia se calcula como entrada del valle + km
+   * (ver src/lib/distancia.ts). Nulo = dirección urbana normal.
+   */
+  valle?: 'AZAPA' | 'LLUTA' | null;
+  km_valle?: number | null;
 }
 
 /** Datos de facturación cuando el cliente marca "Solicitar factura" en el checkout. */

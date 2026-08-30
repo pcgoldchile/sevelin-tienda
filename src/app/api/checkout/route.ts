@@ -112,6 +112,13 @@ export async function POST(req: NextRequest) {
     comuna: direccion.comuna,
     region: direccion.region,
     referencia: direccion.referencia?.trim() || null,
+    /* Valle declarado (Azapa/Lluta) + km. Viaja hasta acá porque
+       confirmarEnvio() lo necesita para recalcular el costo real: en un
+       valle no hay dirección que geocodificar, el km lo declara el
+       cliente. Queda guardado en direccion_envio para que el POS sepa a
+       qué kilómetro despachar. */
+    valle: direccion.valle ?? null,
+    km_valle: Number.isFinite(Number(direccion.km_valle)) ? Number(direccion.km_valle) : null,
   };
 
   // Autoridad real del costo de envío: se recalcula acá aunque el cliente ya

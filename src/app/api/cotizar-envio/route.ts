@@ -35,7 +35,17 @@ export async function POST(req: NextRequest) {
 
   try {
     const cotizacion = await cotizarOpcionesEnvio(
-      { calle: direccion.calle, numero: direccion.numero, comuna: direccion.comuna, referencia: direccion.referencia || null },
+      {
+        calle: direccion.calle,
+        numero: direccion.numero,
+        comuna: direccion.comuna,
+        referencia: direccion.referencia || null,
+        // Valle declarado (Azapa/Lluta) + su kilómetro: la validación real
+        // de que el valle existe la hace esValleValido() en envio.ts, acá
+        // solo se traslada lo que mandó el formulario.
+        valle: direccion.valle ?? null,
+        km_valle: Number.isFinite(Number(direccion.km_valle)) ? Number(direccion.km_valle) : null,
+      },
       items
     );
     return NextResponse.json(cotizacion);

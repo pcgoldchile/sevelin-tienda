@@ -72,9 +72,18 @@ export function TarjetaProducto({ producto }: { producto: ProductoWeb }) {
         <div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-t from-surface-sunken/70 via-transparent to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
       </Link>
       <div className="flex flex-1 flex-col gap-1 p-3.5">
+        {/* Caja de nombre de EXACTAMENTE 2 líneas: h-10 (40px) con
+            leading-5 (20px por línea). Antes era `min-h-[2.5rem]` +
+            `leading-tight` (17.5px por línea = 35px de texto en una caja
+            de 40px): esos 5px sobrantes dejaban asomar el borde superior
+            de la tercera línea en los nombres largos, que es la franja
+            cortada que se veía en el teléfono. Con la altura calzando
+            justo con el interlineado, el recorte cae siempre en el
+            límite de línea aunque el navegador agrande la tipografía por
+            su cuenta (el "font boosting" de Android rompe line-clamp). */}
         <Link
           href={`/productos/${producto.sku}`}
-          className="line-clamp-2 min-h-[2.5rem] text-sm font-medium leading-tight text-ink hover:text-primary"
+          className="line-clamp-2 h-10 overflow-hidden text-sm font-medium leading-5 text-ink hover:text-primary"
         >
           {producto.nombre}
         </Link>
@@ -87,8 +96,16 @@ export function TarjetaProducto({ producto }: { producto: ProductoWeb }) {
             fila quedan con el selector de cantidad y "Agregar" a la misma
             altura, tengan nombre corto o largo. */}
         <div className="mt-auto flex flex-col gap-1.5 pt-3">
-          <div className="flex items-center gap-2">
-            <div className="flex items-center rounded-md border border-border">
+          {/* Cantidad y "Agregar" van APILADOS, no en una fila.
+              En móvil la grilla es de 2 columnas: la tarjeta mide ~160px
+              y el interior ~132px, mientras que el selector (~100px) más
+              el botón (~92px) suman ~198px. La fila desbordaba 66px y
+              "Agregar" quedaba cortado contra el borde de la tarjeta.
+              Apilar también hace el botón full-width, que en pantalla
+              táctil es un blanco mucho más cómodo. Desde `lg` (4
+              columnas, tarjetas anchas) vuelven a caber lado a lado. */}
+          <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
+            <div className="flex items-center justify-between rounded-md border border-border lg:justify-start">
               <button
                 type="button"
                 onClick={() => ajustarCantidad(-1)}
@@ -154,7 +171,7 @@ export function TarjetaProducto({ producto }: { producto: ProductoWeb }) {
                   setAvisoStock(null);
                 }, 2800);
               }}
-              className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-semibold uppercase tracking-wide transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+              className={`flex w-full items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-semibold uppercase tracking-wide transition-colors disabled:cursor-not-allowed disabled:opacity-50 lg:w-auto lg:flex-1 lg:py-1.5 ${
                 agregado ? "bg-success text-surface-sunken" : "bg-primary text-surface-sunken hover:bg-primary-soft"
               }`}
             >

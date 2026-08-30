@@ -4,8 +4,9 @@
 > arquitectura completo (todas las fases) vive en `README-ECOMMERCE-SEVELIN.md`, en el repo del POS
 > (`sevelin-pos-oficial`) — este documento es el estado de ESTE repo (`sevelin-tienda`) nada más.
 
-**Fecha:** 29-08-2026 · **Versión activa:** v16 (rediseño gamer completo, catálogo sin bloqueo de
-SKU, subcategorías, descripción enriquecida, correo transaccional — ver "v16" abajo) ·
+**Fecha:** 30-08-2026 · **Versión activa:** v17 (arreglos de móvil, menú que se cierra solo,
+**envío por distancia real** con Nominatim + OSRM, valles con km declarado, horarios de corte —
+ver "v17" abajo) ·
 **En producción:** desplegado en Vercel, dominio `sevelin.cl` **todavía apunta a Tiendanube** (la
 tienda nueva vive en la URL de Vercel por ahora — decidir cuándo migrar el DNS, ver "Pendiente").
 
@@ -137,6 +138,33 @@ Next.js 16 (App Router) · TypeScript · Tailwind v4 · `@supabase/supabase-js`.
 - **WhatsApp**: decidido NO implementarlo todavía con automatización "no oficial" (viola los
   términos de servicio de WhatsApp, riesgo real de que baneen el número) — requiere pasar por la
   verificación de Meta Business Manager (API oficial), sin decisión tomada sobre cuándo.
+
+## Estado: qué está HECHO (v17 — móvil, menú y envío por distancia — 30-08-2026)
+> Detalle completo en `docs/CHANGELOG-V17.md`.
+- **Arreglos de móvil** (reportados con capturas del teléfono): el botón "Agregar" salía cortado
+  porque la fila cantidad+botón desbordaba **66px** dentro de una tarjeta de 160px — ahora van
+  apilados hasta `lg`. La franja de texto cortada bajo los nombres largos era una caja de 40px
+  con 2 líneas de 17,5px: los 5px sobrantes dejaban asomar la tercera línea; ahora `h-10` +
+  `leading-5` calzan exacto. El botón de WhatsApp se aparta al bajar y es más chico en móvil.
+- **Menú**: se cierra solo al **cambiar de ruta** (así atrapa el "Ir a pagar" del carrito, no
+  solo los enlaces del header), al abrir el carrito, con Escape, y con un botón "Cerrar" al
+  final de los dos menús.
+- **Envío por distancia real** — reemplaza la tarifa plana de la v6. Nominatim geocodifica y
+  **OSRM** mide los km manejando desde la tienda. Escala urbana de 6 tramos hasta 9,5 km
+  ($2.000 a $4.500) y sobre eso `5000 + techo((km−9,5)/1,5) × 500`. Dentro de Arica se ofrecen
+  hasta 3 opciones: retiro, despacho propio y courier.
+- **Azapa y Lluta: el cliente declara el kilómetro.** Nominatim ignora la numeración en caminos
+  rurales y ancla al inicio del camino ("Camino Azapa 5000" daba 2,6 km → tarifa urbana mínima
+  para un despacho que cruza medio valle). Ahora hay selector de sector + campo de km, y la
+  distancia es entrada del valle + km (Azapa 4,5 km · Lluta 5,0 km).
+- **⚠️ La coordenada de la tienda está FIJA y confirmada por el dueño** (`-18.4619, -70.2976`),
+  no se geocodifica. Ver la trampa correspondiente abajo.
+- **Horarios de corte**: despacho el mismo día solo antes de las **18:00**; retiro hasta las
+  **20:00**. Evaluado en hora de Chile con `Intl`, nunca con la del navegador ni la del
+  servidor (que corre en UTC). El aviso aparece bajo cada opción de envío.
+- **Pendiente de configuración (no es código):** `COSTO_ENVIO_CHILEXPRESS_MOCK` NO está en
+  `.env.local` (solo en el `.example`) — sin ella el courier no aparece dentro de Arica y falla
+  la cotización fuera de Arica. `COSTO_ENVIO_PLANO` quedó **obsoleta**, el código ya no la lee.
 
 ## Arquitectura (resumen — ver README-ECOMMERCE-SEVELIN.md para el detalle completo)
 - Proyecto **separado** del POS (`sevelin-pos-oficial`), repo Git propio, deploy Vercel propio.
@@ -363,6 +391,28 @@ Next.js 16 (App Router) · TypeScript · Tailwind v4 · `@supabase/supabase-js`.
   detalle de qué se probó en la Fase 1.
 
 ## Trampas ya descubiertas (no repetir)
+- **NUNCA codificar a mano la coordenada de origen de la tienda, ni sacarla de un
+  geocodificador.** Un origen equivocado corre TODAS las tarifas de envío a la vez y es un
+  error invisible: los precios salen plausibles, solo que mal. Pasó dos veces en la misma
+  sesión (v17): las coordenadas escritas de memoria quedaron a 4,7 km del local, y al
+  geocodificar "San Rafael 896, Arica" Nominatim devolvió un punto ~4 km al norte. Las buenas
+  (`-18.4619, -70.2976`, confirmadas por el dueño desde Google Maps) están fijas en
+  `src/lib/distancia.ts`.
+- **Nominatim ignora la numeración en caminos rurales** y ancla el punto al INICIO del camino:
+  "Camino Azapa 5000" resolvía a 2,6 km de la tienda. El error siempre subestima, o sea cobra
+  de menos. Por eso los valles no se geocodifican: el cliente declara el kilómetro.
+- **OSRM espera las coordenadas como `lon,lat`**, al revés de lo habitual. Invertirlas da rutas
+  silenciosamente equivocadas, no un error.
+- **Nominatim exige un `User-Agent` que identifique la app** y permite 1 petición por segundo;
+  sin eso bloquean. `router.project-osrm.org` es su servidor de demostración: sirve para el
+  volumen de una tienda chica pero no da garantías, así que el código degrada en vez de romper.
+- **`line-clamp-N` necesita que la altura de la caja sea múltiplo exacto del interlineado.** Con
+  `min-h-[2.5rem]` (40px) y `leading-tight` (17,5px/línea) sobran 5px y asoma el borde de la
+  línea siguiente. Además el *font boosting* de Android puede romper `line-clamp` del todo, así
+  que la altura fija es la que realmente garantiza el recorte.
+- Al medir un supuesto desborde horizontal en móvil, comparar
+  `document.documentElement.scrollWidth` con el viewport ANTES de tocar nada: lo que se veía
+  cortado en el checkout era un recorte del panel de vista previa, no de la página.
 - El `.gitignore` que genera `create-next-app` trae `.env*` (ignora TODO archivo que empiece con
   `.env`, incluido `.env.local.example`). Se cambió a listar los archivos reales uno por uno
   (`.env`, `.env.local`, etc.) para que el `.example` sí quede versionado — mismo criterio que

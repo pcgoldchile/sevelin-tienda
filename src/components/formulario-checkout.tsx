@@ -36,6 +36,8 @@ export function FormularioCheckout() {
   // que ya no corresponde.
   const [regionElegida, setRegionElegida] = useState("");
   const [comunaElegida, setComunaElegida] = useState("");
+  // Valle rural elegido ("" = ciudad). Solo se ofrece dentro de Arica.
+  const [valleElegido, setValleElegido] = useState("");
   const comunasDisponibles = regionElegida ? COMUNAS_POR_REGION[regionElegida as keyof typeof COMUNAS_POR_REGION] ?? [] : [];
   // Advertencia visible, no bloqueante (ver punto 4 del pedido): un celular
   // chileno tiene 9 dígitos, pero el dato se manda tal cual lo escribió el
@@ -83,7 +85,13 @@ export function FormularioCheckout() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          direccion: { calle, numero, comuna },
+          direccion: {
+            calle,
+            numero,
+            comuna,
+            valle: String(datos.get("valle") || "") || null,
+            km_valle: datos.get("km_valle") ? Number(datos.get("km_valle")) : null,
+          },
           items: items.map((item) => ({ sku: item.sku, cantidad: item.cantidad })),
         }),
       });
@@ -92,6 +100,11 @@ export function FormularioCheckout() {
 
       const nuevasOpciones: OpcionEnvio[] = data.opciones;
       setOpciones(nuevasOpciones);
+      /* Aviso general del servidor: hoy se usa cuando la dirección no se
+         pudo ubicar en el mapa y por eso no hay despacho a domicilio en la
+         lista. Va como error visible (no silencioso) para que el cliente
+         entienda por qué solo ve retiro y courier. */
+      setErrorEnvio(data.aviso || null);
       // Una sola opción (fuera de Arica, Chilexpress): no hay nada que
       // elegir, se preselecciona sola. Con dos (retiro/local en Arica), el
       // cliente tiene que elegir una a propósito.
@@ -136,6 +149,11 @@ export function FormularioCheckout() {
             comuna: datos.get("comuna"),
             region: datos.get("region"),
             referencia: datos.get("referencia"),
+            // El servidor recalcula el costo con estos datos; van igual que
+            // en la cotización previa para que no haya diferencia entre lo
+            // que el cliente vio y lo que termina pagando.
+            valle: String(datos.get("valle") || "") || null,
+            km_valle: datos.get("km_valle") ? Number(datos.get("km_valle")) : null,
           },
           items: items.map((item) => ({ sku: item.sku, cantidad: item.cantidad })),
           metodoEnvio: metodoElegido,
@@ -281,6 +299,42 @@ export function FormularioCheckout() {
               </option>
             ))}
           </select>
+          {/* Sector rural — solo tiene sentido dentro de Arica.
+              En Azapa y Lluta la "numeración" es un marcador de kilómetro,
+              no una dirección: el geocodificador la ignora y ancla el punto
+              al inicio del camino, lo que cobraría tarifa urbana mínima por
+              un despacho que cruza medio valle. Preguntando el km derecho
+              se calcula bien: entrada del valle + km declarado. */}
+          {comunaElegida === "Arica" && (
+            <select
+              name="valle"
+              value={valleElegido}
+              className={CAMPO}
+              onChange={(e) => {
+                setValleElegido(e.target.value);
+                invalidarEnvio();
+              }}
+            >
+              <option value="">Dentro de la ciudad de Arica</option>
+              <option value="AZAPA">Valle de Azapa</option>
+              <option value="LLUTA">Valle de Lluta</option>
+            </select>
+          )}
+
+          {comunaElegida === "Arica" && valleElegido && (
+            <input
+              name="km_valle"
+              type="number"
+              min="0"
+              max="80"
+              step="0.5"
+              required
+              placeholder="¿En qué kilómetro? (ej: 5)"
+              className={CAMPO}
+              onChange={invalidarEnvio}
+            />
+          )}
+
           <input name="referencia" placeholder="Referencia (opcional)" className={CAMPO} />
 
           <motion.button
@@ -310,17 +364,32 @@ export function FormularioCheckout() {
                         elegida ? "border-accent bg-accent-soft/40 shadow-glow-accent" : "border-border bg-surface hover:border-border-strong"
                       }`}
                     >
-                      <span className="flex items-center gap-3">
+                      <span className="flex items-start gap-3">
                         <input
                           type="radio"
                           name="metodo-envio"
                           checked={elegida}
                           onChange={() => setMetodoElegido(opcion.metodo)}
-                          className="accent-accent"
+                          className="mt-0.5 accent-accent"
                         />
-                        {opcion.detalle}
+                        <span className="flex flex-col gap-0.5">
+                          <span>{opcion.detalle}</span>
+                          {/* Aviso de plazo según el horario de corte: es lo
+                              que evita que alguien compre a las 19:00
+                              creyendo que sale hoy. */}
+                          {opcion.aviso && (
+                            <span className="text-xs leading-snug text-ink-faint">{opcion.aviso}</span>
+                          )}
+                          {/* Si OSRM no respondió, la distancia salió de una
+                              estimación: se dice, no se esconde. */}
+                          {opcion.distanciaEstimada && (
+                            <span className="text-xs leading-snug text-accent">
+                              Distancia estimada — el valor final puede ajustarse al despachar.
+                            </span>
+                          )}
+                        </span>
                       </span>
-                      <span className="font-semibold text-ink tabular-nums">
+                      <span className="shrink-0 font-semibold text-ink tabular-nums">
                         {opcion.costo === 0 ? "Gratis" : formatoCLP.format(opcion.costo)}
                       </span>
                     </label>

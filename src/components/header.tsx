@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronDown, Menu, Search, ShoppingCart, User } from "lucide-react";
+import { ChevronDown, Menu, Search, ShoppingCart, User, X } from "lucide-react";
 import { useCarrito } from "@/context/carrito-context";
 import { useSesion } from "@/context/sesion-context";
 import { EASE_OUT } from "@/lib/motion";
@@ -27,6 +27,7 @@ export function Header({ categorias }: { categorias: string[] }) {
   const { cantidadTotal, abrirCarrito } = useCarrito();
   const { usuario, perfil, cargando } = useSesion();
   const router = useRouter();
+  const pathname = usePathname();
   const [menuCategoriasAbierto, setMenuCategoriasAbierto] = useState(false);
   const [menuMovilAbierto, setMenuMovilAbierto] = useState(false);
   const [busqueda, setBusqueda] = useState("");
@@ -34,11 +35,38 @@ export function Header({ categorias }: { categorias: string[] }) {
   const categoriasPrincipales = ORDEN_CATEGORIAS_PRINCIPALES.filter((c) => categorias.includes(c));
   const categoriasResto = categorias.filter((c) => !categoriasPrincipales.includes(c));
 
+  const cerrarMenus = useCallback(() => {
+    setMenuMovilAbierto(false);
+    setMenuCategoriasAbierto(false);
+  }, []);
+
+  /* Cualquier cambio de ruta cierra los menús. Esto es lo que resuelve el
+     caso reportado: con las categorías desplegadas, apretar "Ir a pagar"
+     en el carrito navegaba a /checkout y el menú quedaba abierto encima
+     del formulario. Cubrirlo por la ruta (y no poniendo un onClick en
+     cada enlace) también atrapa las navegaciones que no nacen del
+     header: el drawer del carrito, un banner, o el botón "atrás". */
+  useEffect(() => {
+    cerrarMenus();
+  }, [pathname, cerrarMenus]);
+
+  /* Escape cierra lo que esté abierto — es lo que espera cualquiera que
+     use el teclado, y en móvil evita quedar atrapado si el botón de
+     cerrar queda fuera de la pantalla. */
+  useEffect(() => {
+    if (!menuMovilAbierto && !menuCategoriasAbierto) return;
+    const alPresionar = (e: KeyboardEvent) => {
+      if (e.key === "Escape") cerrarMenus();
+    };
+    window.addEventListener("keydown", alPresionar);
+    return () => window.removeEventListener("keydown", alPresionar);
+  }, [menuMovilAbierto, menuCategoriasAbierto, cerrarMenus]);
+
   function buscar(e: React.FormEvent) {
     e.preventDefault();
     const q = busqueda.trim();
     router.push(q ? `/productos?q=${encodeURIComponent(q)}` : "/productos");
-    setMenuMovilAbierto(false);
+    cerrarMenus();
   }
 
   return (
@@ -77,7 +105,12 @@ export function Header({ categorias }: { categorias: string[] }) {
 
         <motion.button
           type="button"
-          onClick={abrirCarrito}
+          onClick={() => {
+            // El carrito se abre encima del menú: si se deja desplegado,
+            // al volver del drawer (o al ir a pagar) queda tapando todo.
+            cerrarMenus();
+            abrirCarrito();
+          }}
           whileTap={{ scale: 0.92 }}
           className="relative ml-auto flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-ink-soft transition-colors hover:bg-surface-sunken hover:text-primary md:ml-0"
           aria-label="Abrir carrito"
@@ -170,6 +203,17 @@ export function Header({ categorias }: { categorias: string[] }) {
                         </li>
                       ))}
                     </ul>
+                    {/* Cerrar al final del desplegable: con la lista
+                        larga, el botón que lo abrió queda arriba y fuera
+                        de alcance visual. */}
+                    <button
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()} // gana al onBlur del botón que abre
+                      onClick={() => setMenuCategoriasAbierto(false)}
+                      className="flex w-full items-center justify-center gap-1.5 border-t border-border px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-ink-faint transition-colors hover:bg-surface-sunken hover:text-primary"
+                    >
+                      <X className="h-3.5 w-3.5" aria-hidden /> Cerrar
+                    </button>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -222,6 +266,18 @@ export function Header({ categorias }: { categorias: string[] }) {
                   {categoria}
                 </Link>
               ))}
+
+              {/* Cerrar al final de la lista: con todas las categorías
+                  desplegadas hay que hacer scroll hasta arriba para
+                  encontrar el botón de hamburguesa. Este queda justo
+                  donde termina de leerse el menú. */}
+              <button
+                type="button"
+                onClick={() => setMenuMovilAbierto(false)}
+                className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-md border border-border py-2.5 text-xs font-semibold uppercase tracking-wide text-ink-faint transition-colors hover:border-primary hover:text-primary"
+              >
+                <X className="h-3.5 w-3.5" aria-hidden /> Cerrar menú
+              </button>
             </div>
           </motion.div>
         )}

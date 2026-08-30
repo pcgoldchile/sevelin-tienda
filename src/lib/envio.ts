@@ -1,5 +1,8 @@
 import { obtenerProductoPorSku } from './catalogo';
 import { chilexpressHabilitado, cotizarTarifasChilexpress } from './chilexpress';
+import { distanciaDesdeTienda, distanciaValle, esValleValido, VALLES } from './distancia';
+import { estadoHorario } from './horarios';
+import { tarifaPorDistancia } from './tarifas-envio';
 import type { DireccionEnvio, ProductoWeb } from './tipos';
 
 /**
@@ -33,10 +36,18 @@ export interface OpcionEnvio {
   metodo: MetodoEnvio;
   costo: number;
   detalle?: string;
+  /** Aviso de plazo según el horario de corte (ver src/lib/horarios.ts). */
+  aviso?: string;
+  /** Distancia usada para tarificar, cuando aplica (solo LOCAL). */
+  km?: number;
+  /** true si la distancia es una estimación porque OSRM no respondió. */
+  distanciaEstimada?: boolean;
 }
 
 export interface CotizacionEnvio {
   opciones: OpcionEnvio[];
+  /** Aviso general cuando no se pudo ubicar la dirección en el mapa. */
+  aviso?: string;
 }
 
 function normalizar(texto: string): string {
@@ -47,12 +58,43 @@ function esComunaTienda(comuna: string): boolean {
   return normalizar(comuna) === normalizar(COMUNA_TIENDA);
 }
 
-function tarifaLocalPlana(): number {
-  const valor = Number(process.env.COSTO_ENVIO_PLANO);
-  if (!valor || valor <= 0) {
-    throw new Error('COSTO_ENVIO_PLANO no está configurado (o es <= 0): ver .env.local.example.');
-  }
-  return valor;
+/**
+ * Despacho dentro de Arica, tarificado por distancia real de manejo.
+ *
+ * Si NO se puede ubicar la dirección (Nominatim no la encuentra), se
+ * devuelve null: el llamador ofrece retiro y courier, y pide coordinar por
+ * WhatsApp. Es deliberado no caer a una tarifa por defecto — cobrar el
+ * tramo mínimo a un domicilio de Azapa sería regalar el despacho, y cobrar
+ * el máximo sería estafar a alguien del centro. Ante la duda, no se
+ * inventa un precio.
+ */
+async function tarifaLocalPorDistancia(direccion: DireccionEnvio): Promise<OpcionEnvio | null> {
+  /* Valle (Azapa/Lluta): no se geocodifica. La distancia es la entrada del
+     valle más el kilómetro que declaró el cliente — en un camino rural la
+     numeración es un marcador de km y el geocodificador la ignora, así que
+     preguntarlo es más fiable que deducirlo. */
+  const distancia = esValleValido(direccion.valle)
+    ? distanciaValle(direccion.valle, direccion.km_valle ?? 0)
+    : await distanciaDesdeTienda(direccion.calle, direccion.numero, direccion.comuna);
+
+  if (!distancia) return null;
+
+  const tarifa = tarifaPorDistancia(distancia.km);
+  const horario = estadoHorario();
+
+  const detalle = esValleValido(direccion.valle)
+    ? `Despacho a ${VALLES[direccion.valle].etiqueta}, km ${direccion.km_valle ?? 0} · ` +
+      `${distancia.km.toFixed(1)} km desde la tienda`
+    : tarifa.detalle;
+
+  return {
+    metodo: 'LOCAL',
+    costo: tarifa.costo,
+    detalle,
+    aviso: horario.avisoDespacho,
+    km: Number(distancia.km.toFixed(2)),
+    distanciaEstimada: distancia.estimada,
+  };
 }
 
 function costoMockChilexpress(): number {
@@ -159,17 +201,50 @@ async function cotizarViaChilexpress(
   return { metodo: 'CHILEXPRESS', costo: tarifa.precio, detalle: tarifa.servicio };
 }
 
-/** Vista previa: qué opciones de envío mostrarle al cliente antes de pagar. */
+/** Retiro en tienda: siempre disponible y siempre gratis, con su aviso de horario. */
+function opcionRetiro(): OpcionEnvio {
+  return {
+    metodo: 'RETIRO',
+    costo: 0,
+    detalle: 'Retiro en tienda (San Rafael 896, Arica)',
+    aviso: estadoHorario().avisoRetiro,
+  };
+}
+
+/**
+ * Vista previa: qué opciones de envío mostrarle al cliente antes de pagar.
+ *
+ * Dentro de Arica se ofrecen hasta TRES opciones: retiro, despacho propio
+ * (tarificado por distancia real) y courier tradicional. El courier se
+ * mantiene disponible también dentro de la comuna —a pedido del dueño—
+ * porque es la salida cuando el domicilio no se puede ubicar en el mapa o
+ * el cliente prefiere Starken/Blue Express.
+ */
 export async function cotizarOpcionesEnvio(
   direccion: DireccionEnvio,
   items: { sku: string; cantidad: number }[]
 ): Promise<CotizacionEnvio> {
   if (esComunaTienda(direccion.comuna)) {
+    const opciones: OpcionEnvio[] = [opcionRetiro()];
+
+    const local = await tarifaLocalPorDistancia(direccion);
+    if (local) opciones.push(local);
+
+    /* El courier se agrega en modo "mejor esfuerzo": si falla su
+       cotización no puede tumbar las opciones que sí funcionan (sobre
+       todo el retiro, que no depende de nada externo). */
+    try {
+      opciones.push(await cotizarViaChilexpress(direccion, items));
+    } catch {
+      // Sin courier disponible: quedan retiro y/o despacho propio.
+    }
+
     return {
-      opciones: [
-        { metodo: 'RETIRO', costo: 0, detalle: 'Retiro en tienda (San Rafael 896, Arica)' },
-        { metodo: 'LOCAL', costo: tarifaLocalPlana(), detalle: 'Despacho a domicilio en Arica' },
-      ],
+      opciones,
+      aviso: local
+        ? undefined
+        : 'No pudimos ubicar esa dirección en el mapa para calcular el despacho a domicilio. ' +
+          'Puedes retirar en tienda, usar courier, o escribirnos por WhatsApp y coordinamos el envío.',
     };
   }
 
@@ -189,13 +264,27 @@ export async function confirmarEnvio(
   metodoElegido?: string
 ): Promise<OpcionEnvio> {
   if (esComunaTienda(direccion.comuna)) {
-    if (metodoElegido === 'RETIRO') {
-      return { metodo: 'RETIRO', costo: 0, detalle: 'Retiro en tienda (San Rafael 896, Arica)' };
-    }
+    if (metodoElegido === 'RETIRO') return opcionRetiro();
+
     if (metodoElegido === 'LOCAL') {
-      return { metodo: 'LOCAL', costo: tarifaLocalPlana(), detalle: 'Despacho a domicilio en Arica' };
+      /* Se vuelve a medir la distancia acá, aunque la vista previa ya lo
+         hizo: este es el único número que termina cobrándose. Si entre la
+         cotización y el pago la dirección cambió, el costo cambia con
+         ella. El resultado viene de la caché del módulo de distancia, así
+         que no es una petición extra en el caso normal. */
+      const local = await tarifaLocalPorDistancia(direccion);
+      if (!local) {
+        throw new Error(
+          'No pudimos ubicar esa dirección para calcular el despacho a domicilio. ' +
+            'Elige retiro en tienda o envío por courier, o escríbenos por WhatsApp para coordinarlo.'
+        );
+      }
+      return local;
     }
-    throw new Error('Elige una forma de envío: retiro en tienda o despacho a domicilio en Arica.');
+
+    if (metodoElegido === 'CHILEXPRESS') return cotizarViaChilexpress(direccion, items);
+
+    throw new Error('Elige una forma de envío: retiro en tienda, despacho a domicilio o courier.');
   }
 
   return cotizarViaChilexpress(direccion, items);
