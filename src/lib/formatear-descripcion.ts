@@ -31,6 +31,9 @@ import { escaparParaSanitizar } from './escapar-html';
  *     párrafo, separado por línea en blanco, no una lista real.
  *   - Cualquier otro bloque → párrafo normal (los saltos de línea sueltos
  *     dentro de un mismo bloque quedan como <br>).
+ *   - Dentro de cualquier línea, `**negrita**` y `[texto](url)` se
+ *     interpretan (ver `conEnfasis`) — es lo mínimo que necesita el pie
+ *     de envíos fijo, no un parser de markdown completo.
  */
 
 const PATRON_VINETA = /^(?:[✅✔️✓☑•▪▸▶]+|[-*]|\d+[.)])[ \t]+/u;
@@ -46,6 +49,38 @@ function quitarVineta(linea: string): string | null {
  *  que termine en ":" (como el cierre de un párrafo largo) no debe
  *  convertirse en encabezado. */
 const LARGO_MAXIMO_TITULO = 100;
+
+/**
+ * Énfasis MUY limitado dentro de una línea: `**negrita**` y
+ * `[texto](url)`. No es un parser de markdown general a propósito — solo
+ * lo que necesita el pie de envíos fijo ("**Envíos a todo Chile.**",
+ * "[www.sevelin.cl](https://www.sevelin.cl)"), para no abrir la puerta a
+ * que cualquier texto suelto con un asterisco se empiece a interpretar
+ * como marcado. Todo lo que no matchea se escapa igual que siempre.
+ */
+const TOKEN_ENFASIS = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)|\*\*([^*]+)\*\*/g;
+
+function conEnfasis(linea: string): string {
+  let salida = '';
+  let ultimo = 0;
+  let m: RegExpExecArray | null;
+
+  TOKEN_ENFASIS.lastIndex = 0;
+  while ((m = TOKEN_ENFASIS.exec(linea))) {
+    salida += escaparParaSanitizar(linea.slice(ultimo, m.index));
+    if (m[1] !== undefined) {
+      // [texto](url) — la URL nunca lleva comillas en la práctica, pero
+      // se escapan igual por si acaso: sigue siendo texto de un admin.
+      const href = m[2].replace(/"/g, '%22');
+      salida += `<a href="${href}" target="_blank" rel="noopener noreferrer">${escaparParaSanitizar(m[1])}</a>`;
+    } else {
+      salida += `<strong>${escaparParaSanitizar(m[3] as string)}</strong>`;
+    }
+    ultimo = TOKEN_ENFASIS.lastIndex;
+  }
+  salida += escaparParaSanitizar(linea.slice(ultimo));
+  return salida;
+}
 
 export function formatearDescripcionPlana(texto: string): string {
   const bloques = texto
@@ -78,7 +113,7 @@ export function formatearDescripcionPlana(texto: string): string {
         html += '<ul>';
         listaAbierta = true;
       }
-      for (const item of items) html += `<li>${escaparParaSanitizar(item as string)}</li>`;
+      for (const item of items) html += `<li>${conEnfasis(item as string)}</li>`;
       continue;
     }
 
@@ -86,11 +121,11 @@ export function formatearDescripcionPlana(texto: string): string {
 
     const esTitulo = lineas.length === 1 && lineas[0].length <= LARGO_MAXIMO_TITULO && /[:：]$/.test(lineas[0]);
     if (esTitulo) {
-      html += `<h3>${escaparParaSanitizar(lineas[0])}</h3>`;
+      html += `<h3>${conEnfasis(lineas[0])}</h3>`;
       continue;
     }
 
-    html += `<p>${lineas.map(escaparParaSanitizar).join('<br>')}</p>`;
+    html += `<p>${lineas.map(conEnfasis).join('<br>')}</p>`;
   }
 
   cerrarLista();

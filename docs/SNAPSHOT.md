@@ -4,9 +4,10 @@
 > arquitectura completo (todas las fases) vive en `README-ECOMMERCE-SEVELIN.md`, en el repo del POS
 > (`sevelin-pos-oficial`) — este documento es el estado de ESTE repo (`sevelin-tienda`) nada más.
 
-**Fecha:** 30-08-2026 · **Versión activa:** v17 (arreglos de móvil, menú que se cierra solo,
-**envío por distancia real** con Nominatim + OSRM, valles con km declarado, horarios de corte —
-ver "v17" abajo) ·
+**Fecha:** 30-08-2026 · **Versión activa:** v18 (rediseño de ficha de producto + fix del sanitizador
+que no cargaba en Vercel + soporte de negrita/link en descripciones — ver "v18" abajo; también v17:
+arreglos de móvil, menú que se cierra solo, **envío por distancia real** con Nominatim + OSRM, valles
+con km declarado, horarios de corte) ·
 **En producción:** desplegado en Vercel, dominio `sevelin.cl` **todavía apunta a Tiendanube** (la
 tienda nueva vive en la URL de Vercel por ahora — decidir cuándo migrar el DNS, ver "Pendiente").
 
@@ -165,6 +166,37 @@ Next.js 16 (App Router) · TypeScript · Tailwind v4 · `@supabase/supabase-js`.
 - **Pendiente de configuración (no es código):** `COSTO_ENVIO_CHILEXPRESS_MOCK` NO está en
   `.env.local` (solo en el `.example`) — sin ella el courier no aparece dentro de Arica y falla
   la cotización fuera de Arica. `COSTO_ENVIO_PLANO` quedó **obsoleta**, el código ya no la lee.
+
+## Estado: qué está HECHO (v18 — ficha de producto, sanitizador real, contenido — 30-08-2026)
+> Detalle completo en `docs/CHANGELOG-V18.md`.
+- **🔴 Bug crítico corregido: TODAS las fichas de producto daban 500 en producción.** La causa era
+  `isomorphic-dompurify` (arrastra jsdom): el `import()` dinámico fallaba en tiempo de ejecución en el
+  entorno serverless de Vercel — de forma silenciosa al principio (atrapado por un `catch`), y con
+  500 antes de eso (import estático, ver el episodio completo abajo). **Reemplazado por
+  `sanitize-html`** (JS puro, sin jsdom): `sanitizarDescripcionHtml()` volvió a ser síncrona, sin
+  `serverExternalPackages` ni carga diferida. Verificado con `next build` + `next start` real
+  (simulando producción), no solo `next dev` — local nunca reprodujo ninguno de los dos síntomas.
+- **Rediseño de la ficha de producto**: el botón "Agregar al carrito" pasó a ir INMEDIATAMENTE
+  después del precio (antes de la descripción, no al final) y queda `lg:sticky` en desktop — con
+  descripciones de más de 2.500 caracteres (servicios técnicos) el botón quedaba a un scroll largo de
+  distancia. La descripción en texto plano ("✅ viñeta tras viñeta" sin jerarquía) pasó a
+  estructurarse de verdad: título de sección, lista de características en grid de 2 columnas con
+  ícono check propio (reemplaza el emoji que haya usado cada admin), párrafos normales para el resto.
+  Ver `src/lib/formatear-descripcion.ts`.
+- **Soporte de `**negrita**` y `[texto](url)`** dentro de las descripciones de texto plano
+  (`conEnfasis()`) — no es markdown genérico a propósito, solo lo que necesita un pie de contacto
+  fijo con etiquetas en negrita y un link a la tienda.
+- **"Destacados" del home = los más vendidos de verdad**, no los primeros del catálogo por orden
+  alfabético. El dato (`productos_web.unidades_vendidas`) lo empuja el POS —
+  `POST /api/sync/mas-vendidos` (nuevo, protegido con `SYNC_SECRET`) — porque el grueso de las ventas
+  pasa por el mostrador, no por la web. Ver `supabase/10-mas-vendidos.sql`.
+- **Banners de categoría = el producto más barato de cada categoría**, con foto real y "Desde $X",
+  en vez de 3 SKU fijos escritos a mano que quedaban obsoletos apenas se agotaban.
+- **60 fichas de producto del catálogo reescritas** con una plantilla comercial (título + intro +
+  características + advertencias reales + pie fijo de envíos/contacto) — trabajo hecho desde
+  `sevelin-pos-oficial` (dueño de `descripcion_web`), documentado en su propio
+  `docs/CHANGELOG-V41.md`. Quedan pendientes 40 productos sin ninguna descripción guardada (esperando
+  specs del usuario) y los servicios técnicos (prompt aparte, otra sesión).
 
 ## Arquitectura (resumen — ver README-ECOMMERCE-SEVELIN.md para el detalle completo)
 - Proyecto **separado** del POS (`sevelin-pos-oficial`), repo Git propio, deploy Vercel propio.
@@ -391,6 +423,19 @@ Next.js 16 (App Router) · TypeScript · Tailwind v4 · `@supabase/supabase-js`.
   detalle de qué se probó en la Fase 1.
 
 ## Trampas ya descubiertas (no repetir)
+- **`isomorphic-dompurify` (jsdom) NO es confiable en el serverless de Vercel** — ni con
+  `serverExternalPackages` ni con `import()` diferido dentro de un `try/catch`: el import puede
+  fallar en tiempo de EJECUCIÓN ahí (nunca en local, ni con `next dev` ni con `next start`), y si el
+  código solo lo atrapa con un `catch` sin verificarlo aparte, el síntoma es silencioso — la página
+  no se cae, pero el sanitizador nunca corre de verdad, cayendo siempre al texto plano de respaldo.
+  Se reemplazó por `sanitize-html` (JS puro, sin jsdom). Cualquier librería que dependa de jsdom en
+  una Route Handler/Server Component de este proyecto es sospechosa por defecto — probarla con
+  `next build && next start` (no `next dev`) antes de confiar en que funciona en Vercel.
+- Al escapar texto plano antes de convertirlo en HTML, **escapar el "&" a ciegas rompe las
+  entidades HTML reales** que algunas descripciones traen literales ("2&times; HDMI", "-5&deg;"):
+  quedan como el texto "&amp;times;" en vez de decodificarse a "×". La función que arma HTML para
+  re-sanitizar (`escaparParaSanitizar`, en `escapar-html.ts`) deja pasar el "&" cuando tiene pinta de
+  entidad real (`&nombre;` o `&#123;`) y solo escapa los "&" sueltos.
 - **NUNCA codificar a mano la coordenada de origen de la tienda, ni sacarla de un
   geocodificador.** Un origen equivocado corre TODAS las tarifas de envío a la vez y es un
   error invisible: los precios salen plausibles, solo que mal. Pasó dos veces en la misma
