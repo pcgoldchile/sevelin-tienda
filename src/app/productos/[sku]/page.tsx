@@ -30,9 +30,8 @@ export default async function FichaProducto({ params }: PropsPagina) {
   }
   if (!producto) notFound();
 
-  // El sanitizador se carga de forma diferida (ver src/lib/sanitizar-html.ts)
   const descripcionSegura = producto.descripcion_web
-    ? await sanitizarDescripcionHtml(producto.descripcion_web)
+    ? sanitizarDescripcionHtml(producto.descripcion_web)
     : '';
 
   return (

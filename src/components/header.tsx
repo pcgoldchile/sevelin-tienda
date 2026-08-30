@@ -45,10 +45,17 @@ export function Header({ categorias }: { categorias: string[] }) {
      en el carrito navegaba a /checkout y el menú quedaba abierto encima
      del formulario. Cubrirlo por la ruta (y no poniendo un onClick en
      cada enlace) también atrapa las navegaciones que no nacen del
-     header: el drawer del carrito, un banner, o el botón "atrás". */
-  useEffect(() => {
+     header: el drawer del carrito, un banner, o el botón "atrás".
+     Ajustado DURANTE el render (no en un useEffect): es el patrón que
+     recomienda React para "resetear estado cuando cambia una prop"
+     (react.dev, "You Might Not Need An Effect") — evita el
+     efecto-que-dispara-otro-render que marca el lint, y de paso el menú
+     nunca alcanza a pintarse abierto ni un frame en la ruta nueva. */
+  const [pathnameAnterior, setPathnameAnterior] = useState(pathname);
+  if (pathname !== pathnameAnterior) {
+    setPathnameAnterior(pathname);
     cerrarMenus();
-  }, [pathname, cerrarMenus]);
+  }
 
   /* Escape cierra lo que esté abierto — es lo que espera cualquiera que
      use el teclado, y en móvil evita quedar atrapado si el botón de
