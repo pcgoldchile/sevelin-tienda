@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { obtenerProductoPorSku } from "@/lib/catalogo";
-
 import { formatoCLP } from "@/lib/formato";
 import { sanitizarDescripcionHtml } from "@/lib/sanitizar-html";
 import { GaleriaProducto } from "@/components/galeria-producto";
@@ -59,22 +58,55 @@ export default async function FichaProducto({ params }: PropsPagina) {
           <h1 className="text-3xl font-semibold tracking-tight text-ink">{producto.nombre}</h1>
           <span className="precio-gamer text-3xl text-ink">{formatoCLP.format(producto.precio_web)}</span>
 
-          {producto.descripcion_web && (
-            // El editor del POS guarda HTML (Quill: negrita, cursiva,
-            // listas, links) — se sanitiza antes de inyectarlo. Las
-            // descripciones de ANTES de ese editor eran texto plano, por
-            // eso whitespace-pre-line sigue puesto: no tiene costo para el
-            // HTML nuevo (ya trae sus propios <p>) y evita que las
-            // descripciones viejas pierdan sus saltos de línea.
-            <div
-              className="whitespace-pre-line text-sm leading-relaxed text-ink-soft [&_a]:text-accent [&_a]:underline [&_a:hover]:text-accent-deep [&_ol]:list-decimal [&_ol]:pl-5 [&_p+p]:mt-3 [&_strong]:font-semibold [&_strong]:text-ink [&_ul]:list-disc [&_ul]:pl-5"
-              dangerouslySetInnerHTML={{ __html: descripcionSegura }}
-            />
-          )}
-
-          <div className="mt-2">
+          {/* El "buy box" va INMEDIATAMENTE después del precio, antes de
+              la descripción — no al final. Con descripciones largas (las
+              de servicios técnicos pasan de 2.500 caracteres) el botón
+              "Agregar al carrito" quedaba a un scroll largo de distancia.
+              `lg:sticky` además lo mantiene a la vista mientras se lee la
+              descripción en pantallas anchas, sin competir con el header
+              (que es sticky top-0 z-40): top-24 dejando el hueco y z-10
+              quedando siempre por debajo. En móvil no hace falta sticky:
+              el reordenamiento solo ya lo deja visible sin scroll. */}
+          <div className="lg:sticky lg:top-24 lg:z-10">
             <AccionesProducto producto={producto} />
           </div>
+
+          {producto.descripcion_web && (
+            <div className="descripcion-producto rounded-2xl border border-border bg-surface/60 p-5 sm:p-6">
+              <h2 className="mb-4 flex items-center gap-2 font-display text-sm font-bold uppercase tracking-wide text-ink">
+                <span className="texto-glow-primary text-primary">/</span> Descripción
+              </h2>
+              {/* El HTML que llega acá ya viene estructurado por
+                  sanitizarDescripcionHtml() (título / lista / párrafos —
+                  ver src/lib/formatear-descripcion.ts): el texto plano que
+                  guarda el POS pasa a tener jerarquía visual real en vez
+                  de un bloque plano. whitespace-pre-line se mantiene como
+                  red de seguridad: si el sanitizador falla, el respaldo
+                  devuelve texto escapado con saltos de línea sueltos, y
+                  sin esta clase se perderían. */}
+              <div
+                className="whitespace-pre-line text-sm leading-relaxed text-ink-soft
+                  [&_a]:text-accent [&_a]:underline [&_a:hover]:text-accent-deep
+                  [&_ol]:list-decimal [&_ol]:pl-5 [&_ol_li]:mt-1.5
+                  [&_p]:leading-relaxed [&_p+p]:mt-3
+                  [&_strong]:font-semibold [&_strong]:text-ink
+                  [&_h3]:mb-2.5 [&_h3]:mt-6 [&_h3]:flex [&_h3]:items-center [&_h3]:gap-2
+                  [&_h3]:border-b [&_h3]:border-primary/25 [&_h3]:pb-2
+                  [&_h3]:text-xs [&_h3]:font-bold [&_h3]:uppercase [&_h3]:tracking-[0.12em] [&_h3]:text-primary
+                  [&_h3:first-child]:mt-0
+                  [&_ul]:m-0 [&_ul]:grid [&_ul]:list-none [&_ul]:gap-2 [&_ul]:p-0 sm:[&_ul]:grid-cols-2
+                  [&_li]:relative [&_li]:flex [&_li]:items-start [&_li]:gap-2.5
+                  [&_li]:rounded-lg [&_li]:border [&_li]:border-border [&_li]:bg-surface-sunken/60
+                  [&_li]:px-3 [&_li]:py-2.5 [&_li]:leading-snug
+                  [&_li]:transition-colors [&_li]:hover:border-primary/40
+                  [&_li]:before:flex [&_li]:before:h-5 [&_li]:before:w-5 [&_li]:before:shrink-0
+                  [&_li]:before:items-center [&_li]:before:justify-center [&_li]:before:rounded-full
+                  [&_li]:before:bg-primary/15 [&_li]:before:text-[11px] [&_li]:before:font-bold
+                  [&_li]:before:text-primary [&_li]:before:content-['✓']"
+                dangerouslySetInnerHTML={{ __html: descripcionSegura }}
+              />
+            </div>
+          )}
         </div>
       </div>
     </main>

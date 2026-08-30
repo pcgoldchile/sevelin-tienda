@@ -14,7 +14,11 @@ export function AccionesProducto({ producto }: { producto: ProductoWeb }) {
   const [agregado, setAgregado] = useState(false);
 
   return (
-    <div className="flex flex-col gap-3">
+    // "Buy box": envuelto en su propia tarjeta para que se lea como un
+    // panel de decisión aparte, no como botones sueltos flotando entre el
+    // precio y la descripción — mismo motivo por el que ahora va antes de
+    // la descripción (ver src/app/productos/[sku]/page.tsx).
+    <div className="flex flex-col gap-3 rounded-2xl border border-primary/25 bg-surface p-4 shadow-elevated-sm">
       <div className="flex items-center gap-3">
         <div className="flex items-center rounded-full border border-border">
           <button
@@ -53,7 +57,7 @@ export function AccionesProducto({ producto }: { producto: ProductoWeb }) {
           setAgregado(true);
           setTimeout(() => setAgregado(false), 2000);
         }}
-        className={`rounded-full px-6 py-3 text-sm font-semibold text-white shadow-glow-accent transition-colors ${
+        className={`w-full rounded-full px-6 py-3 text-sm font-semibold text-white shadow-glow-accent transition-colors ${
           agregado ? "bg-success" : "bg-accent hover:bg-accent-deep"
         }`}
       >
