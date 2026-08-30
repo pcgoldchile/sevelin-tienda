@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { listarCatalogo } from "@/lib/catalogo";
+import { listarMasVendidos } from "@/lib/catalogo";
 import { HeroCarrusel } from "@/components/hero-carrusel";
 import { BannersCategoria } from "@/components/banners-categoria";
 import { FranjaConfianza } from "@/components/franja-confianza";
@@ -19,16 +19,18 @@ export default async function Home() {
      tumbar la página completa con un error 500 — tanto en producción como
      al compilar (`next build` prerenderiza esta página, y sin credenciales
      reales fallaría el build entero sin este manejo). */
-  let productos: Awaited<ReturnType<typeof listarCatalogo>> = [];
+  /* "Destacados" = los más vendidos según el POS (`unidades_vendidas`, que
+     el POS empuja vía POST /api/sync/mas-vendidos). Antes eran simplemente
+     los 8 primeros del catálogo por orden alfabético, que no es un
+     criterio: el A de "Adaptador" no dice nada de si el producto se vende. */
+  let destacados: Awaited<ReturnType<typeof listarMasVendidos>> = [];
   let errorCatalogo = false;
   try {
-    productos = await listarCatalogo();
+    destacados = await listarMasVendidos(CANTIDAD_DESTACADOS);
   } catch (err) {
     console.error("[Home] No se pudo cargar el catálogo:", err instanceof Error ? err.message : err);
     errorCatalogo = true;
   }
-
-  const destacados = productos.slice(0, CANTIDAD_DESTACADOS);
 
   return (
     <main className="flex flex-col">

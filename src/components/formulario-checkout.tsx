@@ -377,8 +377,14 @@ export function FormularioCheckout() {
                           {/* Aviso de plazo según el horario de corte: es lo
                               que evita que alguien compre a las 19:00
                               creyendo que sale hoy. */}
+                          {/* `text-ink-faint` sobre el fondo magenta de la
+                              opción seleccionada quedaba casi ilegible
+                              (gris apagado sobre morado). Se usa el tono
+                              suave, que sí contrasta en ambos estados. */}
                           {opcion.aviso && (
-                            <span className="text-xs leading-snug text-ink-faint">{opcion.aviso}</span>
+                            <span className={`text-xs leading-snug ${elegida ? "text-ink" : "text-ink-soft"}`}>
+                              {opcion.aviso}
+                            </span>
                           )}
                           {/* Si OSRM no respondió, la distancia salió de una
                               estimación: se dice, no se esconde. */}

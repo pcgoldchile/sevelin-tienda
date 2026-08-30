@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { obtenerProductoPorSku } from "@/lib/catalogo";
+
 import { formatoCLP } from "@/lib/formato";
 import { sanitizarDescripcionHtml } from "@/lib/sanitizar-html";
 import { GaleriaProducto } from "@/components/galeria-producto";
@@ -29,6 +30,11 @@ export default async function FichaProducto({ params }: PropsPagina) {
     );
   }
   if (!producto) notFound();
+
+  // El sanitizador se carga de forma diferida (ver src/lib/sanitizar-html.ts)
+  const descripcionSegura = producto.descripcion_web
+    ? await sanitizarDescripcionHtml(producto.descripcion_web)
+    : '';
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
@@ -62,7 +68,7 @@ export default async function FichaProducto({ params }: PropsPagina) {
             // descripciones viejas pierdan sus saltos de línea.
             <div
               className="whitespace-pre-line text-sm leading-relaxed text-ink-soft [&_a]:text-accent [&_a]:underline [&_a:hover]:text-accent-deep [&_ol]:list-decimal [&_ol]:pl-5 [&_p+p]:mt-3 [&_strong]:font-semibold [&_strong]:text-ink [&_ul]:list-disc [&_ul]:pl-5"
-              dangerouslySetInnerHTML={{ __html: sanitizarDescripcionHtml(producto.descripcion_web) }}
+              dangerouslySetInnerHTML={{ __html: descripcionSegura }}
             />
           )}
 

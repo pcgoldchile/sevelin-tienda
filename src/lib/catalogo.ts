@@ -113,6 +113,73 @@ export function esOrdenCatalogoValido(valor: string | undefined): valor is Orden
   return !!valor && valor in ORDEN_CATALOGO;
 }
 
+/**
+ * Los más vendidos del catálogo publicado, para "Destacados" del home.
+ *
+ * El contador `unidades_vendidas` lo empuja el POS (ver
+ * POST /api/sync/mas-vendidos y supabase/10-mas-vendidos.sql), porque el
+ * grueso de las ventas pasa por el mostrador: ordenar por los pedidos web
+ * daría una foto muy parcial del negocio.
+ *
+ * Si todavía no se ha sincronizado nada (todos en 0), el `order` secundario
+ * por nombre deja un resultado estable en vez de un orden arbitrario — la
+ * portada sigue mostrando productos, solo que sin el criterio de ventas
+ * hasta la primera sincronización.
+ */
+export async function listarMasVendidos(limite = 8): Promise<ProductoWeb[]> {
+  const { data, error } = await supabaseWeb
+    .from('productos_web')
+    .select('*')
+    .eq('publicado_web', true)
+    .gt('stock_web', 0)
+    .order('unidades_vendidas', { ascending: false })
+    .order('nombre', { ascending: true })
+    .limit(limite);
+
+  if (error) throw new Error(error.message);
+  return data || [];
+}
+
+/**
+ * El producto MÁS BARATO de cada categoría, para los banners del home.
+ *
+ * Reemplaza los SKU fijos escritos a mano que había antes: esos quedaban
+ * obsoletos apenas el producto se agotaba o se despublicaba, y el banner
+ * se quedaba sin foto. Ahora el banner muestra el precio de entrada real
+ * de la categoría ("Desde $X") y siempre apunta a algo que existe hoy.
+ *
+ * Se hace una consulta por categoría en vez de traer el catálogo entero y
+ * agrupar en memoria: son 3 categorías y cada consulta pide UNA fila
+ * (`limit(1)` sobre un índice de precio), lo que pesa muchísimo menos que
+ * traer los ~65 productos publicados solo para quedarse con 3.
+ */
+export async function productoMasBaratoPorCategoria(
+  categorias: string[]
+): Promise<Record<string, ProductoWeb>> {
+  const resultados = await Promise.all(
+    categorias.map(async (categoria) => {
+      const { data, error } = await supabaseWeb
+        .from('productos_web')
+        .select('*')
+        .eq('publicado_web', true)
+        .gt('stock_web', 0)
+        .eq('categoria', categoria)
+        .order('precio_web', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+      // Una categoría vacía no es un error: el banner simplemente se
+      // muestra sin foto ni precio, como ya hacía antes.
+      if (error) return null;
+      return data ? ([categoria, data] as const) : null;
+    })
+  );
+
+  const porCategoria: Record<string, ProductoWeb> = {};
+  for (const par of resultados) if (par) porCategoria[par[0]] = par[1];
+  return porCategoria;
+}
+
 /** Catálogo publicado filtrado por categoría y/o texto libre, para /productos. */
 export async function buscarCatalogo(filtros: {
   categoria?: string;
