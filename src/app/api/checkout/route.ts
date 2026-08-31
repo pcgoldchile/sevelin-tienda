@@ -72,17 +72,26 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Debes aceptar los Términos y la Política de Privacidad para continuar' }, { status: 400 });
   }
 
-  // "Solicitar factura" es todo o nada: si viene marcado, los 3 datos de
-  // empresa son obligatorios (sin eso no se puede emitir nada después).
+  // "Solicitar factura" es todo o nada: si viene marcado, los datos de
+  // empresa y su dirección son obligatorios (sin eso no se puede emitir nada
+  // después) — piso/depto es el único campo opcional del grupo.
   let factura: DatosFactura | null = null;
   if (cuerpo.factura) {
     const razonSocial = (cuerpo.factura.razonSocial || '').trim();
     const rut = (cuerpo.factura.rut || '').trim();
     const giro = (cuerpo.factura.giro || '').trim();
-    if (!razonSocial || !rut || !giro) {
-      return NextResponse.json({ error: 'Faltan datos de facturación (razón social, RUT, giro)' }, { status: 400 });
+    const region = (cuerpo.factura.region || '').trim();
+    const comuna = (cuerpo.factura.comuna || '').trim();
+    const calle = (cuerpo.factura.calle || '').trim();
+    const numero = (cuerpo.factura.numero || '').trim();
+    const pisoDepto = (cuerpo.factura.pisoDepto || '').trim() || null;
+    if (!razonSocial || !rut || !giro || !region || !comuna || !calle || !numero) {
+      return NextResponse.json(
+        { error: 'Faltan datos de facturación (razón social, RUT, giro, región, comuna, calle, número)' },
+        { status: 400 }
+      );
     }
-    factura = { razonSocial, rut, giro };
+    factura = { razonSocial, rut, giro, region, comuna, calle, numero, pisoDepto };
   }
 
   const itemsSolicitados = cuerpo.items || [];

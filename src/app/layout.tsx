@@ -8,7 +8,6 @@ import { ToastProvider } from "@/context/toast-context";
 import { SesionProvider } from "@/context/sesion-context";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
-import { CarritoDrawer } from "@/components/carrito-drawer";
 import { WhatsappFlotante } from "@/components/whatsapp-flotante";
 import { FondoCinematico } from "@/components/fx/fondo-cinematico";
 import { VisitTracker } from "@/components/visit-tracker";
@@ -81,7 +80,6 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
                 <Header categorias={categorias} />
                 <div id="contenido">{children}</div>
                 <Footer />
-                <CarritoDrawer />
                 <WhatsappFlotante />
               </CarritoProvider>
             </ToastProvider>

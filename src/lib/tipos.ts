@@ -54,11 +54,19 @@ export interface DireccionEnvio {
   km_valle?: number | null;
 }
 
-/** Datos de facturación cuando el cliente marca "Solicitar factura" en el checkout. */
+/** Datos de facturación cuando el cliente marca "Solicitar factura" en el checkout.
+ * La dirección de facturación es independiente de la de envío (puede ser la
+ * casa matriz de la empresa, no donde llega el paquete) — pisoDepto es el
+ * único campo opcional del grupo. */
 export interface DatosFactura {
   razonSocial: string;
   rut: string;
   giro: string;
+  region: string;
+  comuna: string;
+  calle: string;
+  numero: string;
+  pisoDepto: string | null;
 }
 
 /** Espejo de `perfiles_clientes` — datos propios de la tienda que Supabase
@@ -133,6 +141,11 @@ export interface PedidoWeb {
   factura_razon_social: string | null;
   factura_rut: string | null;
   factura_giro: string | null;
+  factura_region: string | null;
+  factura_comuna: string | null;
+  factura_calle: string | null;
+  factura_numero: string | null;
+  factura_piso_depto: string | null;
   // Trazabilidad del consentimiento (Ley 21.719) — ver
   // supabase/07-consentimiento-privacidad.sql.
   consentimiento_privacidad: boolean;

@@ -4,8 +4,11 @@
 > arquitectura completo (todas las fases) vive en `README-ECOMMERCE-SEVELIN.md`, en el repo del POS
 > (`sevelin-pos-oficial`) — este documento es el estado de ESTE repo (`sevelin-tienda`) nada más.
 
-**Fecha:** 01-09-2026 · **Versión activa:** v29 (checkout: pill de cantidad con altura fija + campo
-RUT opcional con formato automático — ver "v29" abajo; también v28: cantidades editables en "Tu
+**Fecha:** 31-08-2026 · **Versión activa:** v30 (carrito y checkout estilo MercadoLibre: `/carrito`
+con selección por ítem reemplaza el drawer, `/checkout` de solo lectura con "Tu pedido" primero en
+mobile, carrito guardado por cuenta en `perfiles_clientes.carrito`, dirección de facturación
+completa — ver "v30" abajo; también v29: checkout: pill de cantidad con altura fija + campo
+RUT opcional con formato automático; también v28: cantidades editables en "Tu
 pedido", envío 100% automático sin botón, campos de dirección reordenados; también v27: **TODO lo de v19-v26 quedó desplegado en producción
 de verdad** — Vercel CLI conectado, Chilexpress activado con credenciales reales, y se encontró y
 corrigió un bug real que bloqueaba CUALQUIER despliegue desde v19 [cron incompatible con el plan

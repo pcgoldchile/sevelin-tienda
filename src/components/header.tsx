@@ -24,7 +24,7 @@ const ORDEN_CATEGORIAS_PRINCIPALES = [
 ];
 
 export function Header({ categorias }: { categorias: string[] }) {
-  const { cantidadTotal, abrirCarrito } = useCarrito();
+  const { cantidadTotal } = useCarrito();
   const { usuario, perfil, cargando } = useSesion();
   const router = useRouter();
   const pathname = usePathname();
@@ -110,17 +110,11 @@ export function Header({ categorias }: { categorias: string[] }) {
           </Link>
         )}
 
-        <motion.button
-          type="button"
-          onClick={() => {
-            // El carrito se abre encima del menú: si se deja desplegado,
-            // al volver del drawer (o al ir a pagar) queda tapando todo.
-            cerrarMenus();
-            abrirCarrito();
-          }}
-          whileTap={{ scale: 0.92 }}
+        <Link
+          href="/carrito"
+          onClick={cerrarMenus}
           className="relative ml-auto flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-ink-soft transition-colors hover:bg-surface-sunken hover:text-primary md:ml-0"
-          aria-label="Abrir carrito"
+          aria-label="Ver carrito"
         >
           <ShoppingCart className="h-4 w-4" aria-hidden />
           <AnimatePresence>
@@ -137,7 +131,7 @@ export function Header({ categorias }: { categorias: string[] }) {
               </motion.span>
             )}
           </AnimatePresence>
-        </motion.button>
+        </Link>
 
         <button
           type="button"

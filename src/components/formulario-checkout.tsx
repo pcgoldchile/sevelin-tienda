@@ -4,7 +4,6 @@ import { useEffect, useRef, useState, type FormEvent, type FocusEvent } from "re
 import Image from "next/image";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
-import { Minus, Plus } from "lucide-react";
 import { formatoCLP } from "@/lib/formato";
 import { useCarrito } from "@/context/carrito-context";
 import { useSesion } from "@/context/sesion-context";
@@ -18,7 +17,10 @@ const CAMPO =
   "rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm outline-none transition-colors focus:border-accent";
 
 export function FormularioCheckout() {
-  const { items, subtotal, vaciarCarrito, cambiarCantidad, quitarItem } = useCarrito();
+  // Editar cantidades/quitar ítems ya vive en /carrito (estilo MercadoLibre)
+  // — acá solo se paga lo que llegó seleccionado, "Tu pedido" es de solo
+  // lectura.
+  const { itemsSeleccionados, subtotalSeleccionado, quitarSeleccionados } = useCarrito();
   // Con sesión, se precargan nombre/apellido/email/teléfono desde el perfil
   // (siguen siendo editables) — sin sesión, el checkout de invitado sigue
   // funcionando exactamente igual que siempre. `cargando` alterna la `key`
@@ -40,6 +42,14 @@ export function FormularioCheckout() {
   // Valle rural elegido ("" = ciudad). Solo se ofrece dentro de Arica.
   const [valleElegido, setValleElegido] = useState("");
   const comunasDisponibles = regionElegida ? COMUNAS_POR_REGION[regionElegida as keyof typeof COMUNAS_POR_REGION] ?? [] : [];
+  // Región/comuna de FACTURACIÓN — independientes de la de envío (misma
+  // lógica de comuna-depende-de-región, pero un segundo par de estados
+  // porque puede ser una dirección distinta, ej. la casa matriz).
+  const [facturaRegionElegida, setFacturaRegionElegida] = useState("");
+  const [facturaComunaElegida, setFacturaComunaElegida] = useState("");
+  const facturaComunasDisponibles = facturaRegionElegida
+    ? COMUNAS_POR_REGION[facturaRegionElegida as keyof typeof COMUNAS_POR_REGION] ?? []
+    : [];
   // Calle/número/km de valle en estado (antes eran no controlados, solo
   // leídos al tocar "Calcular envío") — ahora hace falta saber cuándo
   // cambian para recalcular el envío solo, sin botón.
@@ -62,6 +72,8 @@ export function FormularioCheckout() {
   // (a diferencia de teléfono): necesita reescribir el valor que el
   // navegador ya mostró, no solo leerlo.
   const [rutTexto, setRutTexto] = useState("");
+  // RUT de la empresa en "Solicitar factura" — mismo formateo automático.
+  const [facturaRutTexto, setFacturaRutTexto] = useState("");
   // Desmarcada por defecto a propósito (Ley 21.719: consentimiento libre e
   // inequívoco, nunca una casilla premarcada) — el submit queda bloqueado
   // mientras no se acepte a propósito.
@@ -80,7 +92,7 @@ export function FormularioCheckout() {
   function guardarAbandono(evento: FocusEvent<HTMLInputElement>) {
     const correo = evento.target.value.trim();
     if (debounceAbandonoRef.current) clearTimeout(debounceAbandonoRef.current);
-    if (!correo || !correo.includes("@") || items.length === 0) return;
+    if (!correo || !correo.includes("@") || itemsSeleccionados.length === 0) return;
     debounceAbandonoRef.current = setTimeout(async () => {
       try {
         const respuesta = await fetch("/api/carrito/abandono", {
@@ -89,7 +101,7 @@ export function FormularioCheckout() {
           body: JSON.stringify({
             id: carritoAbandonoIdRef.current || undefined,
             correo,
-            items: items.map((item) => ({ sku: item.sku, cantidad: item.cantidad })),
+            items: itemsSeleccionados.map((item) => ({ sku: item.sku, cantidad: item.cantidad })),
           }),
         });
         const data = await respuesta.json();
@@ -101,16 +113,16 @@ export function FormularioCheckout() {
   }
 
   const opcionElegida = opciones?.find((o) => o.metodo === metodoElegido) ?? null;
-  const total = subtotal + (opcionElegida?.costo ?? 0);
+  const total = subtotalSeleccionado + (opcionElegida?.costo ?? 0);
 
   const direccionCompleta =
     !!regionElegida && !!comunaElegida && !!calleTexto.trim() && !!numeroTexto.trim() &&
     (comunaElegida !== "Arica" || !valleElegido || !!kmValleTexto.trim());
 
-  // "Firma" de cantidades — cambia de valor solo cuando el carrito cambia de
-  // verdad (sku o cantidad), para poder usarla como dependencia de efecto
+  // "Firma" de cantidades — cambia de valor solo cuando la selección cambia
+  // de verdad (sku o cantidad), para poder usarla como dependencia de efecto
   // sin recalcular en cada render.
-  const itemsFirma = items.map((item) => `${item.sku}:${item.cantidad}`).join(",");
+  const itemsFirma = itemsSeleccionados.map((item) => `${item.sku}:${item.cantidad}`).join(",");
 
   // Se llama desde cada onChange de la dirección (no desde el efecto de
   // abajo: React pide que el setState directo viva en un manejador de
@@ -120,13 +132,6 @@ export function FormularioCheckout() {
     setOpciones(null);
     setMetodoElegido(null);
     setErrorEnvio(null);
-  }
-
-  // El peso/volumen del paquete cambia con la cantidad — cualquier
-  // cotización ya calculada deja de servir apenas se toca un +/-/cantidad.
-  function cambiarCantidadYRecalcular(sku: string, cantidad: number) {
-    cambiarCantidad(sku, cantidad);
-    invalidarEnvio();
   }
 
   async function calcularEnvio() {
@@ -145,7 +150,7 @@ export function FormularioCheckout() {
             valle: valleElegido || null,
             km_valle: kmValleTexto.trim() ? Number(kmValleTexto) : null,
           },
-          items: items.map((item) => ({ sku: item.sku, cantidad: item.cantidad })),
+          items: itemsSeleccionados.map((item) => ({ sku: item.sku, cantidad: item.cantidad })),
         }),
       });
       const data = await respuesta.json();
@@ -178,9 +183,9 @@ export function FormularioCheckout() {
 
   // Recalcula solo, sin botón: apenas la dirección está completa, y de
   // nuevo cada vez que cambia algo que afecta el costo (dirección o
-  // cantidades del carrito — el peso/volumen del paquete cambia con ellas).
-  // Debounce de 600ms para no disparar una cotización por cada tecla
-  // mientras se escribe la calle.
+  // cantidades seleccionadas — el peso/volumen del paquete cambia con
+  // ellas). Debounce de 600ms para no disparar una cotización por cada
+  // tecla mientras se escribe la calle.
   useEffect(() => {
     if (!direccionCompleta) return;
     const temporizador = setTimeout(() => {
@@ -230,7 +235,7 @@ export function FormularioCheckout() {
             valle: String(datos.get("valle") || "") || null,
             km_valle: datos.get("km_valle") ? Number(datos.get("km_valle")) : null,
           },
-          items: items.map((item) => ({ sku: item.sku, cantidad: item.cantidad })),
+          items: itemsSeleccionados.map((item) => ({ sku: item.sku, cantidad: item.cantidad })),
           metodoEnvio: metodoElegido,
           nota: datos.get("nota"),
           consentimientoPrivacidad: aceptaPrivacidad,
@@ -240,6 +245,11 @@ export function FormularioCheckout() {
                 razonSocial: datos.get("facturaRazonSocial"),
                 rut: datos.get("facturaRut"),
                 giro: datos.get("facturaGiro"),
+                region: datos.get("facturaRegion"),
+                comuna: datos.get("facturaComuna"),
+                calle: datos.get("facturaCalle"),
+                numero: datos.get("facturaNumero"),
+                pisoDepto: datos.get("facturaPisoDepto"),
               }
             : undefined,
         }),
@@ -248,7 +258,7 @@ export function FormularioCheckout() {
       const data = await respuesta.json();
       if (!respuesta.ok) throw new Error(data.error || "No se pudo iniciar el pago");
 
-      vaciarCarrito();
+      quitarSeleccionados();
       window.location.href = data.url_pago;
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo iniciar el pago");
@@ -256,12 +266,12 @@ export function FormularioCheckout() {
     }
   }
 
-  if (items.length === 0) {
+  if (itemsSeleccionados.length === 0) {
     return (
       <div className="rounded-2xl bg-surface p-8 text-center shadow-elevated-md">
-        <p className="text-sm text-ink-soft">Tu carrito está vacío.</p>
-        <Link href="/productos" className="mt-3 inline-block text-sm font-medium text-accent hover:underline">
-          Ver productos
+        <p className="text-sm text-ink-soft">No tienes productos seleccionados para pagar.</p>
+        <Link href="/carrito" className="mt-3 inline-block text-sm font-medium text-accent hover:underline">
+          Volver al carrito
         </Link>
       </div>
     );
@@ -269,7 +279,54 @@ export function FormularioCheckout() {
 
   return (
     <div className="grid gap-8 sm:grid-cols-5">
-      <form onSubmit={manejarSubmit} className="flex flex-col gap-6 sm:col-span-3">
+      {/* "Tu pedido" va PRIMERO en el DOM (pedido explícito del dueño: al
+          comprar por teléfono el resumen quedaba al final, muy abajo) — en
+          desktop se reordena a la derecha con sm:order-2 para conservar el
+          layout de dos columnas de siempre. */}
+      <aside className="order-1 h-fit rounded-2xl bg-surface p-5 shadow-elevated-lg sm:order-2 sm:col-span-2">
+        <div className="flex items-center justify-between">
+          <h2 className="font-display text-sm font-semibold text-ink">Tu pedido</h2>
+          <Link href="/carrito" className="text-xs font-medium text-accent hover:underline">
+            Editar
+          </Link>
+        </div>
+        <ul className="mt-3 flex flex-col gap-3">
+          {itemsSeleccionados.map((item) => (
+            <li key={item.sku} className="flex gap-3 text-sm text-ink-soft">
+              <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-surface-sunken">
+                {item.imagen ? (
+                  <Image src={item.imagen} alt={item.nombre} fill className="object-cover" sizes="48px" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-[9px] text-ink-faint">Sin foto</div>
+                )}
+              </div>
+              <div className="flex flex-1 flex-col gap-0.5">
+                <span className="text-ink">{item.nombre}</span>
+                <span className="text-xs text-ink-faint">Cantidad: {item.cantidad}</span>
+              </div>
+              <span className="shrink-0 tabular-nums">{formatoCLP.format(item.precio_web * item.cantidad)}</span>
+            </li>
+          ))}
+        </ul>
+        <div className="mt-3 flex flex-col gap-1.5 border-t border-border pt-3 text-sm">
+          <div className="flex justify-between text-ink-soft">
+            <span>Subtotal</span>
+            <span className="tabular-nums">{formatoCLP.format(subtotalSeleccionado)}</span>
+          </div>
+          <div className="flex justify-between text-ink-soft">
+            <span>Envío{opcionElegida?.detalle ? ` (${opcionElegida.detalle})` : ""}</span>
+            <span className="tabular-nums">
+              {opcionElegida ? (opcionElegida.costo === 0 ? "Gratis" : formatoCLP.format(opcionElegida.costo)) : "Por calcular"}
+            </span>
+          </div>
+          <div className="flex justify-between text-base font-semibold text-ink">
+            <span>Total</span>
+            <span className="tabular-nums">{formatoCLP.format(total)}</span>
+          </div>
+        </div>
+      </aside>
+
+      <form onSubmit={manejarSubmit} className="order-2 flex flex-col gap-6 sm:order-1 sm:col-span-3">
         <fieldset className="flex flex-col gap-3">
           <legend className="mb-1 text-xs font-semibold uppercase tracking-wider text-ink-faint">Tus datos</legend>
           <div className="flex gap-3">
@@ -453,8 +510,8 @@ export function FormularioCheckout() {
 
           {/* Sin botón: el envío se recalcula solo apenas la dirección está
               completa (pedido explícito del dueño), y de nuevo cada vez que
-              cambia la dirección o las cantidades del carrito. Este texto es
-              el único indicio de que algo está pasando en segundo plano. */}
+              cambia la dirección o las cantidades seleccionadas. Este texto
+              es el único indicio de que algo está pasando en segundo plano. */}
           {calculandoEnvio && (
             <p className="text-xs text-ink-faint">Calculando el envío…</p>
           )}
@@ -549,9 +606,60 @@ export function FormularioCheckout() {
               >
                 <input name="facturaRazonSocial" required={quiereFactura} placeholder="Razón social" className={CAMPO} />
                 <div className="flex gap-3">
-                  <input name="facturaRut" required={quiereFactura} placeholder="RUT empresa" className={`${CAMPO} flex-1`} />
+                  <input
+                    name="facturaRut"
+                    required={quiereFactura}
+                    value={facturaRutTexto}
+                    onChange={(e) => setFacturaRutTexto(formatearRut(e.target.value))}
+                    placeholder="RUT empresa"
+                    maxLength={12}
+                    className={`${CAMPO} flex-1`}
+                  />
                   <input name="facturaGiro" required={quiereFactura} placeholder="Giro" className={`${CAMPO} flex-1`} />
                 </div>
+
+                <p className="mt-1 text-xs font-semibold uppercase tracking-wider text-ink-faint">Dirección de facturación</p>
+                <select
+                  name="facturaRegion"
+                  required={quiereFactura}
+                  value={facturaRegionElegida}
+                  className={CAMPO}
+                  onChange={(e) => {
+                    setFacturaRegionElegida(e.target.value);
+                    setFacturaComunaElegida("");
+                  }}
+                >
+                  <option value="" disabled>
+                    Región
+                  </option>
+                  {REGIONES_CHILE.map((region) => (
+                    <option key={region} value={region}>
+                      {region}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  name="facturaComuna"
+                  required={quiereFactura}
+                  value={facturaComunaElegida}
+                  disabled={!facturaRegionElegida}
+                  className={`${CAMPO} disabled:cursor-not-allowed disabled:opacity-50`}
+                  onChange={(e) => setFacturaComunaElegida(e.target.value)}
+                >
+                  <option value="" disabled>
+                    {facturaRegionElegida ? "Comuna" : "Elige una región primero"}
+                  </option>
+                  {facturaComunasDisponibles.map((comuna) => (
+                    <option key={comuna} value={comuna}>
+                      {comuna}
+                    </option>
+                  ))}
+                </select>
+                <div className="flex gap-3">
+                  <input name="facturaCalle" required={quiereFactura} placeholder="Calle" className={`${CAMPO} flex-[2]`} />
+                  <input name="facturaNumero" required={quiereFactura} placeholder="Número" className={`${CAMPO} flex-1`} />
+                </div>
+                <input name="facturaPisoDepto" placeholder="Piso/Departamento (opcional)" className={CAMPO} />
               </motion.div>
             )}
           </AnimatePresence>
@@ -590,94 +698,6 @@ export function FormularioCheckout() {
           {enviando ? "Redirigiendo a Flow…" : `Pagar ${formatoCLP.format(total)}`}
         </motion.button>
       </form>
-
-      <aside className="h-fit rounded-2xl bg-surface p-5 shadow-elevated-lg sm:col-span-2">
-        <h2 className="font-display text-sm font-semibold text-ink">Tu pedido</h2>
-        <ul className="mt-3 flex flex-col gap-4">
-          {items.map((item) => (
-            <li key={item.sku} className="flex gap-3 text-sm text-ink-soft">
-              <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-surface-sunken">
-                {item.imagen ? (
-                  <Image src={item.imagen} alt={item.nombre} fill className="object-cover" sizes="48px" />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-[9px] text-ink-faint">Sin foto</div>
-                )}
-              </div>
-              <div className="flex flex-1 flex-col gap-1">
-                <span className="text-ink">{item.nombre}</span>
-                <div className="flex items-center justify-between gap-2">
-                  {/* Alto fijo EXPLÍCITO (h-7) en los 3 elementos — no basta
-                      con ponerlo solo en el contenedor y confiar en que
-                      `items-stretch` lo reparta igual: se probó en producción
-                      real y el <input> quedaba con 26px de alto real contra
-                      un line-height de 28px (el texto se dibujaba más alto
-                      que su propia caja, saliéndose del óvalo). Con h-7 en
-                      cada uno de los 3 no depende de cómo el navegador
-                      calcule el estirado. */}
-                  <div className="flex h-7 overflow-hidden rounded-full border border-border">
-                    <button
-                      type="button"
-                      onClick={() => cambiarCantidadYRecalcular(item.sku, item.cantidad - 1)}
-                      className="flex h-7 w-7 shrink-0 items-center justify-center text-ink-soft transition-colors hover:text-primary"
-                      aria-label={`Restar cantidad de ${item.nombre}`}
-                    >
-                      <Minus className="h-3 w-3" aria-hidden />
-                    </button>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      value={item.cantidad}
-                      onChange={(e) => {
-                        const valor = parseInt(e.target.value.replace(/\D/g, ""), 10);
-                        if (!Number.isNaN(valor)) cambiarCantidadYRecalcular(item.sku, valor);
-                      }}
-                      className="h-7 w-7 shrink-0 bg-transparent text-center text-sm leading-7 tabular-nums text-ink outline-none"
-                      aria-label={`Cantidad de ${item.nombre}`}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => cambiarCantidadYRecalcular(item.sku, item.cantidad + 1)}
-                      disabled={item.cantidad >= item.stock_web}
-                      className="flex h-7 w-7 shrink-0 items-center justify-center text-ink-soft transition-colors hover:text-primary disabled:pointer-events-none disabled:opacity-40"
-                      aria-label={`Sumar cantidad de ${item.nombre}`}
-                    >
-                      <Plus className="h-3 w-3" aria-hidden />
-                    </button>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      quitarItem(item.sku);
-                      invalidarEnvio();
-                    }}
-                    className="text-xs text-ink-faint underline transition-colors hover:text-accent"
-                  >
-                    Quitar
-                  </button>
-                </div>
-              </div>
-              <span className="shrink-0 tabular-nums">{formatoCLP.format(item.precio_web * item.cantidad)}</span>
-            </li>
-          ))}
-        </ul>
-        <div className="mt-3 flex flex-col gap-1.5 border-t border-border pt-3 text-sm">
-          <div className="flex justify-between text-ink-soft">
-            <span>Subtotal</span>
-            <span className="tabular-nums">{formatoCLP.format(subtotal)}</span>
-          </div>
-          <div className="flex justify-between text-ink-soft">
-            <span>Envío{opcionElegida?.detalle ? ` (${opcionElegida.detalle})` : ""}</span>
-            <span className="tabular-nums">
-              {opcionElegida ? (opcionElegida.costo === 0 ? "Gratis" : formatoCLP.format(opcionElegida.costo)) : "Por calcular"}
-            </span>
-          </div>
-          <div className="flex justify-between text-base font-semibold text-ink">
-            <span>Total</span>
-            <span className="tabular-nums">{formatoCLP.format(total)}</span>
-          </div>
-        </div>
-      </aside>
     </div>
   );
 }

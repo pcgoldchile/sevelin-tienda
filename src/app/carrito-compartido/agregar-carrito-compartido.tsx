@@ -10,7 +10,7 @@ export function AgregarCarritoCompartido({
 }: {
   items: { producto: ProductoWeb; cantidad: number }[];
 }) {
-  const { agregarItem, abrirCarrito } = useCarrito();
+  const { agregarItem } = useCarrito();
   const [agregado, setAgregado] = useState(false);
   const router = useRouter();
 
@@ -21,8 +21,7 @@ export function AgregarCarritoCompartido({
       agregarItem(producto, cantidad);
     }
     setAgregado(true);
-    abrirCarrito();
-    router.push("/productos");
+    router.push("/carrito");
   }
 
   return (
