@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { after } from "next/server";
 import { obtenerProductoPorSku } from "@/lib/catalogo";
 import { formatoCLP } from "@/lib/formato";
 import { sanitizarDescripcionHtml } from "@/lib/sanitizar-html";
+import { registrarVistaProducto } from "@/lib/eventos-web";
 import { GaleriaProducto } from "@/components/galeria-producto";
 import { AccionesProducto } from "@/components/acciones-producto";
 import { EtiquetaProductoBadge } from "@/components/etiqueta-producto-badge";
@@ -30,6 +32,10 @@ export default async function FichaProducto({ params }: PropsPagina) {
     );
   }
   if (!producto) notFound();
+
+  // Se registra DESPUÉS de mandar la respuesta (after()), no retrasa la
+  // ficha — el POS la lee para el panel "Más buscados / más vistos".
+  after(() => registrarVistaProducto(producto.producto_pos_id));
 
   const descripcionSegura = producto.descripcion_web
     ? sanitizarDescripcionHtml(producto.descripcion_web)

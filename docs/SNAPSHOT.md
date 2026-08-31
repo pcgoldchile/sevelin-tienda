@@ -4,10 +4,11 @@
 > arquitectura completo (todas las fases) vive en `README-ECOMMERCE-SEVELIN.md`, en el repo del POS
 > (`sevelin-pos-oficial`) — este documento es el estado de ESTE repo (`sevelin-tienda`) nada más.
 
-**Fecha:** 31-08-2026 · **Versión activa:** v21 (etiqueta destacada de producto — NOVEDAD/TENDENCIA/
-OFERTA, badge en tarjeta y ficha de producto, código listo pero pendiente de desplegar — ver "v21"
-abajo; también v20: Chilexpress: código de cotización real validado de punta a punta contra el
-ambiente de pruebas, falta solo la TCC para producción — ver "v20" abajo;
+**Fecha:** 31-08-2026 · **Versión activa:** v22 (tracking de búsquedas y vistas de producto —
+`eventos_web`, para el panel "Más buscados" del POS, código listo pero pendiente de desplegar — ver
+"v22" abajo; también v21: etiqueta destacada de producto — NOVEDAD/TENDENCIA/OFERTA, badge en tarjeta
+y ficha de producto, código listo pero pendiente de desplegar; v20: Chilexpress: código de cotización
+real validado de punta a punta contra el ambiente de pruebas, falta solo la TCC para producción;
 también v19: carritos persistentes con expiración de 24h — link de "compartir carrito" con token en
 vez de codificado sin vencimiento, popup avisando la duración, y recordatorio de carrito abandonado
 cuando el cliente deja el correo en el checkout sin pagar; v18: rediseño de ficha de producto + fix del
@@ -203,6 +204,17 @@ Next.js 16 (App Router) · TypeScript · Tailwind v4 · `@supabase/supabase-js`.
   `sevelin-pos-oficial` (dueño de `descripcion_web`), documentado en su propio
   `docs/CHANGELOG-V41.md`. Quedan pendientes 40 productos sin ninguna descripción guardada (esperando
   specs del usuario) y los servicios técnicos (prompt aparte, otra sesión).
+
+## Estado: qué está HECHO (v22 — tracking de búsquedas y vistas de producto, 31-08-2026)
+> Detalle completo en `docs/CHANGELOG-V22.md`.
+- `eventos_web` nueva (`supabase/13-eventos-web.sql`, aplicada): 2 tipos de evento, `busqueda`
+  (término escrito en `/productos?q=...`) y `vista_producto` (cada vez que se abre una ficha,
+  `/productos/[sku]`). `src/lib/eventos-web.ts::registrarBusqueda()`/`registrarVistaProducto()`, mejor
+  esfuerzo (nunca lanza), llamadas con `after()` (next/server) para no retrasar la respuesta.
+- La lee el POS (`GET /api/pos/mas-buscados`, `dbWeb`) para el panel nuevo "Más buscados" — ver
+  `sevelin-pos-oficial/docs/CHANGELOG-V43.md`. **Código listo, probado localmente contra producción
+  (se insertaron y revirtieron eventos de prueba reales), PENDIENTE DE DESPLEGAR** — mismo caso que la
+  etiqueta destacada (v21): hasta desplegar, no se registra nada desde el sitio real.
 
 ## Estado: qué está HECHO (v21 — etiqueta destacada de producto, 31-08-2026)
 > Detalle completo en `docs/CHANGELOG-V21.md`.

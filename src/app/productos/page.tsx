@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { after } from "next/server";
 import { buscarCatalogo, esOrdenCatalogoValido, listarCategorias, listarSubcategorias } from "@/lib/catalogo";
+import { registrarBusqueda } from "@/lib/eventos-web";
 import { TarjetaProducto } from "@/components/tarjeta-producto";
 import { SelectorOrden } from "@/components/selector-orden";
 import { ScrollReveal } from "@/components/fx/scroll-reveal";
@@ -13,6 +15,12 @@ interface PropsPagina {
 export default async function Productos({ searchParams }: PropsPagina) {
   const { categoria, subcategoria, q, orden } = await searchParams;
   const ordenActual = esOrdenCatalogoValido(orden) ? orden : "relevancia";
+
+  // Se registra el término tal cual lo buscó el cliente, tenga o no
+  // resultados — un término sin resultados también es una señal útil
+  // ("demanda no satisfecha"). after() corre después de mandar la
+  // respuesta, no retrasa la página.
+  if (q?.trim()) after(() => registrarBusqueda(q));
 
   let productos: Awaited<ReturnType<typeof buscarCatalogo>> = [];
   let categorias: string[] = [];
