@@ -500,7 +500,7 @@ Next.js 16 (App Router) · TypeScript · Tailwind v4 · `@supabase/supabase-js`.
 - `docs/README-SUPABASE-WEB.md`, `docs/README-WEBHOOK-POS.md`: pasos manuales para crear el proyecto
   Supabase Web y configurar el webhook.
 
-## Pendiente (real, verificado al 29-08-2026 — no repetir lo ya hecho)
+## Pendiente (real, verificado al 31-08-2026 — no repetir lo ya hecho)
 
 **Notificaciones (correo/WhatsApp) — lo más reciente, v16:**
 1. **Verificar un dominio propio en Resend** (dashboard.resend.com, cuenta con
@@ -562,7 +562,16 @@ Next.js 16 (App Router) · TypeScript · Tailwind v4 · `@supabase/supabase-js`.
 10. **Flow en producción**: `POST /payment/create` está verificado solo contra **sandbox**. Falta (a)
     cambiar a credenciales de producción reales en Vercel cuando el usuario las tenga, (b) probar el
     flujo completo con un pago real (`getStatus`/`FLOW_ESTADO_PAGADO` nunca se confirmaron contra un
-    pago completado de verdad, solo contra la creación de la orden).
+    pago completado de verdad, solo contra la creación de la orden). **Sigue así después de v30-v32**:
+    el checkout nuevo (`/carrito` + `/checkout` separados) se probó hasta el submit, no de punta a
+    punta con un pago real.
+10b. **Carrito guardado por cuenta (v30, `perfiles_clientes.carrito`) sin probar con una sesión real
+    de dos dispositivos** — la lógica se revisó por código y se verificó que no rompe nada (build,
+    tsc, lint), pero nunca se inició sesión de verdad en el navegador para confirmar que el carrito
+    efectivamente aparece igual en dos pestañas/dispositivos distintos con la misma cuenta.
+    ~~Confirmar el pill de cantidad ya no se escapa~~ — **RESUELTO Y VERIFICADO 31-08-2026**: medido
+    con `getBoundingClientRect()` en producción real, contra el mismo producto ("$300.000") de la
+    captura original del dueño — los 3 elementos del control de cantidad miden 36px exactos.
 11. **Productos que llegaron sin SKU YA se pueden publicar** (v16, sync ya no lo exige) — sigue
     pendiente curar el catálogo: clasificarlos/marcarlos `publicado_web=true` desde el modal del POS
     si se quiere que se vean en la tienda. Ya no es un bloqueo técnico.
