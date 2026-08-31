@@ -4,9 +4,9 @@
 > arquitectura completo (todas las fases) vive en `README-ECOMMERCE-SEVELIN.md`, en el repo del POS
 > (`sevelin-pos-oficial`) — este documento es el estado de ESTE repo (`sevelin-tienda`) nada más.
 
-**Fecha:** 01-09-2026 · **Versión activa:** v28 (checkout: cantidades editables en "Tu pedido",
-envío 100% automático sin botón, campos de dirección reordenados — probado de punta a punta contra
-Chilexpress real — ver "v28" abajo; también v27: **TODO lo de v19-v26 quedó desplegado en producción
+**Fecha:** 01-09-2026 · **Versión activa:** v29 (checkout: pill de cantidad con altura fija + campo
+RUT opcional con formato automático — ver "v29" abajo; también v28: cantidades editables en "Tu
+pedido", envío 100% automático sin botón, campos de dirección reordenados; también v27: **TODO lo de v19-v26 quedó desplegado en producción
 de verdad** — Vercel CLI conectado, Chilexpress activado con credenciales reales, y se encontró y
 corrigió un bug real que bloqueaba CUALQUIER despliegue desde v19 [cron incompatible con el plan
 Hobby]; también v26: Chilexpress: credenciales productivas reales confirmadas contra
@@ -213,6 +213,16 @@ Next.js 16 (App Router) · TypeScript · Tailwind v4 · `@supabase/supabase-js`.
   `sevelin-pos-oficial` (dueño de `descripcion_web`), documentado en su propio
   `docs/CHANGELOG-V41.md`. Quedan pendientes 40 productos sin ninguna descripción guardada (esperando
   specs del usuario) y los servicios técnicos (prompt aparte, otra sesión).
+
+## Estado: qué está HECHO (v29 — pill de cantidad robusto + RUT del cliente, 01-09-2026)
+> Detalle completo en `docs/CHANGELOG-V29.md`.
+- Selector de cantidad de "Tu pedido" con altura fija (`h-7`/`w-7`) en vez de padding — más robusto
+  ante diferencias de fuente entre navegadores. **No se pudo reproducir el bug reportado** (número
+  "escapándose" del óvalo) para confirmar contra el caso real — pendiente que el dueño lo revise.
+- Campo RUT (identificación, opcional) en "Tus Datos" — un solo input, formato automático mientras se
+  escribe (`src/lib/rut.ts`). Se persiste en `pedidos_web.cliente_rut` (columna nueva), no en
+  `factura_rut` (ese es el de la empresa al pedir factura). No visible todavía en el panel "Pedidos
+  Web" del POS.
 
 ## Estado: qué está HECHO (v28 — checkout: cantidades editables + envío automático, 01-09-2026)
 > Detalle completo en `docs/CHANGELOG-V28.md`.

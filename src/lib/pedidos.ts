@@ -8,6 +8,9 @@ interface DatosCliente {
   apellido: string;
   email: string;
   telefono: string;
+  // Identificación, no facturación (esa sigue siendo DatosFactura.rut).
+  // Opcional: el checkout sigue funcionando igual sin él.
+  rut: string | null;
 }
 
 /**
@@ -56,6 +59,7 @@ export async function crearPedido(datos: {
       cliente_apellido: datos.cliente.apellido,
       cliente_email: datos.cliente.email,
       cliente_telefono: datos.cliente.telefono,
+      cliente_rut: datos.cliente.rut,
       cliente_user_id: datos.clienteUserId,
       nota_cliente: datos.nota,
       quiere_factura: !!datos.factura,

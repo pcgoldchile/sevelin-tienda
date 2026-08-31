@@ -15,6 +15,8 @@ interface CuerpoCheckout {
     // Código de país y número ya vienen concatenados por el formulario
     // (ver formulario-checkout.tsx) — acá solo se guarda como un string.
     telefono?: string;
+    // Identificación, no facturación (esa sigue siendo factura.rut) — opcional.
+    rut?: string;
   };
   direccion?: Partial<DireccionEnvio>;
   items?: { sku?: string; cantidad?: number }[];
@@ -156,7 +158,7 @@ export async function POST(req: NextRequest) {
   let total: number;
   try {
     const pedido = await crearPedido({
-      cliente: { nombre, apellido, email, telefono },
+      cliente: { nombre, apellido, email, telefono, rut: cuerpo.cliente?.rut?.trim() || null },
       direccion: direccionCompleta,
       items,
       metodoEnvio: cotizacion.metodo,

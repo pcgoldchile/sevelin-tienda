@@ -9,6 +9,7 @@ import { formatoCLP } from "@/lib/formato";
 import { useCarrito } from "@/context/carrito-context";
 import { useSesion } from "@/context/sesion-context";
 import { CODIGOS_PAIS, CODIGO_PAIS_POR_DEFECTO } from "@/lib/codigos-pais";
+import { formatearRut } from "@/lib/rut";
 import { REGIONES_CHILE } from "@/lib/regiones-chile";
 import { COMUNAS_POR_REGION } from "@/lib/comunas-chile";
 import type { OpcionEnvio } from "@/lib/envio";
@@ -55,6 +56,12 @@ export function FormularioCheckout() {
   // precargado del perfil; en cuanto escribe algo, `telefonoTexto` manda.
   const telefonoEfectivo = telefonoTexto || perfil?.telefono || "";
   const telefonoLargoInesperado = codigoPaisElegido === "+56" && telefonoEfectivo.replace(/\D/g, "").length > 9;
+  // RUT (identificación, opcional) — un solo campo con el dígito
+  // verificador incluido, se reformatea solo en cada tecla
+  // (formatearRut(): "219613873" → "21.961.387-3"). Controlado a propósito
+  // (a diferencia de teléfono): necesita reescribir el valor que el
+  // navegador ya mostró, no solo leerlo.
+  const [rutTexto, setRutTexto] = useState("");
   // Desmarcada por defecto a propósito (Ley 21.719: consentimiento libre e
   // inequívoco, nunca una casilla premarcada) — el submit queda bloqueado
   // mientras no se acepte a propósito.
@@ -209,6 +216,7 @@ export function FormularioCheckout() {
             apellido: datos.get("apellido"),
             email: datos.get("email"),
             telefono,
+            rut: datos.get("rut"),
           },
           direccion: {
             calle: datos.get("calle"),
@@ -320,6 +328,15 @@ export function FormularioCheckout() {
           {telefonoLargoInesperado && (
             <p className="text-xs text-accent">Ingresaste más de 9 dígitos — revisa que el número esté correcto.</p>
           )}
+          <input
+            name="rut"
+            value={rutTexto}
+            onChange={(e) => setRutTexto(formatearRut(e.target.value))}
+            placeholder="RUT (opcional)"
+            inputMode="text"
+            maxLength={12}
+            className={CAMPO}
+          />
         </fieldset>
 
         <fieldset className="flex flex-col gap-3">
@@ -589,11 +606,16 @@ export function FormularioCheckout() {
               <div className="flex flex-1 flex-col gap-1">
                 <span className="text-ink">{item.nombre}</span>
                 <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center rounded-full border border-border">
+                  {/* Alto fijo (h-7) en los 3 elementos, no relleno (padding) —
+                      con padding, la altura real del input dependía de la
+                      fuente/line-height del navegador y podía desalinearse o
+                      salirse del óvalo. Con alto fijo + flex centrado, los
+                      tres miden exactamente lo mismo siempre. */}
+                  <div className="flex h-7 items-stretch overflow-hidden rounded-full border border-border">
                     <button
                       type="button"
                       onClick={() => cambiarCantidadYRecalcular(item.sku, item.cantidad - 1)}
-                      className="px-2 py-1 text-ink-soft transition-colors hover:text-primary"
+                      className="flex w-7 shrink-0 items-center justify-center text-ink-soft transition-colors hover:text-primary"
                       aria-label={`Restar cantidad de ${item.nombre}`}
                     >
                       <Minus className="h-3 w-3" aria-hidden />
@@ -607,14 +629,14 @@ export function FormularioCheckout() {
                         const valor = parseInt(e.target.value.replace(/\D/g, ""), 10);
                         if (!Number.isNaN(valor)) cambiarCantidadYRecalcular(item.sku, valor);
                       }}
-                      className="w-8 bg-transparent text-center text-sm tabular-nums text-ink outline-none"
+                      className="w-7 shrink-0 bg-transparent text-center text-sm leading-7 tabular-nums text-ink outline-none"
                       aria-label={`Cantidad de ${item.nombre}`}
                     />
                     <button
                       type="button"
                       onClick={() => cambiarCantidadYRecalcular(item.sku, item.cantidad + 1)}
                       disabled={item.cantidad >= item.stock_web}
-                      className="px-2 py-1 text-ink-soft transition-colors hover:text-primary disabled:pointer-events-none disabled:opacity-40"
+                      className="flex w-7 shrink-0 items-center justify-center text-ink-soft transition-colors hover:text-primary disabled:pointer-events-none disabled:opacity-40"
                       aria-label={`Sumar cantidad de ${item.nombre}`}
                     >
                       <Plus className="h-3 w-3" aria-hidden />

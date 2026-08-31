@@ -123,6 +123,9 @@ export interface PedidoWeb {
   cliente_apellido: string | null;
   cliente_email: string | null;
   cliente_telefono: string | null;
+  // RUT del cliente (identificación) — distinto de factura_rut, el de la
+  // empresa cuando pide "Solicitar factura". Opcional.
+  cliente_rut: string | null;
   // null = pedido de invitado (sin sesión al momento de pagar).
   cliente_user_id: string | null;
   nota_cliente: string | null;
