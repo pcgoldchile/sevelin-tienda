@@ -513,6 +513,9 @@ Next.js 16 (App Router) · TypeScript · Tailwind v4 · `@supabase/supabase-js`.
     una ejecución diaria (ver `docs/CHANGELOG-V27.md`). Un carrito abandonado justo después de esa
     hora puede tardar casi 24h en recibir el recordatorio, cerca del límite en que el carrito ya
     expiró. Evaluar si conviene el plan Pro para recuperar la frecuencia original.
+8d. ~~CRON_SECRET sin configurar~~ — **RESUELTO 01-09-2026**: agregada a Vercel Production con la CLI
+    y redesplegado. Confirmado con curl real: `GET /api/cron/recordar-carritos` sin el header da 401,
+    con el secreto correcto da 200. Ya no queda ninguna variable de entorno pendiente de esta sesión.
 9. ~~Chilexpress~~ — **RESUELTO Y ACTIVADO EN PRODUCCIÓN el 01-09-2026.** Historia completa: v20
    (llaves de prueba self-service), v24 (documentación oficial, `declaredWorth` real), v25 (endpoint
    correcto `rates/business`, no `rates/courier`), v26 (credenciales PRODUCTIVAS reales confirmadas
