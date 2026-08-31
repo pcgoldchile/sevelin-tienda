@@ -9,6 +9,7 @@ import confetti from "canvas-confetti";
 import { formatoCLP } from "@/lib/formato";
 import { useCarrito } from "@/context/carrito-context";
 import { useToast } from "@/context/toast-context";
+import { EtiquetaProductoBadge } from "@/components/etiqueta-producto-badge";
 import type { ProductoWeb } from "@/lib/tipos";
 
 // Confetti cian/magenta al agregar al carrito — un pequeño "loot get" gamer.
@@ -70,6 +71,7 @@ export function TarjetaProducto({ producto }: { producto: ProductoWeb }) {
           <div className="flex h-full w-full items-center justify-center text-xs text-ink-faint">Sin foto</div>
         )}
         <div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-t from-surface-sunken/70 via-transparent to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
+        <EtiquetaProductoBadge etiqueta={producto.etiqueta_web} className="absolute left-2 top-2" />
       </Link>
       <div className="flex flex-1 flex-col gap-1 p-3.5">
         {/* Caja de nombre de EXACTAMENTE 2 líneas: h-10 (40px) con

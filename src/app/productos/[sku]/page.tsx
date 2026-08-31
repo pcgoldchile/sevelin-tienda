@@ -5,6 +5,7 @@ import { formatoCLP } from "@/lib/formato";
 import { sanitizarDescripcionHtml } from "@/lib/sanitizar-html";
 import { GaleriaProducto } from "@/components/galeria-producto";
 import { AccionesProducto } from "@/components/acciones-producto";
+import { EtiquetaProductoBadge } from "@/components/etiqueta-producto-badge";
 
 export const revalidate = 60;
 
@@ -54,6 +55,7 @@ export default async function FichaProducto({ params }: PropsPagina) {
         <GaleriaProducto imagenes={producto.imagen_urls || []} nombre={producto.nombre} />
 
         <div className="flex flex-col gap-4">
+          <EtiquetaProductoBadge etiqueta={producto.etiqueta_web} />
           <h1 className="text-3xl font-semibold tracking-tight text-ink">{producto.nombre}</h1>
           <span className="precio-gamer text-3xl text-ink">{formatoCLP.format(producto.precio_web)}</span>
 

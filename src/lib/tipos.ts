@@ -22,8 +22,14 @@ export interface ProductoWeb {
   // NULL = usa el default de la tienda (+5, ver formatoStock en src/lib/formato.ts).
   // Se configura por producto desde el POS (módulo "Página Web → Categorías").
   stock_umbral_web: number | null;
+  // Etiqueta destacada, marcada a mano desde el POS — ver EtiquetaProducto abajo.
+  etiqueta_web: EtiquetaProducto | null;
   sincronizado_en: string;
 }
+
+/** Etiqueta destacada de producto — el dueño marca como mucho una por
+ * producto desde el modal del POS ("Tienda web" → Etiqueta destacada). */
+export type EtiquetaProducto = 'NOVEDAD' | 'TENDENCIA' | 'OFERTA';
 
 /** Dirección de envío del checkout de invitado — se guarda tal cual en `pedidos_web.direccion_envio`
  * (columna JSONB, por eso `region` no necesitó una migración aparte). */
@@ -168,4 +174,5 @@ export interface ProductoPOS {
   // categoria_id (FK interna del POS a producto_categorias) NO viaja acá a
   // propósito: no tiene contraparte en este Supabase, solo se usa categoria_web.
   stock_umbral_web: number | null;
+  etiqueta_web: EtiquetaProducto | null;
 }
