@@ -163,15 +163,12 @@ export function FormularioCheckout() {
          lista. Va como error visible (no silencioso) para que el cliente
          entienda por qué solo ve retiro y courier. */
       setErrorEnvio(data.aviso || null);
-      setMetodoElegido((actual) => {
-        // Si el método que ya tenía elegido sigue disponible entre las
-        // opciones nuevas (ej. solo cambió la cantidad), se mantiene — no
-        // tiene sentido hacer que el cliente vuelva a elegir por eso. Si no
-        // sigue disponible, se preselecciona sola cuando queda una sola
-        // opción (fuera de Arica); con dos, el cliente elige a propósito.
-        if (actual && nuevasOpciones.some((o) => o.metodo === actual)) return actual;
-        return nuevasOpciones.length === 1 ? nuevasOpciones[0].metodo : null;
-      });
+      // Nunca se preselecciona sola, ni con una sola opción disponible — la
+      // elección del método de envío es siempre manual (pedido explícito
+      // del dueño). Si el método que ya tenía elegido sigue disponible entre
+      // las opciones nuevas (ej. solo cambió la cantidad), se mantiene — no
+      // tiene sentido hacer que el cliente vuelva a elegir por eso solo.
+      setMetodoElegido((actual) => (actual && nuevasOpciones.some((o) => o.metodo === actual) ? actual : null));
     } catch (err) {
       setErrorEnvio(err instanceof Error ? err.message : "No se pudo calcular el envío");
       setOpciones(null);
@@ -508,6 +505,19 @@ export function FormularioCheckout() {
 
           <input name="referencia" placeholder="Referencia (opcional)" className={CAMPO} />
 
+          {/* Subtítulo propio para el método de envío — antes esta zona
+              quedaba en blanco hasta que la dirección estaba completa, sin
+              ninguna pista de que ahí iba a aparecer algo (pedido explícito
+              del dueño: que se note que existe un paso de método de envío,
+              no solo dentro del checkout). */}
+          <p className="mt-1 text-xs font-semibold uppercase tracking-wider text-ink-faint">Método de envío</p>
+
+          {!direccionCompleta && (
+            <p className="text-xs text-ink-faint">
+              Completa tu dirección para ver los métodos de envío disponibles, incluido el retiro en tienda.
+            </p>
+          )}
+
           {/* Sin botón: el envío se recalcula solo apenas la dirección está
               completa (pedido explícito del dueño), y de nuevo cada vez que
               cambia la dirección o las cantidades seleccionadas. Este texto
@@ -517,7 +527,7 @@ export function FormularioCheckout() {
           )}
 
           <AnimatePresence>
-            {opciones && opciones.length > 1 && (
+            {opciones && opciones.length > 0 && (
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}

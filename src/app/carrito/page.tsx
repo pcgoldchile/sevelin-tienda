@@ -20,8 +20,14 @@ export default function CarritoPage() {
     seleccionarTodos,
   } = useCarrito();
   const [compartiendo, setCompartiendo] = useState(false);
-  const [linkCopiado, setLinkCopiado] = useState(false);
+  const [copiado, setCopiado] = useState(false);
   const [mostrarAvisoDuracion, setMostrarAvisoDuracion] = useState(false);
+  // Link ya generado (token vigente 24h) — una vez que existe, se ofrece un
+  // botón "Copiar link" aparte del de compartir: en mobile navigator.share()
+  // abre el panel nativo del sistema y no deja nada copiado en el
+  // portapapeles, así que sin este botón no había forma de copiarlo a mano
+  // después de compartirlo una vez.
+  const [linkCompartido, setLinkCompartido] = useState<string | null>(null);
 
   const todosSeleccionados = items.length > 0 && items.every((item) => item.seleccionado);
 
@@ -37,6 +43,7 @@ export default function CarritoPage() {
       if (!respuesta.ok) throw new Error(data.error || "No se pudo crear el link");
 
       const url = `${window.location.origin}/carrito-compartido?t=${data.token}`;
+      setLinkCompartido(url);
       setMostrarAvisoDuracion(true);
 
       // En mobile, el share nativo (WhatsApp, etc.) es lo que la gente espera;
@@ -50,12 +57,23 @@ export default function CarritoPage() {
         }
       }
       await navigator.clipboard.writeText(url);
-      setLinkCopiado(true);
-      setTimeout(() => setLinkCopiado(false), 2000);
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 2000);
     } catch {
       // Falló crear el link o el portapapeles está bloqueado.
     } finally {
       setCompartiendo(false);
+    }
+  }
+
+  async function copiarLink() {
+    if (!linkCompartido) return;
+    try {
+      await navigator.clipboard.writeText(linkCompartido);
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 2000);
+    } catch {
+      // Portapapeles bloqueado — mejor esfuerzo, no bloquea el resto del flujo.
     }
   }
 
@@ -163,14 +181,29 @@ export default function CarritoPage() {
             ))}
           </ul>
 
-          <button
-            type="button"
-            onClick={compartirCarrito}
-            disabled={compartiendo}
-            className="self-start rounded-full border border-border px-4 py-2.5 text-sm font-medium text-ink-soft transition-colors hover:border-border-strong hover:text-ink disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {compartiendo ? "Creando link…" : linkCopiado ? "✓ Link copiado" : "🔗 Compartir carrito"}
-          </button>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={compartirCarrito}
+              disabled={compartiendo}
+              className="rounded-full border border-border px-4 py-2.5 text-sm font-medium text-ink-soft transition-colors hover:border-border-strong hover:text-ink disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {compartiendo ? "Creando link…" : "🔗 Compartir carrito"}
+            </button>
+            {/* Solo aparece una vez que existe un link generado — separado
+                del botón de compartir porque navigator.share() (mobile) abre
+                el panel nativo del sistema y no deja nada en el
+                portapapeles. */}
+            {linkCompartido && (
+              <button
+                type="button"
+                onClick={copiarLink}
+                className="rounded-full border border-border px-4 py-2.5 text-sm font-medium text-ink-soft transition-colors hover:border-border-strong hover:text-ink"
+              >
+                {copiado ? "✓ Link copiado" : "Copiar link"}
+              </button>
+            )}
+          </div>
         </div>
 
         <aside className="h-fit rounded-2xl bg-surface p-5 shadow-elevated-lg sm:col-span-2">

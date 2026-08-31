@@ -243,9 +243,14 @@ export async function cotizarOpcionesEnvio(
   direccion: DireccionEnvio,
   items: { sku: string; cantidad: number }[]
 ): Promise<CotizacionEnvio> {
-  if (esComunaTienda(direccion.comuna)) {
-    const opciones: OpcionEnvio[] = [opcionRetiro()];
+  // Retiro en tienda va SIEMPRE, sin importar la región/comuna que haya
+  // puesto el cliente (pedido explícito del dueño): pensado para quien
+  // compra desde otra ciudad pero quiere que un familiar que vive en Arica
+  // pase a retirarlo — exigir que la dirección de envío fuera "Arica" para
+  // ver esta opción no tenía sentido en ese caso.
+  const opciones: OpcionEnvio[] = [opcionRetiro()];
 
+  if (esComunaTienda(direccion.comuna)) {
     const local = await tarifaLocalPorDistancia(direccion);
     if (local) opciones.push(local);
 
@@ -267,8 +272,13 @@ export async function cotizarOpcionesEnvio(
     };
   }
 
-  const opcion = await cotizarViaChilexpress(direccion, items);
-  return { opciones: [opcion] };
+  try {
+    opciones.push(await cotizarViaChilexpress(direccion, items));
+  } catch {
+    // Sin courier disponible fuera de Arica: queda solo el retiro en tienda.
+  }
+
+  return { opciones };
 }
 
 /**
@@ -282,9 +292,11 @@ export async function confirmarEnvio(
   items: { sku: string; cantidad: number }[],
   metodoElegido?: string
 ): Promise<OpcionEnvio> {
-  if (esComunaTienda(direccion.comuna)) {
-    if (metodoElegido === 'RETIRO') return opcionRetiro();
+  // Igual que en la vista previa: retiro en tienda es válido sin importar
+  // la región/comuna de envío que haya puesto el cliente.
+  if (metodoElegido === 'RETIRO') return opcionRetiro();
 
+  if (esComunaTienda(direccion.comuna)) {
     if (metodoElegido === 'LOCAL') {
       /* Se vuelve a medir la distancia acá, aunque la vista previa ya lo
          hizo: este es el único número que termina cobrándose. Si entre la
@@ -306,5 +318,7 @@ export async function confirmarEnvio(
     throw new Error('Elige una forma de envío: retiro en tienda, despacho a domicilio o courier.');
   }
 
-  return cotizarViaChilexpress(direccion, items);
+  if (metodoElegido === 'CHILEXPRESS') return cotizarViaChilexpress(direccion, items);
+
+  throw new Error('Elige una forma de envío: retiro en tienda o courier.');
 }

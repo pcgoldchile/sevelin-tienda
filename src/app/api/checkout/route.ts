@@ -20,9 +20,9 @@ interface CuerpoCheckout {
   };
   direccion?: Partial<DireccionEnvio>;
   items?: { sku?: string; cantidad?: number }[];
-  // Solo aplica dentro de la comuna de la tienda: 'RETIRO' o 'LOCAL' — una
-  // elección legítima del cliente (ver src/lib/envio.ts). Fuera de esa
-  // comuna se ignora: siempre se cotiza con Chilexpress.
+  // 'RETIRO' es válido en cualquier región/comuna de envío (pensado para
+  // quien compra de otra ciudad pero un familiar en Arica retira); 'LOCAL'
+  // solo aplica dentro de la comuna de la tienda — ver src/lib/envio.ts.
   metodoEnvio?: string;
   nota?: string;
   factura?: Partial<DatosFactura>;
