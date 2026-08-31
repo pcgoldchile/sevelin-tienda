@@ -141,12 +141,18 @@ async function agregarPaquete(items: { sku: string; cantidad: number }[]) {
   const itemMayor = productos.reduce((mayor, actual) =>
     volumenCm3(actual.producto) > volumenCm3(mayor.producto) ? actual : mayor
   ).producto;
+  // Valor declarado real del paquete (Chilexpress lo exige, no es opcional —
+  // ver la documentación oficial confirmada el 31-08-2026 en
+  // developers.wschilexpress.com/api-details, operación Rate). Antes se
+  // mandaba 0 fijo por no tener acceso a los campos reales de la API.
+  const valorDeclarado = productos.reduce((acc, { producto, cantidad }) => acc + producto.precio_web * cantidad, 0);
 
   return {
     pesoKg,
     largoCm: itemMayor.profundidad_cm as number,
     altoCm: itemMayor.alto_cm as number,
     anchoCm: itemMayor.ancho_cm as number,
+    valorDeclarado,
   };
 }
 
@@ -202,6 +208,7 @@ async function cotizarViaChilexpress(
     largoCm: paquete.largoCm,
     altoCm: paquete.altoCm,
     anchoCm: paquete.anchoCm,
+    valorDeclarado: paquete.valorDeclarado,
   });
 
   return { metodo: 'CHILEXPRESS', costo: tarifa.precio, detalle: tarifa.servicio };

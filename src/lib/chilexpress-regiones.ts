@@ -2,17 +2,15 @@ import { REGIONES_CHILE } from './regiones-chile';
 
 /**
  * Código de región de Chilexpress para cada una de las 16 regiones de Chile
- * (ver REGIONES_CHILE en regiones-chile.ts) — "R" + el número de región
- * (numeración oficial en números romanos: XV=15, I=1... XVI=16), salvo la
- * Metropolitana, que usa "RM" en vez de "R13". Confirmado contra la API
- * real de Chilexpress (georeference/api/v1.0/coverage-areas, con la
- * suscripción real del 31-08-2026): las comunas cabecera de cada región
- * (Rancagua→R6, Talca→R7, Valdivia→R14, Coyhaique→R11, Punta Arenas→R12,
- * Arica→R15, Chillán→R16, Temuco→R9, Puerto Montt→R10, Iquique→R1,
- * Calama→R2, Copiapó→R3, La Serena→R4, Valparaíso→R5, Santiago→RM)
- * devolvieron exactamente estos códigos — no está documentado en ninguna
- * parte pública, developers.wschilexpress.com no expone esto (ver el aviso
- * al inicio de chilexpress.ts).
+ * (ver REGIONES_CHILE en regiones-chile.ts) — "R" + el número de región INE,
+ * salvo la Metropolitana (ineRegionCode 13), que usa "RM" en vez de "R13".
+ *
+ * CONFIRMADO OFICIAL el 31-08-2026 contra `GET /georeference/api/v1.0/regions`
+ * (developers.wschilexpress.com/api-details#api=georeference-rest-api&
+ * operation=GetRegions) — ese endpoint devuelve el listado completo de las
+ * 16 regiones con su `regionId` exacto, no hubo que inferirlo probando
+ * comuna por comuna (como se hizo en un primer intento contra
+ * coverage-areas, antes de encontrar este endpoint dedicado).
  */
 export const CODIGO_REGION_CHILEXPRESS: Record<(typeof REGIONES_CHILE)[number], string> = {
   'Arica y Parinacota': 'R15',

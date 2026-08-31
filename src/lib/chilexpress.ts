@@ -126,8 +126,11 @@ export interface TarifaChilexpress {
  * y la forma de la respuesta quedaron CONFIRMADOS contra el ambiente de
  * pruebas el 31-08-2026 (ver el aviso completo al inicio del archivo:
  * funciona en sandbox, no en producción con estas llaves). `declaredWorth`
- * sigue el ejemplo original (0) en vez del total real del pedido — eso sí
- * sigue sin confirmar qué efecto tiene en el precio.
+ * ahora manda el valor real del pedido (suma de precio_web × cantidad,
+ * calculado en agregarPaquete() de envio.ts) — la documentación oficial
+ * (developers.wschilexpress.com/api-details, operación Rate) confirma que
+ * es un campo OBLIGATORIO, no un dato decorativo; antes se mandaba 0 fijo
+ * porque no había forma de confirmarlo sin acceso real a la API.
  */
 export async function cotizarTarifasChilexpress(datos: {
   origenCountyCode: string;
@@ -136,6 +139,7 @@ export async function cotizarTarifasChilexpress(datos: {
   largoCm: number;
   altoCm: number;
   anchoCm: number;
+  valorDeclarado: number;
 }): Promise<TarifaChilexpress> {
   const apiKey = apiKeyCotizador();
 
@@ -153,7 +157,7 @@ export async function cotizarTarifasChilexpress(datos: {
       },
       productType: 3,
       contentType: 1,
-      declaredWorth: 0,
+      declaredWorth: Math.round(datos.valorDeclarado),
       deliveryTime: 0,
     }),
   });

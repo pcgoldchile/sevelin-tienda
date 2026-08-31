@@ -4,8 +4,10 @@
 > arquitectura completo (todas las fases) vive en `README-ECOMMERCE-SEVELIN.md`, en el repo del POS
 > (`sevelin-pos-oficial`) — este documento es el estado de ESTE repo (`sevelin-tienda`) nada más.
 
-**Fecha:** 31-08-2026 · **Versión activa:** v23 (tracking de visitas de página — `VisitTracker`,
-para el panel "Métricas" del POS, código listo pero pendiente de desplegar — ver "v23" abajo; también
+**Fecha:** 31-08-2026 · **Versión activa:** v24 (Chilexpress: documentación oficial encontrada —
+`declaredWorth` real en vez de 0, mapeo de regiones confirmado oficial, camino a producción claro
+—ver "v24" abajo; también v23: tracking de visitas de página — `VisitTracker`,
+para el panel "Métricas" del POS, código listo pero pendiente de desplegar; también
 v22: tracking de búsquedas y vistas de producto — `eventos_web`, para el panel "Más buscados" del POS;
 v21: etiqueta destacada de producto — NOVEDAD/TENDENCIA/OFERTA, badge en tarjeta y ficha de producto;
 v20: Chilexpress: código de cotización real validado de punta a punta contra el ambiente de pruebas,
@@ -205,6 +207,16 @@ Next.js 16 (App Router) · TypeScript · Tailwind v4 · `@supabase/supabase-js`.
   `sevelin-pos-oficial` (dueño de `descripcion_web`), documentado en su propio
   `docs/CHANGELOG-V41.md`. Quedan pendientes 40 productos sin ninguna descripción guardada (esperando
   specs del usuario) y los servicios técnicos (prompt aparte, otra sesión).
+
+## Estado: qué está HECHO (v24 — Chilexpress: documentación oficial, 31-08-2026)
+> Detalle completo en `docs/CHANGELOG-V24.md`.
+- El dueño encontró que `developers.wschilexpress.com/api-details` tiene documentación pública real
+  (sin login) — reemplaza dos supuestos de v20 por hechos confirmados: `declaredWorth` es OBLIGATORIO
+  (ahora se manda el valor real del carrito, no `0` fijo) y el mapeo de regiones
+  (`chilexpress-regiones.ts`) quedó confirmado oficial vía `GET /georeference/api/v1.0/regions`.
+- **Camino a producción claro**: con la TCC que el dueño ya asoció a su cuenta de Portal Empresa, el
+  siguiente paso es escribir a `soporteintegraciones@chilexpress.cl` — Chilexpress responde en menos
+  de 24h con las credenciales productivas reales. Ver detalle completo en la sección "Pendiente" #9.
 
 ## Estado: qué está HECHO (v23 — tracking de visitas de página, 31-08-2026)
 > Detalle completo en `docs/CHANGELOG-V23.md`.
@@ -459,29 +471,34 @@ Next.js 16 (App Router) · TypeScript · Tailwind v4 · `@supabase/supabase-js`.
    una vez al día. Si es Hobby, el recordatorio va a llegar mucho más tarde de lo pensado (o hay que
    ajustar el diseño) — ver `docs/CHANGELOG-V19.md`. Ambos proyectos ya están en Vercel (confirmado
    31-08-2026), falta solo el plan.
-9. **Chilexpress — código validado de punta a punta el 31-08-2026, falta la TCC para producción.** El
-   dueño consiguió 3 suscripciones reales del portal de Chilexpress (Coberturas, Cotizador, Envíos),
-   cada una con su propia llave. Contra `services.wschilexpress.com` (producción) las 3 dieron 401 en
-   casi todo — pero contra `testservices.wschilexpress.com` (ambiente de PRUEBAS) las 3 funcionaron
-   perfecto, incluida la cotización real de tarifa:
-   - **API-COBERTURAS-CHILEXPRESS confirmada** — resuelve comuna → countyCode. Con esto se resolvió el
-     TODO viejo de `src/lib/chilexpress.ts` (mapear comuna a región de Chilexpress, ver
-     `src/lib/chilexpress-regiones.ts`, tabla completa de las 16 regiones confirmada contra la API).
+9. **Chilexpress — código validado de punta a punta, documentación oficial encontrada, camino claro
+   para producción (actualizado 31-08-2026).** El dueño consiguió 3 suscripciones reales del portal de
+   Chilexpress (Coberturas, Cotizador, Envíos), cada una con su propia llave. Contra
+   `services.wschilexpress.com` (producción) las 3 dieron 401 en casi todo — pero contra
+   `testservices.wschilexpress.com` (ambiente de PRUEBAS) las 3 funcionaron perfecto, incluida la
+   cotización real de tarifa:
+   - **API-COBERTURAS-CHILEXPRESS confirmada** — resuelve comuna → countyCode. El mapeo de las 16
+     regiones (`src/lib/chilexpress-regiones.ts`) pasó de "inferido probando comuna por comuna" a
+     **confirmado oficial**: el dueño encontró que developers.wschilexpress.com/api-details tiene
+     documentación pública real (sin necesitar login) — `GET /georeference/api/v1.0/regions` devuelve
+     el listado completo con el código exacto de cada región, coincide 100% con lo inferido antes.
    - **API-COTIZADOR-CHILEXPRESS confirmada** — `rating/api/v1.0/rates/courier` respondió con tarifas
-     reales de prueba. De paso se encontró y corrigió un bug real: `serviceValue` viene como TEXTO
-     ("15172"), no número — el código original (adivinado de un plugin de WooCommerce, sin
-     documentación oficial) lo comparaba con `<` sin convertir, lo que habría elegido mal la tarifa
-     "más barata" (comparación de texto, no numérica).
-   - **Por qué no se activó en producción todavía**: según el FAQ del portal
-     (developers.wschilexpress.com/faq), las credenciales PRODUCTIVAS (con la tarifa preferencial real
-     del convenio corporativo) requieren una **TCC** (Tarjeta de Cliente Chilexpress) — un trámite
-     aparte (formulario "Quiero Ser Cliente" en portalempresa.chilexpress.cl), no algo que se resuelve
-     regenerando la key del portal de desarrolladores. Las 3 llaves que tiene el dueño son del registro
-     self-service (gratis, sin TCC) y solo devuelven precios de PRUEBA. **No poner
-     `CHILEXPRESS_API_KEY_COTIZADOR` en Vercel todavía** — mostraría un precio falso a un cliente real
-     en vez de la tarifa referencial (`COSTO_ENVIO_CHILEXPRESS_MOCK`). Cuando el dueño consiga la TCC y
-     las credenciales productivas: cambiar `CHILEXPRESS_API_BASE` a `services.wschilexpress.com` y
-     poner las 3 keys nuevas en Vercel — el código ya no necesita más cambios.
+     reales de prueba. Dos hallazgos de esa misma documentación oficial: (a) `serviceValue` viene como
+     TEXTO ("15172"), no número — bug real corregido, el código original (adivinado de un plugin de
+     WooCommerce) lo comparaba con `<` sin convertir, habría elegido mal la tarifa "más barata"; (b)
+     **`declaredWorth` es un campo OBLIGATORIO** (el valor declarado del paquete) — antes se mandaba
+     `0` fijo sin poder confirmarlo, ahora `agregarPaquete()` en `envio.ts` calcula el valor real del
+     carrito (precio_web × cantidad) y se lo pasa a Chilexpress.
+   - **Camino claro para producción**: la página "¿Cómo me integro?" del portal (pública, sin login) lo
+     explica directo — con una TCC ya asociada (el dueño la vinculó el 31-08-2026 a su cuenta de Portal
+     Empresa, cuenta 1215422), el siguiente paso es escribir a **soporteintegraciones@chilexpress.cl**
+     solicitando las credenciales productivas y la habilitación de la cuenta empresa. Chilexpress
+     promete responder **dentro de 24 horas** con las credenciales reales por correo. **No poner
+     `CHILEXPRESS_API_KEY_COTIZADOR` en Vercel todavía** con las llaves de prueba — mostraría un precio
+     falso a un cliente real en vez de la tarifa referencial (`COSTO_ENVIO_CHILEXPRESS_MOCK`). Cuando
+     lleguen las credenciales productivas: cambiar `CHILEXPRESS_API_BASE` a
+     `services.wschilexpress.com` y poner las 3 keys nuevas en Vercel — el código ya no necesita más
+     cambios.
 10. **Flow en producción**: `POST /payment/create` está verificado solo contra **sandbox**. Falta (a)
     cambiar a credenciales de producción reales en Vercel cuando el usuario las tenga, (b) probar el
     flujo completo con un pago real (`getStatus`/`FLOW_ESTADO_PAGADO` nunca se confirmaron contra un
