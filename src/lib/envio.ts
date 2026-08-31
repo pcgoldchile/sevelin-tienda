@@ -205,7 +205,19 @@ async function cotizarViaChilexpress(
     valorDeclarado: paquete.valorDeclarado,
   });
 
-  return { metodo: 'CHILEXPRESS', costo: tarifa.precio, detalle: tarifa.servicio };
+  // "Chilexpress" va siempre en el detalle, no solo el nombre del servicio
+  // ("BASICO", "EXPRESS"...) — el dueño planea agregar otra empresa de
+  // envío más adelante, y sin la marca del courier no se podría distinguir
+  // un "BASICO" de Chilexpress de un "BASICO" de la otra empresa.
+  return { metodo: 'CHILEXPRESS', costo: tarifa.precio, detalle: `Chilexpress · ${formatearServicio(tarifa.servicio)}` };
+}
+
+/** Chilexpress devuelve el nombre del servicio en mayúsculas fijas
+ * ("BASICO", "EXPRESS", "PRIORITARIO") — se pasa a Título para que no
+ * desentone con el resto de los textos del checkout. */
+function formatearServicio(servicio: string): string {
+  const limpio = servicio.trim().toLowerCase();
+  return limpio.charAt(0).toUpperCase() + limpio.slice(1);
 }
 
 /** Retiro en tienda: siempre disponible y siempre gratis, con su aviso de horario. */
