@@ -97,7 +97,12 @@ export default function CarritoPage() {
       <h1 className="font-display text-3xl font-semibold tracking-tight text-ink">Tu carrito</h1>
 
       <div className="mt-6 grid gap-8 sm:grid-cols-5">
-        <div className="flex flex-col gap-4 sm:col-span-3">
+        {/* order-2 en mobile: la lista de ítems queda DEBAJO del resumen
+            (que tiene "Compartir carrito"), así ese botón no se aleja cada
+            vez más aunque el carrito tenga muchos productos — mismo
+            criterio que "Tu pedido" primero en /checkout. En escritorio
+            vuelve a su columna de siempre (sm:order-1, a la izquierda). */}
+        <div className="order-2 flex flex-col gap-4 sm:order-1 sm:col-span-3">
           <label className="flex cursor-pointer items-center gap-2 border-b border-border pb-3 text-sm text-ink-soft">
             <input
               type="checkbox"
@@ -181,32 +186,15 @@ export default function CarritoPage() {
             ))}
           </ul>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={compartirCarrito}
-              disabled={compartiendo}
-              className="rounded-full border border-border px-4 py-2.5 text-sm font-medium text-ink-soft transition-colors hover:border-border-strong hover:text-ink disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {compartiendo ? "Creando link…" : "🔗 Compartir carrito"}
-            </button>
-            {/* Solo aparece una vez que existe un link generado — separado
-                del botón de compartir porque navigator.share() (mobile) abre
-                el panel nativo del sistema y no deja nada en el
-                portapapeles. */}
-            {linkCompartido && (
-              <button
-                type="button"
-                onClick={copiarLink}
-                className="rounded-full border border-border px-4 py-2.5 text-sm font-medium text-ink-soft transition-colors hover:border-border-strong hover:text-ink"
-              >
-                {copiado ? "✓ Link copiado" : "Copiar link"}
-              </button>
-            )}
-          </div>
         </div>
 
-        <aside className="h-fit rounded-2xl bg-surface p-5 shadow-elevated-lg sm:col-span-2">
+        {/* "Compartir carrito"/"Copiar link" viven en este resumen, no
+            debajo de la lista de ítems: con muchos productos esos botones
+            quedaban cada vez más abajo, fuera de la vista, en vez de
+            quedarse accesibles (pedido explícito del dueño). El resumen es
+            `h-fit` y arranca arriba de la columna sin importar cuántos
+            ítems tenga el carrito. */}
+        <aside className="order-1 h-fit rounded-2xl bg-surface p-5 shadow-elevated-lg sm:order-2 sm:col-span-2">
           <h2 className="font-display text-sm font-semibold text-ink">Resumen de compra</h2>
           <div className="mt-3 flex flex-col gap-1.5 text-sm">
             <div className="flex justify-between text-ink-soft">
@@ -233,6 +221,30 @@ export default function CarritoPage() {
           {itemsSeleccionados.length === 0 && (
             <p className="mt-2 text-center text-xs text-ink-faint">Selecciona al menos un producto para continuar.</p>
           )}
+
+          <div className="mt-4 flex flex-col gap-2 border-t border-border pt-4">
+            <button
+              type="button"
+              onClick={compartirCarrito}
+              disabled={compartiendo}
+              className="w-full rounded-full border border-border px-4 py-2.5 text-sm font-medium text-ink-soft transition-colors hover:border-border-strong hover:text-ink disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {compartiendo ? "Creando link…" : "🔗 Compartir carrito"}
+            </button>
+            {/* Solo aparece una vez que existe un link generado — separado
+                del botón de compartir porque navigator.share() (mobile) abre
+                el panel nativo del sistema y no deja nada en el
+                portapapeles. */}
+            {linkCompartido && (
+              <button
+                type="button"
+                onClick={copiarLink}
+                className="w-full rounded-full border border-border px-4 py-2.5 text-sm font-medium text-ink-soft transition-colors hover:border-border-strong hover:text-ink"
+              >
+                {copiado ? "✓ Link copiado" : "Copiar link"}
+              </button>
+            )}
+          </div>
         </aside>
       </div>
 

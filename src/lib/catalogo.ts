@@ -95,6 +95,37 @@ export async function listarSubcategorias(categoria: string): Promise<string[]> 
 }
 
 /**
+ * Árbol categoría → subcategorías del catálogo publicado, para el menú del
+ * header (ver header.tsx): cada categoría principal que tenga subcategorías
+ * se puede desplegar igual que "Más categorías", en vez de ser un link
+ * plano. Una sola consulta (categoria + subcategoria de cada producto) en
+ * vez de una por categoría — se agrupa acá mismo en memoria.
+ */
+export async function listarArbolCategorias(): Promise<Record<string, string[]>> {
+  const { data, error } = await supabaseWeb
+    .from('productos_web')
+    .select('categoria, subcategoria')
+    .eq('publicado_web', true)
+    .gt('stock_web', 0)
+    .not('categoria', 'is', null);
+
+  if (error) throw new Error(error.message);
+
+  const arbol: Record<string, Set<string>> = {};
+  for (const fila of data || []) {
+    const categoria = fila.categoria as string;
+    if (!arbol[categoria]) arbol[categoria] = new Set();
+    if (fila.subcategoria) arbol[categoria].add(fila.subcategoria as string);
+  }
+
+  const resultado: Record<string, string[]> = {};
+  for (const [categoria, subcategorias] of Object.entries(arbol)) {
+    resultado[categoria] = Array.from(subcategorias).sort((a, b) => a.localeCompare(b, 'es'));
+  }
+  return resultado;
+}
+
+/**
  * Whitelist de orden para /productos — nunca se interpola el query param
  * crudo en .order(), siempre se pasa por este mapa (valor no reconocido o
  * ausente cae en 'relevancia', el orden por defecto de siempre).

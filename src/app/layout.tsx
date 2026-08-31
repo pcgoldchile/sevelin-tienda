@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { IBM_Plex_Sans, Orbitron, Rajdhani } from "next/font/google";
 import { MotionConfig } from "framer-motion";
 import "./globals.css";
-import { listarCategorias } from "@/lib/catalogo";
+import { listarCategorias, listarArbolCategorias } from "@/lib/catalogo";
 import { CarritoProvider } from "@/context/carrito-context";
 import { ToastProvider } from "@/context/toast-context";
 import { SesionProvider } from "@/context/sesion-context";
@@ -44,8 +44,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   // Si Supabase Web no responde (mismo criterio que el catálogo en page.tsx),
   // el header se muestra igual, solo sin categorías.
   let categorias: string[] = [];
+  let arbolCategorias: Record<string, string[]> = {};
   try {
-    categorias = await listarCategorias();
+    [categorias, arbolCategorias] = await Promise.all([listarCategorias(), listarArbolCategorias()]);
   } catch (err) {
     console.error("[RootLayout] No se pudieron cargar las categorías:", err instanceof Error ? err.message : err);
   }
@@ -77,7 +78,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           <SesionProvider>
             <ToastProvider>
               <CarritoProvider>
-                <Header categorias={categorias} />
+                <Header categorias={categorias} arbolCategorias={arbolCategorias} />
                 <div id="contenido">{children}</div>
                 <Footer />
                 <WhatsappFlotante />

@@ -62,13 +62,18 @@ export async function BannersCategoria() {
                     </span>
                   )}
                 </div>
-                <div className="relative aspect-[4/3] w-full overflow-hidden bg-surface-sunken">
+                <div className="relative aspect-[4/3] w-full overflow-hidden bg-surface-sunken p-8">
+                  {/* object-contain, no object-cover: las fotos de producto
+                      (cable, ventilador, mouse) no vienen encuadradas para
+                      llenar un recuadro 4:3 — recortarlas cortaba puntas y
+                      bordes de forma rara. Con contain + relleno se ve
+                      completo el producto, con espacio parejo alrededor. */}
                   {foto ? (
                     <Image
                       src={foto}
                       alt={c.etiqueta}
                       fill
-                      className="object-cover transition-transform duration-500 group-hover:scale-110"
+                      className="object-contain transition-transform duration-500 group-hover:scale-110"
                       sizes="(min-width: 640px) 33vw, 100vw"
                     />
                   ) : (

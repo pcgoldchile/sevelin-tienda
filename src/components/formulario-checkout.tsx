@@ -310,11 +310,18 @@ export function FormularioCheckout() {
             <span>Subtotal</span>
             <span className="tabular-nums">{formatoCLP.format(subtotalSeleccionado)}</span>
           </div>
-          <div className="flex justify-between text-ink-soft">
-            <span>Envío{opcionElegida?.detalle ? ` (${opcionElegida.detalle})` : ""}</span>
-            <span className="tabular-nums">
-              {opcionElegida ? (opcionElegida.costo === 0 ? "Gratis" : formatoCLP.format(opcionElegida.costo)) : "Por calcular"}
-            </span>
+          <div className="flex flex-col gap-0.5">
+            {/* El detalle (ej. "Retiro en tienda (San Rafael 896, Arica)")
+                va en su propia línea, no entre paréntesis junto al precio —
+                pegado ahí se leía como una sola frase confusa
+                ("Envío (Retiro en tienda (San Rafael 896, Arica)) Gratis"). */}
+            <div className="flex justify-between text-ink-soft">
+              <span>Envío</span>
+              <span className="tabular-nums">
+                {opcionElegida ? (opcionElegida.costo === 0 ? "Gratis" : formatoCLP.format(opcionElegida.costo)) : "Por calcular"}
+              </span>
+            </div>
+            {opcionElegida?.detalle && <span className="text-xs text-ink-faint">{opcionElegida.detalle}</span>}
           </div>
           <div className="flex justify-between text-base font-semibold text-ink">
             <span>Total</span>

@@ -4,10 +4,14 @@
 > arquitectura completo (todas las fases) vive en `README-ECOMMERCE-SEVELIN.md`, en el repo del POS
 > (`sevelin-pos-oficial`) — este documento es el estado de ESTE repo (`sevelin-tienda`) nada más.
 
-**Fecha:** 31-08-2026 · **Versión activa:** v31 ("Método de envío" visible con texto guía antes de
-completar la dirección, y "Retiro en tienda" disponible sin importar la región/comuna de envío —
+**Fecha:** 31-08-2026 · **Versión activa:** v32 (detalle de envío reubicado en su propia línea del
+resumen, fotos de banners de categoría sin recortar (`object-contain`), 90 productos revisados y
+subcategorizados donde tenía sentido (16 subcategorías nuevas, 5 productos con categoría corregida),
+y el menú del header ahora permite desplegar subcategorías desde cualquier categoría principal, no
+solo "Más categorías" — ver "v32" abajo; también v31: "Método de envío" visible con texto guía antes
+de completar la dirección, y "Retiro en tienda" disponible sin importar la región/comuna de envío —
 pensado para que un familiar en Arica retire un pedido comprado desde otra ciudad; selección de
-método siempre manual, nunca preseleccionada — ver "v31" abajo; también v30: carrito y checkout
+método siempre manual, nunca preseleccionada; también v30: carrito y checkout
 estilo MercadoLibre: `/carrito` con selección por ítem reemplaza el drawer, `/checkout` de solo
 lectura con "Tu pedido" primero en mobile, carrito guardado por cuenta en
 `perfiles_clientes.carrito`, dirección de facturación completa; también v29: checkout: pill de cantidad con altura fija + campo

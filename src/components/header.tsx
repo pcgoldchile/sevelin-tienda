@@ -23,13 +23,29 @@ const ORDEN_CATEGORIAS_PRINCIPALES = [
   "Energía Portátil",
 ];
 
-export function Header({ categorias }: { categorias: string[] }) {
+export function Header({
+  categorias,
+  arbolCategorias,
+}: {
+  categorias: string[];
+  /** categoría → subcategorías (vacío si esa categoría no tiene ninguna) —
+   * ver listarArbolCategorias() en src/lib/catalogo.ts. */
+  arbolCategorias: Record<string, string[]>;
+}) {
   const { cantidadTotal } = useCarrito();
   const { usuario, perfil, cargando } = useSesion();
   const router = useRouter();
   const pathname = usePathname();
-  const [menuCategoriasAbierto, setMenuCategoriasAbierto] = useState(false);
+  // Un solo desplegable abierto a la vez en la franja de escritorio — guarda
+  // el NOMBRE de la categoría abierta ("__mas__" para "Más categorías"), no
+  // un booleano por botón, porque ahora cualquier categoría principal con
+  // subcategorías puede desplegarse igual que "Más categorías" (pedido
+  // explícito del dueño).
+  const [desplegableAbierto, setDesplegableAbierto] = useState<string | null>(null);
   const [menuMovilAbierto, setMenuMovilAbierto] = useState(false);
+  // En mobile no hay desplegable flotante — la subcategoría se expande
+  // dentro de la misma lista (acordeón), con su propio estado.
+  const [categoriaMovilExpandida, setCategoriaMovilExpandida] = useState<string | null>(null);
   const [busqueda, setBusqueda] = useState("");
 
   const categoriasPrincipales = ORDEN_CATEGORIAS_PRINCIPALES.filter((c) => categorias.includes(c));
@@ -37,7 +53,8 @@ export function Header({ categorias }: { categorias: string[] }) {
 
   const cerrarMenus = useCallback(() => {
     setMenuMovilAbierto(false);
-    setMenuCategoriasAbierto(false);
+    setDesplegableAbierto(null);
+    setCategoriaMovilExpandida(null);
   }, []);
 
   /* Cualquier cambio de ruta cierra los menús. Esto es lo que resuelve el
@@ -61,13 +78,13 @@ export function Header({ categorias }: { categorias: string[] }) {
      use el teclado, y en móvil evita quedar atrapado si el botón de
      cerrar queda fuera de la pantalla. */
   useEffect(() => {
-    if (!menuMovilAbierto && !menuCategoriasAbierto) return;
+    if (!menuMovilAbierto && !desplegableAbierto) return;
     const alPresionar = (e: KeyboardEvent) => {
       if (e.key === "Escape") cerrarMenus();
     };
     window.addEventListener("keydown", alPresionar);
     return () => window.removeEventListener("keydown", alPresionar);
-  }, [menuMovilAbierto, menuCategoriasAbierto, cerrarMenus]);
+  }, [menuMovilAbierto, desplegableAbierto, cerrarMenus]);
 
   function buscar(e: React.FormEvent) {
     e.preventDefault();
@@ -154,36 +171,98 @@ export function Header({ categorias }: { categorias: string[] }) {
           >
             Todos los productos
           </Link>
-          {categoriasPrincipales.map((categoria) => (
-            <Link
-              key={categoria}
-              href={`/productos?categoria=${encodeURIComponent(categoria)}`}
-              className="rounded-md px-3 py-1.5 text-sm font-medium text-ink-soft transition-colors hover:bg-surface-sunken hover:text-primary"
-            >
-              {categoria}
-            </Link>
-          ))}
+          {categoriasPrincipales.map((categoria) => {
+            const subcategorias = arbolCategorias[categoria] || [];
+            // Sin subcategorías: link plano, igual que antes. Con
+            // subcategorías: mismo patrón de desplegable que "Más
+            // categorías" (pedido explícito del dueño — que se note que
+            // también se pueden desplegar, no solo esa).
+            if (subcategorias.length === 0) {
+              return (
+                <Link
+                  key={categoria}
+                  href={`/productos?categoria=${encodeURIComponent(categoria)}`}
+                  className="rounded-md px-3 py-1.5 text-sm font-medium text-ink-soft transition-colors hover:bg-surface-sunken hover:text-primary"
+                >
+                  {categoria}
+                </Link>
+              );
+            }
+            const abierto = desplegableAbierto === categoria;
+            return (
+              <div key={categoria} className="relative">
+                <button
+                  type="button"
+                  onClick={() => setDesplegableAbierto((actual) => (actual === categoria ? null : categoria))}
+                  onBlur={() => setTimeout(() => setDesplegableAbierto((actual) => (actual === categoria ? null : actual)), 150)}
+                  className="flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium text-ink-soft transition-colors hover:bg-surface-sunken hover:text-primary"
+                >
+                  {categoria}
+                  <motion.span aria-hidden animate={{ rotate: abierto ? 180 : 0 }} transition={{ duration: 0.2 }}>
+                    <ChevronDown className="h-3.5 w-3.5" />
+                  </motion.span>
+                </button>
+                <AnimatePresence>
+                  {abierto && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      transition={{ duration: 0.18, ease: EASE_OUT }}
+                      className="absolute left-0 top-full z-10 mt-2 w-64 overflow-hidden rounded-xl border border-border bg-surface/97 shadow-2xl backdrop-blur-xl"
+                    >
+                      <div aria-hidden className="h-0.5 w-full bg-gradient-to-r from-primary via-accent to-primary-soft" />
+                      <ul className="flex flex-col gap-0.5 p-2">
+                        <li>
+                          <Link
+                            href={`/productos?categoria=${encodeURIComponent(categoria)}`}
+                            className="block rounded-md border-l-2 border-transparent px-3 py-2 text-sm font-medium text-ink transition-colors hover:border-primary hover:bg-primary/10 hover:text-primary"
+                          >
+                            Todo en {categoria}
+                          </Link>
+                        </li>
+                        {subcategorias.map((sub) => (
+                          <li key={sub}>
+                            <Link
+                              href={`/productos?categoria=${encodeURIComponent(categoria)}&subcategoria=${encodeURIComponent(sub)}`}
+                              className="block rounded-md border-l-2 border-transparent px-3 py-2 text-sm text-ink-soft transition-colors hover:border-primary hover:bg-primary/10 hover:text-primary"
+                            >
+                              {sub}
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            );
+          })}
           {categoriasResto.length > 0 && (
             <div className="relative">
               <button
                 type="button"
-                onClick={() => setMenuCategoriasAbierto((v) => !v)}
-                onBlur={() => setTimeout(() => setMenuCategoriasAbierto(false), 150)}
+                onClick={() => setDesplegableAbierto((actual) => (actual === "__mas__" ? null : "__mas__"))}
+                onBlur={() => setTimeout(() => setDesplegableAbierto((actual) => (actual === "__mas__" ? null : actual)), 150)}
                 className="flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium text-ink-soft transition-colors hover:bg-surface-sunken hover:text-primary"
               >
                 Más categorías
-                <motion.span aria-hidden animate={{ rotate: menuCategoriasAbierto ? 180 : 0 }} transition={{ duration: 0.2 }}>
+                <motion.span aria-hidden animate={{ rotate: desplegableAbierto === "__mas__" ? 180 : 0 }} transition={{ duration: 0.2 }}>
                   <ChevronDown className="h-3.5 w-3.5" />
                 </motion.span>
               </button>
               <AnimatePresence>
-                {menuCategoriasAbierto && (
+                {desplegableAbierto === "__mas__" && (
                   <motion.div
                     initial={{ opacity: 0, y: -6 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -6 }}
                     transition={{ duration: 0.18, ease: EASE_OUT }}
-                    className="absolute left-0 top-full z-10 mt-2 w-[22rem] overflow-hidden rounded-xl border border-border bg-surface/97 shadow-2xl backdrop-blur-xl"
+                    /* right-0, no left-0: es siempre el último ítem de la
+                       franja — anclado a la izquierda, el panel se salía
+                       del viewport por la derecha (bug ya existente, más
+                       notorio ahora con subcategorías anidadas más altas). */
+                    className="absolute right-0 top-full z-10 mt-2 w-[22rem] overflow-hidden rounded-xl border border-border bg-surface/97 shadow-2xl backdrop-blur-xl"
                   >
                     {/* Filo superior de acento — reemplaza el borde de neón
                         completo de .panel-hud, que acá se sentía recargado
@@ -201,6 +280,26 @@ export function Header({ categorias }: { categorias: string[] }) {
                           >
                             {categoria}
                           </Link>
+                          {/* Subcategorías indentadas debajo, si esta
+                              categoría del "resto" también tiene (ej.
+                              Almacenamiento, Servicios Técnicos) — mismo
+                              pedido de que se puedan desplegar, dentro del
+                              mismo panel para no anidar otro desplegable
+                              flotante encima de este. */}
+                          {(arbolCategorias[categoria] || []).length > 0 && (
+                            <ul className="ml-3 mt-0.5 flex flex-col gap-0.5 border-l border-border pl-2">
+                              {arbolCategorias[categoria].map((sub) => (
+                                <li key={sub}>
+                                  <Link
+                                    href={`/productos?categoria=${encodeURIComponent(categoria)}&subcategoria=${encodeURIComponent(sub)}`}
+                                    className="block rounded-md px-2 py-1 text-xs text-ink-faint transition-colors hover:text-primary"
+                                  >
+                                    {sub}
+                                  </Link>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
                         </li>
                       ))}
                     </ul>
@@ -210,7 +309,7 @@ export function Header({ categorias }: { categorias: string[] }) {
                     <button
                       type="button"
                       onMouseDown={(e) => e.preventDefault()} // gana al onBlur del botón que abre
-                      onClick={() => setMenuCategoriasAbierto(false)}
+                      onClick={() => setDesplegableAbierto(null)}
                       className="flex w-full items-center justify-center gap-1.5 border-t border-border px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-ink-faint transition-colors hover:bg-surface-sunken hover:text-primary"
                     >
                       <X className="h-3.5 w-3.5" aria-hidden /> Cerrar
@@ -257,16 +356,59 @@ export function Header({ categorias }: { categorias: string[] }) {
                   <User className="h-4 w-4" aria-hidden /> {usuario ? perfil?.nombre || "Mi cuenta" : "Iniciar sesión"}
                 </Link>
               )}
-              {categorias.map((categoria) => (
-                <Link
-                  key={categoria}
-                  href={`/productos?categoria=${encodeURIComponent(categoria)}`}
-                  className="block py-1.5 text-sm text-ink-soft"
-                  onClick={() => setMenuMovilAbierto(false)}
-                >
-                  {categoria}
-                </Link>
-              ))}
+              {categorias.map((categoria) => {
+                const subcategorias = arbolCategorias[categoria] || [];
+                const expandida = categoriaMovilExpandida === categoria;
+                return (
+                  <div key={categoria}>
+                    <div className="flex items-center">
+                      <Link
+                        href={`/productos?categoria=${encodeURIComponent(categoria)}`}
+                        className="block flex-1 py-1.5 text-sm text-ink-soft"
+                        onClick={() => setMenuMovilAbierto(false)}
+                      >
+                        {categoria}
+                      </Link>
+                      {subcategorias.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setCategoriaMovilExpandida((actual) => (actual === categoria ? null : categoria))}
+                          aria-label={`Ver subcategorías de ${categoria}`}
+                          className="p-1.5 text-ink-faint transition-colors hover:text-primary"
+                        >
+                          <motion.span aria-hidden animate={{ rotate: expandida ? 180 : 0 }} transition={{ duration: 0.2 }} className="block">
+                            <ChevronDown className="h-4 w-4" />
+                          </motion.span>
+                        </button>
+                      )}
+                    </div>
+                    <AnimatePresence>
+                      {expandida && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.18 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="ml-3 flex flex-col gap-0.5 border-l border-border py-0.5 pl-3">
+                            {subcategorias.map((sub) => (
+                              <Link
+                                key={sub}
+                                href={`/productos?categoria=${encodeURIComponent(categoria)}&subcategoria=${encodeURIComponent(sub)}`}
+                                className="block py-1 text-xs text-ink-faint transition-colors hover:text-primary"
+                                onClick={() => setMenuMovilAbierto(false)}
+                              >
+                                {sub}
+                              </Link>
+                            ))}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                );
+              })}
 
               {/* Cerrar al final de la lista: con todas las categorías
                   desplegadas hay que hacer scroll hasta arriba para
