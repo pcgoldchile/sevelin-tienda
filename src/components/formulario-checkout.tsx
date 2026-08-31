@@ -606,16 +606,19 @@ export function FormularioCheckout() {
               <div className="flex flex-1 flex-col gap-1">
                 <span className="text-ink">{item.nombre}</span>
                 <div className="flex items-center justify-between gap-2">
-                  {/* Alto fijo (h-7) en los 3 elementos, no relleno (padding) —
-                      con padding, la altura real del input dependía de la
-                      fuente/line-height del navegador y podía desalinearse o
-                      salirse del óvalo. Con alto fijo + flex centrado, los
-                      tres miden exactamente lo mismo siempre. */}
-                  <div className="flex h-7 items-stretch overflow-hidden rounded-full border border-border">
+                  {/* Alto fijo EXPLÍCITO (h-7) en los 3 elementos — no basta
+                      con ponerlo solo en el contenedor y confiar en que
+                      `items-stretch` lo reparta igual: se probó en producción
+                      real y el <input> quedaba con 26px de alto real contra
+                      un line-height de 28px (el texto se dibujaba más alto
+                      que su propia caja, saliéndose del óvalo). Con h-7 en
+                      cada uno de los 3 no depende de cómo el navegador
+                      calcule el estirado. */}
+                  <div className="flex h-7 overflow-hidden rounded-full border border-border">
                     <button
                       type="button"
                       onClick={() => cambiarCantidadYRecalcular(item.sku, item.cantidad - 1)}
-                      className="flex w-7 shrink-0 items-center justify-center text-ink-soft transition-colors hover:text-primary"
+                      className="flex h-7 w-7 shrink-0 items-center justify-center text-ink-soft transition-colors hover:text-primary"
                       aria-label={`Restar cantidad de ${item.nombre}`}
                     >
                       <Minus className="h-3 w-3" aria-hidden />
@@ -629,14 +632,14 @@ export function FormularioCheckout() {
                         const valor = parseInt(e.target.value.replace(/\D/g, ""), 10);
                         if (!Number.isNaN(valor)) cambiarCantidadYRecalcular(item.sku, valor);
                       }}
-                      className="w-7 shrink-0 bg-transparent text-center text-sm leading-7 tabular-nums text-ink outline-none"
+                      className="h-7 w-7 shrink-0 bg-transparent text-center text-sm leading-7 tabular-nums text-ink outline-none"
                       aria-label={`Cantidad de ${item.nombre}`}
                     />
                     <button
                       type="button"
                       onClick={() => cambiarCantidadYRecalcular(item.sku, item.cantidad + 1)}
                       disabled={item.cantidad >= item.stock_web}
-                      className="flex w-7 shrink-0 items-center justify-center text-ink-soft transition-colors hover:text-primary disabled:pointer-events-none disabled:opacity-40"
+                      className="flex h-7 w-7 shrink-0 items-center justify-center text-ink-soft transition-colors hover:text-primary disabled:pointer-events-none disabled:opacity-40"
                       aria-label={`Sumar cantidad de ${item.nombre}`}
                     >
                       <Plus className="h-3 w-3" aria-hidden />
