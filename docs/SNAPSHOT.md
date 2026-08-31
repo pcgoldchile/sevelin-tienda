@@ -4,10 +4,12 @@
 > arquitectura completo (todas las fases) vive en `README-ECOMMERCE-SEVELIN.md`, en el repo del POS
 > (`sevelin-pos-oficial`) — este documento es el estado de ESTE repo (`sevelin-tienda`) nada más.
 
-**Fecha:** 01-09-2026 · **Versión activa:** v27 (**TODO lo de v19-v26 quedó desplegado en producción
+**Fecha:** 01-09-2026 · **Versión activa:** v28 (checkout: cantidades editables en "Tu pedido",
+envío 100% automático sin botón, campos de dirección reordenados — probado de punta a punta contra
+Chilexpress real — ver "v28" abajo; también v27: **TODO lo de v19-v26 quedó desplegado en producción
 de verdad** — Vercel CLI conectado, Chilexpress activado con credenciales reales, y se encontró y
 corrigió un bug real que bloqueaba CUALQUIER despliegue desde v19 [cron incompatible con el plan
-Hobby] — ver "v27" abajo; también v26: Chilexpress: credenciales productivas reales confirmadas contra
+Hobby]; también v26: Chilexpress: credenciales productivas reales confirmadas contra
 producción; v25: endpoint correcto para la tarifa con descuento real — "Cotizador Empresa" en vez del
 genérico; también v24: documentación oficial encontrada — `declaredWorth` real en vez de 0,
 mapeo de regiones confirmado oficial, camino a producción claro; también v23: tracking de visitas de página — `VisitTracker`,
@@ -211,6 +213,17 @@ Next.js 16 (App Router) · TypeScript · Tailwind v4 · `@supabase/supabase-js`.
   `sevelin-pos-oficial` (dueño de `descripcion_web`), documentado en su propio
   `docs/CHANGELOG-V41.md`. Quedan pendientes 40 productos sin ninguna descripción guardada (esperando
   specs del usuario) y los servicios técnicos (prompt aparte, otra sesión).
+
+## Estado: qué está HECHO (v28 — checkout: cantidades editables + envío automático, 01-09-2026)
+> Detalle completo en `docs/CHANGELOG-V28.md`.
+- "Tu pedido" (resumen del checkout) ahora tiene el mismo selector −/número/+ y "Quitar" que el
+  carrito lateral — se puede seguir ajustando el pedido sin volver a `/productos`.
+- Se sacó el botón "Calcular envío" — la cotización se dispara sola (debounce 600ms) apenas la
+  dirección está completa, y de nuevo cada vez que cambia la dirección o las cantidades.
+- Campos de dirección reordenados: Región → Comuna → (Valle/km) → Calle → Número → Referencia.
+- Probado de punta a punta contra Chilexpress y Supabase Web de **producción** real (ya activados en
+  v27) — cotización real, recálculo automático al cambiar cantidad, y las 3 opciones de Arica
+  apareciendo juntas, todo sin botón.
 
 ## Estado: qué está HECHO (v27 — TODO desplegado de verdad + Chilexpress activado, 01-09-2026)
 > Detalle completo en `docs/CHANGELOG-V27.md`.
