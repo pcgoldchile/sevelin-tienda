@@ -13,34 +13,35 @@
  * que adivinar de memoria, pero SIGUE siendo una fuente indirecta (un
  * plugin de terceros, no la documentación oficial).
  *
- * ⚠️ 31-08-2026, con suscripciones reales del portal de Chilexpress: son 3
- * productos separados, cada uno con su propia subscription key — el
- * "Ocp-Apim-Subscription-Key" de una NO sirve para las otras. Las 3 se
- * probaron contra `https://services.wschilexpress.com` (producción) y
- * dieron 401 en TODOS los endpoints salvo georeference — pero contra
- * `https://testservices.wschilexpress.com` (ambiente de pruebas)
- * funcionaron perfecto, incluida la cotización real de tarifa. Según el FAQ
- * del propio portal (developers.wschilexpress.com/faq): "¿Es necesario
- * tener una TCC para solicitar mis credenciales productivas? Sí" — las
- * llaves que da el registro self-service del portal son de PRUEBA; las
- * credenciales de producción (con la tarifa preferencial real del convenio
- * corporativo) son un trámite aparte, atado a una Tarjeta de Cliente
- * Chilexpress (TCC), no algo que se resuelve solo regenerando la llave.
+ * ⚠️ Son 3 productos/suscripciones separados en el portal de Chilexpress,
+ * cada uno con su propia subscription key — el "Ocp-Apim-Subscription-Key"
+ * de una NO sirve para las otras (ver las 3 variables de entorno abajo).
+ * Historia completa de cómo se llegó hasta acá: v20 (llaves de prueba
+ * self-service, 401 en producción), v24 (documentación oficial encontrada,
+ * declaredWorth real), v25 (el endpoint correcto es `rates/business`, no
+ * `rates/courier`) y v26 — **credenciales PRODUCTIVAS reales, recibidas de
+ * Soporte de Integraciones y confirmadas contra `services.wschilexpress.com`
+ * el 01-09-2026**: las 3 (Coberturas, Cotizador, Envíos) responden 200 con
+ * datos reales. El path de georeferencia que mandó soporte usa `/v2/` en
+ * vez de `/api/v1.0/` — se probó y **el path viejo (`/api/v1.0/`) también
+ * funciona igual en producción**, así que el código no necesitó cambiar,
+ * solo las variables de entorno.
  *   - **API-COBERTURAS-CHILEXPRESS** (`CHILEXPRESS_API_KEY_COBERTURAS`) →
- *     georeference/api (`buscarCountyCodePorComuna`). Confirmada funcionando
- *     en ambos ambientes: devuelve datos correctos, incluido el countyCode
- *     de Arica ("ARIC") y el mapeo de región (ver chilexpress-regiones.ts).
+ *     georeference/api (`buscarCountyCodePorComuna`). Confirmada en
+ *     producción real: countyCode de Arica ("ARIC") y el mapeo de región
+ *     (chilexpress-regiones.ts) devuelven exactamente lo mismo que en pruebas.
  *   - **API-COTIZADOR-CHILEXPRESS** (`CHILEXPRESS_API_KEY_COTIZADOR`) →
- *     rating/api (`cotizarTarifasChilexpress`). CONFIRMADA funcionando en
- *     el ambiente de pruebas — la forma de la respuesta y los campos del
- *     request ya están validados contra un caso real (ver más abajo). Pero
- *     los PRECIOS que devuelve son de prueba, no la tarifa preferencial real
- *     del convenio — no usar para cobrar a un cliente real hasta tener
- *     credenciales productivas (ver aviso en envio.ts).
+ *     rating/api, endpoint `rates/business` (`cotizarTarifasChilexpress`).
+ *     Confirmada en producción real — trae `serviceValueDiscount` con el
+ *     precio ya con el descuento del convenio aplicado.
  *   - **API-ENVIOS-CHILEXPRESS** (`CHILEXPRESS_API_KEY_ENVIOS`) → creación
- *     de órdenes de transporte/etiquetas. Todavía no se usa en este
- *     proyecto (no se crean envíos reales, solo se cotiza) — se deja
- *     documentada para cuando haga falta.
+ *     de órdenes de transporte/etiquetas. Confirmada que la key es válida,
+ *     pero **NUNCA se probó el endpoint de verdad** (`transport-orders`) —
+ *     a diferencia de georeferencia/cotización, generar una OT real CREA un
+ *     envío de verdad y factura a la TCC, no es una operación de solo
+ *     lectura. Este proyecto todavía no genera envíos reales, solo cotiza —
+ *     se deja documentada para cuando se implemente esa fase, con cuidado
+ *     de probarla primero en el ambiente de pruebas/QA, nunca en productivo.
  */
 
 const CHILEXPRESS_API_BASE = process.env.CHILEXPRESS_API_BASE || 'https://testservices.wschilexpress.com';
@@ -110,6 +111,12 @@ interface RespuestaTarifasChilexpress {
       // convierte: "9177" > "10115" alfabéticamente, así que hubiera elegido
       // mal la tarifa "más barata". Se convierte con Number() antes de comparar.
       serviceValue: string;
+      // Solo la trae `rates/business` (no `rates/courier`) — es el precio
+      // YA con el descuento de la tarifa preferencial del convenio
+      // corporativo aplicado. Con las llaves de prueba de hoy sale igual a
+      // `serviceValue` (no hay descuento real configurado todavía), pero es
+      // el campo que hay que usar una vez haya credenciales productivas.
+      serviceValueDiscount?: string;
     }[];
   };
   statusDescription?: string;
@@ -122,15 +129,22 @@ export interface TarifaChilexpress {
 }
 
 /**
- * Cotiza vía Chilexpress. `productType`/`contentType`/`deliveryTime` (3/1/0)
- * y la forma de la respuesta quedaron CONFIRMADOS contra el ambiente de
- * pruebas el 31-08-2026 (ver el aviso completo al inicio del archivo:
- * funciona en sandbox, no en producción con estas llaves). `declaredWorth`
- * ahora manda el valor real del pedido (suma de precio_web × cantidad,
- * calculado en agregarPaquete() de envio.ts) — la documentación oficial
- * (developers.wschilexpress.com/api-details, operación Rate) confirma que
- * es un campo OBLIGATORIO, no un dato decorativo; antes se mandaba 0 fijo
- * porque no había forma de confirmarlo sin acceso real a la API.
+ * Cotiza vía Chilexpress usando `rates/business` ("Cotizador Empresa"), NO
+ * `rates/courier` — Soporte de Integraciones lo confirmó por correo el
+ * 31-08-2026: "debe usar este endpoint para obtener mejores tarifas al ser
+ * cliente directo de Chilexpress y contar con TCC". La respuesta trae
+ * `serviceValueDiscount` (precio con el descuento del convenio corporativo
+ * ya aplicado) además de `serviceValue` (precio de lista); se usa el
+ * primero si viene, cae a `serviceValue` si no (llaves sin descuento
+ * configurado, como las de prueba de hoy, devuelven los dos iguales).
+ *
+ * `productType`/`contentType`/`deliveryTime` (3/1/0) y la forma de la
+ * respuesta quedaron CONFIRMADOS contra el ambiente de pruebas el
+ * 31-08-2026 (ver el aviso completo al inicio del archivo: funciona en
+ * sandbox, no en producción con estas llaves). `declaredWorth` manda el
+ * valor real del pedido (suma de precio_web × cantidad, calculado en
+ * agregarPaquete() de envio.ts) — la documentación oficial confirma que es
+ * un campo OBLIGATORIO, no decorativo.
  */
 export async function cotizarTarifasChilexpress(datos: {
   origenCountyCode: string;
@@ -143,7 +157,7 @@ export async function cotizarTarifasChilexpress(datos: {
 }): Promise<TarifaChilexpress> {
   const apiKey = apiKeyCotizador();
 
-  const respuesta = await fetch(`${CHILEXPRESS_API_BASE}/rating/api/v1.0/rates/courier`, {
+  const respuesta = await fetch(`${CHILEXPRESS_API_BASE}/rating/api/v1.0/rates/business`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Ocp-Apim-Subscription-Key': apiKey },
     body: JSON.stringify({
@@ -170,6 +184,7 @@ export async function cotizarTarifasChilexpress(datos: {
   const opciones = data.data?.courierServiceOptions || [];
   if (opciones.length === 0) throw new Error('Chilexpress no encontró servicios disponibles para esa comuna.');
 
-  const masBarata = opciones.reduce((min, actual) => (Number(actual.serviceValue) < Number(min.serviceValue) ? actual : min));
-  return { servicio: masBarata.serviceDescription, precio: Math.round(Number(masBarata.serviceValue)) };
+  const precioDe = (o: NonNullable<typeof opciones>[number]) => Number(o.serviceValueDiscount ?? o.serviceValue);
+  const masBarata = opciones.reduce((min, actual) => (precioDe(actual) < precioDe(min) ? actual : min));
+  return { servicio: masBarata.serviceDescription, precio: Math.round(precioDe(masBarata)) };
 }

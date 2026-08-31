@@ -159,21 +159,15 @@ async function agregarPaquete(items: { sku: string; cantidad: number }[]) {
 /**
  * Cotiza vía Chilexpress. Si CHILEXPRESS_API_KEY_COTIZADOR no está
  * configurada, usa una tarifa fija/mock (COSTO_ENVIO_CHILEXPRESS_MOCK) —
- * pedido explícito del usuario para no bloquear el checkout mientras se
- * consiguen credenciales productivas reales (ver el aviso completo en
- * chilexpress.ts).
+ * así el checkout nunca queda bloqueado si Chilexpress no está conectado.
  *
- * El 31-08-2026 se probaron 3 suscripciones reales del portal de Chilexpress
- * contra el ambiente de PRUEBAS (no producción): tanto la geo-referencia
- * (resolver comuna → countyCode, por eso este código ya no necesita un
- * countyCode de destino fijo como antes) como el endpoint que de verdad
- * cotiza el precio funcionaron. Pero son llaves de prueba del registro
- * self-service — según el FAQ del portal, las credenciales PRODUCTIVAS (con
- * la tarifa preferencial real del convenio corporativo) necesitan una TCC
- * (Tarjeta de Cliente Chilexpress), un trámite aparte. Por eso, aunque el
- * código ya está validado de punta a punta, NO conviene poner
- * CHILEXPRESS_API_KEY_COTIZADOR en producción todavía: mostraría precios de
- * prueba (no reales) a un cliente real en vez de la tarifa referencial.
+ * **01-09-2026: credenciales PRODUCTIVAS reales recibidas y confirmadas**
+ * contra `services.wschilexpress.com` (georeferencia y cotización real,
+ * `serviceValueDiscount` con el descuento del convenio) — ver el aviso
+ * completo en chilexpress.ts. El código está listo; falta solo que el
+ * dueño ponga las 3 keys y `CHILEXPRESS_API_BASE=https://
+ * services.wschilexpress.com` en Vercel para que el courier fuera de Arica
+ * empiece a cobrar la tarifa real en vez de la mock.
  */
 async function cotizarViaChilexpress(
   direccion: DireccionEnvio,

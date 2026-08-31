@@ -4,9 +4,13 @@
 > arquitectura completo (todas las fases) vive en `README-ECOMMERCE-SEVELIN.md`, en el repo del POS
 > (`sevelin-pos-oficial`) — este documento es el estado de ESTE repo (`sevelin-tienda`) nada más.
 
-**Fecha:** 31-08-2026 · **Versión activa:** v24 (Chilexpress: documentación oficial encontrada —
-`declaredWorth` real en vez de 0, mapeo de regiones confirmado oficial, camino a producción claro
-—ver "v24" abajo; también v23: tracking de visitas de página — `VisitTracker`,
+**Fecha:** 01-09-2026 · **Versión activa:** v27 (**TODO lo de v19-v26 quedó desplegado en producción
+de verdad** — Vercel CLI conectado, Chilexpress activado con credenciales reales, y se encontró y
+corrigió un bug real que bloqueaba CUALQUIER despliegue desde v19 [cron incompatible con el plan
+Hobby] — ver "v27" abajo; también v26: Chilexpress: credenciales productivas reales confirmadas contra
+producción; v25: endpoint correcto para la tarifa con descuento real — "Cotizador Empresa" en vez del
+genérico; también v24: documentación oficial encontrada — `declaredWorth` real en vez de 0,
+mapeo de regiones confirmado oficial, camino a producción claro; también v23: tracking de visitas de página — `VisitTracker`,
 para el panel "Métricas" del POS, código listo pero pendiente de desplegar; también
 v22: tracking de búsquedas y vistas de producto — `eventos_web`, para el panel "Más buscados" del POS;
 v21: etiqueta destacada de producto — NOVEDAD/TENDENCIA/OFERTA, badge en tarjeta y ficha de producto;
@@ -207,6 +211,39 @@ Next.js 16 (App Router) · TypeScript · Tailwind v4 · `@supabase/supabase-js`.
   `sevelin-pos-oficial` (dueño de `descripcion_web`), documentado en su propio
   `docs/CHANGELOG-V41.md`. Quedan pendientes 40 productos sin ninguna descripción guardada (esperando
   specs del usuario) y los servicios técnicos (prompt aparte, otra sesión).
+
+## Estado: qué está HECHO (v27 — TODO desplegado de verdad + Chilexpress activado, 01-09-2026)
+> Detalle completo en `docs/CHANGELOG-V27.md`.
+- El dueño conectó la Vercel CLI (`vercel login`) y me dio acceso al proyecto `sevelin-tienda`. Se
+  agregaron las 4 variables de Chilexpress a Production con `vercel env add`.
+- **Bug real encontrado**: el redeploy falló porque el cron de `vercel.json` (cada 15 min, v19) no es
+  compatible con el plan Hobby (máx. 1 vez al día) — **esto bloqueaba TODO despliegue desde v19**,
+  así que nada de v19-v26 había llegado a producción de verdad hasta hoy. Corregido a 1 vez al día
+  (`0 15 * * *`) y redesplegado manualmente con éxito (`vercel deploy --prod`).
+- Confirmado con `curl` real contra `sevelin-tienda.vercel.app` — el sitio y las rutas nuevas (ej.
+  `/api/eventos/visita`) responden 200. **Ya no queda ningún "código listo pero sin desplegar"** de
+  esta sesión.
+
+## Estado: qué está HECHO (v26 — Chilexpress: credenciales productivas, 01-09-2026)
+> Detalle completo en `docs/CHANGELOG-V26.md`.
+- Soporte de Integraciones mandó las 3 credenciales PRODUCTIVAS reales (Coberturas, Cotizador,
+  Envíos). Se probaron los 2 endpoints de solo lectura (georeferencia y Cotizador Empresa) contra
+  `services.wschilexpress.com` real — ambos devolvieron datos reales, incluido el descuento del
+  convenio (`serviceValueDiscount`). Generación de OT NO se probó a propósito (crearía un envío real
+  y factura).
+- **El código no necesitó ningún cambio** — ya estaba listo desde v25. Solo falta que el dueño ponga
+  las 4 variables de entorno en Vercel (ver `.env.local.example`) para activarlo de verdad — es una
+  decisión de negocio (empieza a cobrar tarifa real a los clientes), no solo técnica.
+
+## Estado: qué está HECHO (v25 — Chilexpress: endpoint con descuento real, 31-08-2026)
+> Detalle completo en `docs/CHANGELOG-V25.md`.
+- Soporte de Integraciones de Chilexpress respondió con el kit completo (Postman QA, manual de
+  webhook, estados de tracking) y aclaró algo clave: **se estaba usando el endpoint equivocado**.
+  `rates/courier` (desde v6) no trae descuento; `rates/business` ("Cotizador Empresa") es el que hay
+  que usar con TCC — trae `serviceValueDiscount`, el precio ya con el descuento del convenio
+  corporativo. Cambiado en `chilexpress.ts`.
+- Webhook de tracking y generación de envíos reales quedan documentados como fuera de alcance por
+  ahora — este proyecto solo cotiza, no genera envíos con Chilexpress todavía.
 
 ## Estado: qué está HECHO (v24 — Chilexpress: documentación oficial, 31-08-2026)
 > Detalle completo en `docs/CHANGELOG-V24.md`.
@@ -466,39 +503,26 @@ Next.js 16 (App Router) · TypeScript · Tailwind v4 · `@supabase/supabase-js`.
    la política **antes** de ese cambio, no después.
 
 **Resto de pendientes:**
-8. **Confirmar el plan de Vercel del proyecto (Hobby vs Pro)** — el cron de recordatorio de carrito
-   abandonado (`vercel.json`, v19) quedó programado cada 15 minutos, pero Hobby limita los cron jobs a
-   una vez al día. Si es Hobby, el recordatorio va a llegar mucho más tarde de lo pensado (o hay que
-   ajustar el diseño) — ver `docs/CHANGELOG-V19.md`. Ambos proyectos ya están en Vercel (confirmado
-   31-08-2026), falta solo el plan.
-9. **Chilexpress — código validado de punta a punta, documentación oficial encontrada, camino claro
-   para producción (actualizado 31-08-2026).** El dueño consiguió 3 suscripciones reales del portal de
-   Chilexpress (Coberturas, Cotizador, Envíos), cada una con su propia llave. Contra
-   `services.wschilexpress.com` (producción) las 3 dieron 401 en casi todo — pero contra
-   `testservices.wschilexpress.com` (ambiente de PRUEBAS) las 3 funcionaron perfecto, incluida la
-   cotización real de tarifa:
-   - **API-COBERTURAS-CHILEXPRESS confirmada** — resuelve comuna → countyCode. El mapeo de las 16
-     regiones (`src/lib/chilexpress-regiones.ts`) pasó de "inferido probando comuna por comuna" a
-     **confirmado oficial**: el dueño encontró que developers.wschilexpress.com/api-details tiene
-     documentación pública real (sin necesitar login) — `GET /georeference/api/v1.0/regions` devuelve
-     el listado completo con el código exacto de cada región, coincide 100% con lo inferido antes.
-   - **API-COTIZADOR-CHILEXPRESS confirmada** — `rating/api/v1.0/rates/courier` respondió con tarifas
-     reales de prueba. Dos hallazgos de esa misma documentación oficial: (a) `serviceValue` viene como
-     TEXTO ("15172"), no número — bug real corregido, el código original (adivinado de un plugin de
-     WooCommerce) lo comparaba con `<` sin convertir, habría elegido mal la tarifa "más barata"; (b)
-     **`declaredWorth` es un campo OBLIGATORIO** (el valor declarado del paquete) — antes se mandaba
-     `0` fijo sin poder confirmarlo, ahora `agregarPaquete()` en `envio.ts` calcula el valor real del
-     carrito (precio_web × cantidad) y se lo pasa a Chilexpress.
-   - **Camino claro para producción**: la página "¿Cómo me integro?" del portal (pública, sin login) lo
-     explica directo — con una TCC ya asociada (el dueño la vinculó el 31-08-2026 a su cuenta de Portal
-     Empresa, cuenta 1215422), el siguiente paso es escribir a **soporteintegraciones@chilexpress.cl**
-     solicitando las credenciales productivas y la habilitación de la cuenta empresa. Chilexpress
-     promete responder **dentro de 24 horas** con las credenciales reales por correo. **No poner
-     `CHILEXPRESS_API_KEY_COTIZADOR` en Vercel todavía** con las llaves de prueba — mostraría un precio
-     falso a un cliente real en vez de la tarifa referencial (`COSTO_ENVIO_CHILEXPRESS_MOCK`). Cuando
-     lleguen las credenciales productivas: cambiar `CHILEXPRESS_API_BASE` a
-     `services.wschilexpress.com` y poner las 3 keys nuevas en Vercel — el código ya no necesita más
-     cambios.
+8. ~~Confirmar el plan de Vercel~~ — **RESUELTO 01-09-2026: es Hobby** (confirmado en el payload del
+   token OIDC de `vercel link`). El cron de recordatorio de carrito abandonado corre 1 vez al día
+   (`vercel.json`, corregido en v27 — antes era cada 15 min, incompatible con Hobby, ver pendiente
+   nuevo #8c). Si en el futuro se quiere el diseño original (~1h después del abandono), hay que pasar
+   a Pro.
+8c. **El cron de recordatorio corre 1 vez al día (15:00 UTC), no cada 15 minutos como se diseñó
+    originalmente en v19** — se tuvo que bajar la frecuencia porque el plan Hobby no permite más de
+    una ejecución diaria (ver `docs/CHANGELOG-V27.md`). Un carrito abandonado justo después de esa
+    hora puede tardar casi 24h en recibir el recordatorio, cerca del límite en que el carrito ya
+    expiró. Evaluar si conviene el plan Pro para recuperar la frecuencia original.
+9. ~~Chilexpress~~ — **RESUELTO Y ACTIVADO EN PRODUCCIÓN el 01-09-2026.** Historia completa: v20
+   (llaves de prueba self-service), v24 (documentación oficial, `declaredWorth` real), v25 (endpoint
+   correcto `rates/business`, no `rates/courier`), v26 (credenciales PRODUCTIVAS reales confirmadas
+   contra `services.wschilexpress.com`), v27 (las 4 variables puestas en Vercel Production con la CLI
+   conectada del dueño, y redesplegado con éxito). El courier fuera de Arica y dentro de Arica (como
+   tercera opción junto a Retiro/Local) ya cobra la tarifa real de Chilexpress con el descuento del
+   convenio (`serviceValueDiscount`). Generación de OT real (`transport-orders`) sigue sin probarse a
+   propósito — crea un envío real y factura a la TCC, fuera de alcance hasta que se implemente esa
+   fase (el manual de webhook de tracking y el listado de estados que mandó Chilexpress quedan
+   documentados para entonces).
 10. **Flow en producción**: `POST /payment/create` está verificado solo contra **sandbox**. Falta (a)
     cambiar a credenciales de producción reales en Vercel cuando el usuario las tenga, (b) probar el
     flujo completo con un pago real (`getStatus`/`FLOW_ESTADO_PAGADO` nunca se confirmaron contra un
