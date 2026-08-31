@@ -11,6 +11,7 @@ import { Footer } from "@/components/footer";
 import { CarritoDrawer } from "@/components/carrito-drawer";
 import { WhatsappFlotante } from "@/components/whatsapp-flotante";
 import { FondoCinematico } from "@/components/fx/fondo-cinematico";
+import { VisitTracker } from "@/components/visit-tracker";
 
 // Tipografía cyberpunk/HUD (ver src/app/globals.css): Orbitron para títulos
 // (geométrica, angular — el look "gamer" de Razer/ROG) + IBM Plex Sans para
@@ -68,6 +69,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             se monta una sola vez acá para no reiniciar la animación al
             navegar entre páginas. */}
         <FondoCinematico />
+        <VisitTracker />
         {/* reducedMotion="user": respeta prefers-reduced-motion del sistema
             para TODAS las animaciones de Framer Motion de una sola vez (ver
             .agents/skills/animate — "reduced motion ships con la animación,

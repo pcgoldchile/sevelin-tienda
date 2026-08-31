@@ -4,11 +4,12 @@
 > arquitectura completo (todas las fases) vive en `README-ECOMMERCE-SEVELIN.md`, en el repo del POS
 > (`sevelin-pos-oficial`) — este documento es el estado de ESTE repo (`sevelin-tienda`) nada más.
 
-**Fecha:** 31-08-2026 · **Versión activa:** v22 (tracking de búsquedas y vistas de producto —
-`eventos_web`, para el panel "Más buscados" del POS, código listo pero pendiente de desplegar — ver
-"v22" abajo; también v21: etiqueta destacada de producto — NOVEDAD/TENDENCIA/OFERTA, badge en tarjeta
-y ficha de producto, código listo pero pendiente de desplegar; v20: Chilexpress: código de cotización
-real validado de punta a punta contra el ambiente de pruebas, falta solo la TCC para producción;
+**Fecha:** 31-08-2026 · **Versión activa:** v23 (tracking de visitas de página — `VisitTracker`,
+para el panel "Métricas" del POS, código listo pero pendiente de desplegar — ver "v23" abajo; también
+v22: tracking de búsquedas y vistas de producto — `eventos_web`, para el panel "Más buscados" del POS;
+v21: etiqueta destacada de producto — NOVEDAD/TENDENCIA/OFERTA, badge en tarjeta y ficha de producto;
+v20: Chilexpress: código de cotización real validado de punta a punta contra el ambiente de pruebas,
+falta solo la TCC para producción;
 también v19: carritos persistentes con expiración de 24h — link de "compartir carrito" con token en
 vez de codificado sin vencimiento, popup avisando la duración, y recordatorio de carrito abandonado
 cuando el cliente deja el correo en el checkout sin pagar; v18: rediseño de ficha de producto + fix del
@@ -204,6 +205,24 @@ Next.js 16 (App Router) · TypeScript · Tailwind v4 · `@supabase/supabase-js`.
   `sevelin-pos-oficial` (dueño de `descripcion_web`), documentado en su propio
   `docs/CHANGELOG-V41.md`. Quedan pendientes 40 productos sin ninguna descripción guardada (esperando
   specs del usuario) y los servicios técnicos (prompt aparte, otra sesión).
+
+## Estado: qué está HECHO (v23 — tracking de visitas de página, 31-08-2026)
+> Detalle completo en `docs/CHANGELOG-V23.md`.
+- `eventos_web.tipo` ahora acepta `'visita'` (`supabase/14-eventos-visita.sql`, aplicada).
+- **`src/components/visit-tracker.tsx`** (nuevo, cliente, montado en `layout.tsx`): reacciona a
+  `usePathname()` — el layout raíz (Server Component) NO se re-ejecuta en cada navegación del App
+  Router, así que un componente cliente es la única forma de contar cada cambio de página real, tanto
+  la carga inicial como cada navegación por `Link`. Manda `POST /api/eventos/visita` con
+  `keepalive: true`.
+- `src/lib/eventos-web.ts::registrarVisita()` — mismo criterio mejor-esfuerzo que las otras dos
+  funciones de este archivo.
+- **Cuenta cargas de página, no visitantes únicos** — a propósito, es lo que pidió el dueño ("total de
+  visitas", no analítica de sesiones). En dev, React StrictMode duplica el efecto (2 inserts por
+  carga) — confirmado que NO pasa en producción, es un comportamiento conocido de desarrollo.
+- La lee el POS (`GET /api/pos/metricas`) para el panel nuevo "Métricas", junto con `carritos_web`
+  (compartidos/abandonados/convertidos) y `perfiles_clientes` (cuentas creadas) — ver
+  `sevelin-pos-oficial/docs/CHANGELOG-V44.md`. **Código listo, PENDIENTE DE DESPLEGAR** — mismo caso
+  que etiquetas (v21) y más buscados (v22).
 
 ## Estado: qué está HECHO (v22 — tracking de búsquedas y vistas de producto, 31-08-2026)
 > Detalle completo en `docs/CHANGELOG-V22.md`.

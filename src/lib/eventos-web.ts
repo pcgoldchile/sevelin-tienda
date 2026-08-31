@@ -27,3 +27,20 @@ export async function registrarVistaProducto(productoPosId: number): Promise<voi
     console.error('[eventos-web] No se pudo registrar la vista:', err instanceof Error ? err.message : err);
   }
 }
+
+/** Una carga de página/navegación — la manda VisitTracker (cliente) a
+ * POST /api/eventos/visita, no un Server Component: el layout raíz NO se
+ * vuelve a ejecutar en cada navegación del App Router (persiste entre
+ * rutas), así que solo un componente cliente que reacciona a `usePathname()`
+ * puede contar cada cambio de página real. Cuenta cargas de página, no
+ * visitantes únicos — un mismo usuario navegando varias páginas suma varias
+ * "visitas" (mismo criterio simple que pidió el dueño: un total, no
+ * analítica de sesiones). */
+export async function registrarVisita(): Promise<void> {
+  try {
+    const { error } = await supabaseWeb.from('eventos_web').insert({ tipo: 'visita' });
+    if (error) console.error('[eventos-web] No se pudo registrar la visita:', error.message);
+  } catch (err) {
+    console.error('[eventos-web] No se pudo registrar la visita:', err instanceof Error ? err.message : err);
+  }
+}
