@@ -69,6 +69,25 @@ export function correoConfirmacionPedido(pedido: PedidoWeb): { subject: string; 
   };
 }
 
+/** Recordatorio de carrito abandonado — la manda el cron
+ * (GET /api/cron/recordar-carritos) cuando el cliente dejó su correo en el
+ * checkout pero no volvió a completar la compra dentro de 24h. Los items ya
+ * vienen resueltos contra el catálogo real (nombre/precio vigentes), nunca
+ * "congelados" del momento en que dejó el correo. */
+export function correoCarritoAbandonado(items: { nombre: string; cantidad: number; precio_web: number }[]): { subject: string; html: string } {
+  const filas = items.map((it) => filaItem(it.nombre, it.cantidad, it.precio_web * it.cantidad)).join('');
+  const urlTienda = process.env.NEXT_PUBLIC_SITE_URL || 'https://sevelin.cl';
+  const contenido = `
+    <p style="margin:0 0 16px;font-size:14px;color:${TEXTO_SUAVE};">Dejaste estos productos en tu carrito — siguen disponibles, pero no alcanzaste a terminar la compra.</p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;">${filas}</table>
+    <a href="${urlTienda}/productos" style="display:inline-block;background:${AZUL};color:#ffffff;text-decoration:none;padding:11px 22px;border-radius:999px;font-size:14px;font-weight:600;">Volver a la tienda</a>
+  `;
+  return {
+    subject: 'Dejaste productos en tu carrito — Sevelin',
+    html: envoltorio('¿Te faltó terminar tu compra?', contenido),
+  };
+}
+
 /** Cancelación de pedido — misma estructura, la usa el POS (Pedidos Web →
  * Cancelar) llamando a esta misma tienda vía POST /api/pos/notificar-cancelacion
  * (el POS no tiene acceso directo a Resend con este remitente ni a este

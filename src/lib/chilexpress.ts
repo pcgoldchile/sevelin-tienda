@@ -1,8 +1,8 @@
 /**
  * Cliente de Chilexpress (courier regional, con convenio corporativo y
  * tarifa preferencial) — reemplaza a Shipit, descartado por decisión del
- * usuario (no operan retiros desde Arica). Server-only (usa
- * CHILEXPRESS_API_KEY): nunca se importa desde código 'use client'.
+ * usuario (no operan retiros desde Arica). Server-only: nunca se importa
+ * desde código 'use client'.
  *
  * A diferencia de Shipit (Fase 4), Chilexpress no tiene un portal de
  * documentación pública fácil de leer (developers.wschilexpress.com es una
@@ -11,25 +11,56 @@
  * (github.com/whooohq/whq-woocommerce-chilexpress-shipping, archivado en
  * 2023 pero con las URLs y el body de la API REST tal cual). Es más sólido
  * que adivinar de memoria, pero SIGUE siendo una fuente indirecta (un
- * plugin de terceros, no la documentación oficial) — TODO CRÍTICO: validar
- * contra developers.wschilexpress.com o soporteintegraciones@chilexpress.cl
- * en cuanto haya API key real, antes del primer envío real.
+ * plugin de terceros, no la documentación oficial).
  *
- * Además, mientras no haya API key configurada, el checkout usa una tarifa
- * fija/mock (`COSTO_ENVIO_CHILEXPRESS_MOCK`, ver src/lib/envio.ts) — así lo
- * pidió el usuario para no bloquear las pruebas de compra mientras
- * consigue las credenciales del convenio corporativo.
+ * ⚠️ 31-08-2026, con suscripciones reales del portal de Chilexpress: son 3
+ * productos separados, cada uno con su propia subscription key — el
+ * "Ocp-Apim-Subscription-Key" de una NO sirve para las otras. Las 3 se
+ * probaron contra `https://services.wschilexpress.com` (producción) y
+ * dieron 401 en TODOS los endpoints salvo georeference — pero contra
+ * `https://testservices.wschilexpress.com` (ambiente de pruebas)
+ * funcionaron perfecto, incluida la cotización real de tarifa. Según el FAQ
+ * del propio portal (developers.wschilexpress.com/faq): "¿Es necesario
+ * tener una TCC para solicitar mis credenciales productivas? Sí" — las
+ * llaves que da el registro self-service del portal son de PRUEBA; las
+ * credenciales de producción (con la tarifa preferencial real del convenio
+ * corporativo) son un trámite aparte, atado a una Tarjeta de Cliente
+ * Chilexpress (TCC), no algo que se resuelve solo regenerando la llave.
+ *   - **API-COBERTURAS-CHILEXPRESS** (`CHILEXPRESS_API_KEY_COBERTURAS`) →
+ *     georeference/api (`buscarCountyCodePorComuna`). Confirmada funcionando
+ *     en ambos ambientes: devuelve datos correctos, incluido el countyCode
+ *     de Arica ("ARIC") y el mapeo de región (ver chilexpress-regiones.ts).
+ *   - **API-COTIZADOR-CHILEXPRESS** (`CHILEXPRESS_API_KEY_COTIZADOR`) →
+ *     rating/api (`cotizarTarifasChilexpress`). CONFIRMADA funcionando en
+ *     el ambiente de pruebas — la forma de la respuesta y los campos del
+ *     request ya están validados contra un caso real (ver más abajo). Pero
+ *     los PRECIOS que devuelve son de prueba, no la tarifa preferencial real
+ *     del convenio — no usar para cobrar a un cliente real hasta tener
+ *     credenciales productivas (ver aviso en envio.ts).
+ *   - **API-ENVIOS-CHILEXPRESS** (`CHILEXPRESS_API_KEY_ENVIOS`) → creación
+ *     de órdenes de transporte/etiquetas. Todavía no se usa en este
+ *     proyecto (no se crean envíos reales, solo se cotiza) — se deja
+ *     documentada para cuando haga falta.
  */
 
 const CHILEXPRESS_API_BASE = process.env.CHILEXPRESS_API_BASE || 'https://testservices.wschilexpress.com';
 
+/** Solo mira la llave de Cotizador: es la que de verdad produce el precio
+ * (rating). Sin ella, el checkout usa la tarifa mock aunque haya una llave
+ * de Coberturas configurada (esa sola no alcanza para cotizar un envío). */
 export function chilexpressHabilitado(): boolean {
-  return !!process.env.CHILEXPRESS_API_KEY;
+  return !!process.env.CHILEXPRESS_API_KEY_COTIZADOR;
 }
 
-function apiKeyChilexpress(): string {
-  const apiKey = process.env.CHILEXPRESS_API_KEY;
-  if (!apiKey) throw new Error('Falta CHILEXPRESS_API_KEY (ver .env.local.example).');
+function apiKeyCoberturas(): string {
+  const apiKey = process.env.CHILEXPRESS_API_KEY_COBERTURAS;
+  if (!apiKey) throw new Error('Falta CHILEXPRESS_API_KEY_COBERTURAS (ver .env.local.example).');
+  return apiKey;
+}
+
+function apiKeyCotizador(): string {
+  const apiKey = process.env.CHILEXPRESS_API_KEY_COTIZADOR;
+  if (!apiKey) throw new Error('Falta CHILEXPRESS_API_KEY_COTIZADOR (ver .env.local.example).');
   return apiKey;
 }
 
@@ -42,12 +73,13 @@ interface CoverageArea {
  * Busca el countyCode de Chilexpress para una comuna, dentro de una región
  * (Chilexpress agrupa la cobertura por región, no hay un listado plano de
  * todo Chile como en Shipit). `regionCode` es el código de región de
- * Chilexpress, NO el código oficial INE — sin API key no se pudo confirmar
- * cuál es el de "Arica y Parinacota" (ver CHILEXPRESS_ORIGIN_COUNTY_CODE en
- * envio.ts, que de momento se configura a mano en vez de resolverse acá).
+ * Chilexpress, NO el código oficial INE — es "R" + el número de región
+ * (numeración romana → arábiga: XV→R15, I→R1... XVI→R16), salvo la
+ * Metropolitana que usa "RM". Confirmado contra la API real el 31-08-2026
+ * (ver el mapeo completo en src/lib/chilexpress-regiones.ts).
  */
 export async function buscarCountyCodePorComuna(regionCode: string, nombreComuna: string): Promise<string> {
-  const apiKey = apiKeyChilexpress();
+  const apiKey = apiKeyCoberturas();
   const url = `${CHILEXPRESS_API_BASE}/georeference/api/v1.0/coverage-areas?RegionCode=${encodeURIComponent(regionCode)}&type=0`;
 
   const respuesta = await fetch(url, {
@@ -69,12 +101,19 @@ export async function buscarCountyCodePorComuna(regionCode: string, nombreComuna
 interface RespuestaTarifasChilexpress {
   data?: {
     courierServiceOptions?: {
-      serviceTypeCode: string;
+      serviceTypeCode: number;
       serviceDescription: string;
-      serviceValue: number;
+      // ⚠️ Viene como TEXTO en la respuesta real ("15172"), no número —
+      // confirmado contra el ambiente de pruebas el 31-08-2026. El código
+      // original (adivinado del plugin de WooCommerce) asumía number y
+      // comparaba con `<` directo, lo que compara como texto si nunca se
+      // convierte: "9177" > "10115" alfabéticamente, así que hubiera elegido
+      // mal la tarifa "más barata". Se convierte con Number() antes de comparar.
+      serviceValue: string;
     }[];
   };
   statusDescription?: string;
+  statusCode?: number;
 }
 
 export interface TarifaChilexpress {
@@ -83,12 +122,12 @@ export interface TarifaChilexpress {
 }
 
 /**
- * Cotiza vía Chilexpress. `productType`/`contentType`/`deliveryTime` usan
- * los mismos valores del ejemplo real encontrado (3/1/0) — sin
- * documentación oficial a mano no se pudo confirmar qué significa cada
- * código exactamente. `declaredWorth` también sigue el ejemplo (0) en vez
- * del total real del pedido — revisar ambas cosas cuando haya acceso real
- * a la API (ver TODO al inicio del archivo).
+ * Cotiza vía Chilexpress. `productType`/`contentType`/`deliveryTime` (3/1/0)
+ * y la forma de la respuesta quedaron CONFIRMADOS contra el ambiente de
+ * pruebas el 31-08-2026 (ver el aviso completo al inicio del archivo:
+ * funciona en sandbox, no en producción con estas llaves). `declaredWorth`
+ * sigue el ejemplo original (0) en vez del total real del pedido — eso sí
+ * sigue sin confirmar qué efecto tiene en el precio.
  */
 export async function cotizarTarifasChilexpress(datos: {
   origenCountyCode: string;
@@ -98,7 +137,7 @@ export async function cotizarTarifasChilexpress(datos: {
   altoCm: number;
   anchoCm: number;
 }): Promise<TarifaChilexpress> {
-  const apiKey = apiKeyChilexpress();
+  const apiKey = apiKeyCotizador();
 
   const respuesta = await fetch(`${CHILEXPRESS_API_BASE}/rating/api/v1.0/rates/courier`, {
     method: 'POST',
@@ -127,6 +166,6 @@ export async function cotizarTarifasChilexpress(datos: {
   const opciones = data.data?.courierServiceOptions || [];
   if (opciones.length === 0) throw new Error('Chilexpress no encontró servicios disponibles para esa comuna.');
 
-  const masBarata = opciones.reduce((min, actual) => (actual.serviceValue < min.serviceValue ? actual : min));
-  return { servicio: masBarata.serviceDescription, precio: Math.round(masBarata.serviceValue) };
+  const masBarata = opciones.reduce((min, actual) => (Number(actual.serviceValue) < Number(min.serviceValue) ? actual : min));
+  return { servicio: masBarata.serviceDescription, precio: Math.round(Number(masBarata.serviceValue)) };
 }

@@ -4,10 +4,16 @@
 > arquitectura completo (todas las fases) vive en `README-ECOMMERCE-SEVELIN.md`, en el repo del POS
 > (`sevelin-pos-oficial`) — este documento es el estado de ESTE repo (`sevelin-tienda`) nada más.
 
-**Fecha:** 30-08-2026 · **Versión activa:** v18 (rediseño de ficha de producto + fix del sanitizador
-que no cargaba en Vercel + soporte de negrita/link en descripciones — ver "v18" abajo; también v17:
-arreglos de móvil, menú que se cierra solo, **envío por distancia real** con Nominatim + OSRM, valles
-con km declarado, horarios de corte) ·
+**Fecha:** 31-08-2026 · **Versión activa:** v21 (etiqueta destacada de producto — NOVEDAD/TENDENCIA/
+OFERTA, badge en tarjeta y ficha de producto, código listo pero pendiente de desplegar — ver "v21"
+abajo; también v20: Chilexpress: código de cotización real validado de punta a punta contra el
+ambiente de pruebas, falta solo la TCC para producción — ver "v20" abajo;
+también v19: carritos persistentes con expiración de 24h — link de "compartir carrito" con token en
+vez de codificado sin vencimiento, popup avisando la duración, y recordatorio de carrito abandonado
+cuando el cliente deja el correo en el checkout sin pagar; v18: rediseño de ficha de producto + fix del
+sanitizador que no cargaba en Vercel + soporte de negrita/link en descripciones; v17: arreglos de
+móvil, menú que se cierra solo, **envío por distancia real** con Nominatim + OSRM, valles con km
+declarado, horarios de corte) ·
 **En producción:** desplegado en Vercel, dominio `sevelin.cl` **todavía apunta a Tiendanube** (la
 tienda nueva vive en la URL de Vercel por ahora — decidir cuándo migrar el DNS, ver "Pendiente").
 
@@ -198,6 +204,43 @@ Next.js 16 (App Router) · TypeScript · Tailwind v4 · `@supabase/supabase-js`.
   `docs/CHANGELOG-V41.md`. Quedan pendientes 40 productos sin ninguna descripción guardada (esperando
   specs del usuario) y los servicios técnicos (prompt aparte, otra sesión).
 
+## Estado: qué está HECHO (v21 — etiqueta destacada de producto, 31-08-2026)
+> Detalle completo en `docs/CHANGELOG-V21.md`.
+- `productos_web.etiqueta_web` nuevo (`supabase/12-etiqueta-web.sql`, aplicada) — NULL o una de
+  `NOVEDAD`/`TENDENCIA`/`OFERTA`, marcada desde el modal del POS. Badge nuevo
+  (`EtiquetaProductoBadge`) en `tarjeta-producto.tsx` y en la ficha de producto.
+- **Código listo, probado localmente, PENDIENTE DE DESPLEGAR**: el mapeo en `POST
+  /api/sync/producto` está en el repo pero no en Vercel — hasta desplegar, la etiqueta que se marque
+  en el POS no va a llegar a la tienda real.
+
+## Estado: qué está HECHO (v20 — Chilexpress validado, falta la TCC, 31-08-2026)
+> Detalle completo en `docs/CHANGELOG-V20.md`.
+- Con 3 suscripciones reales del portal de Chilexpress, se confirmó que el código de cotización
+  (geo-referencia + tarifa) funciona de punta a punta contra el ambiente de PRUEBAS
+  (`testservices.wschilexpress.com`) — incluye `src/lib/chilexpress-regiones.ts` nuevo (mapeo de las
+  16 regiones de Chile, confirmado contra la API real) y la corrección de un bug real (`serviceValue`
+  venía como texto, se comparaba mal). Contra producción las 3 suscripciones dan 401 en casi todo — el
+  FAQ del portal explica que las credenciales productivas reales necesitan una TCC (Tarjeta de Cliente
+  Chilexpress), un trámite aparte del registro self-service.
+- **No se activó en producción a propósito**: `CHILEXPRESS_API_KEY_COTIZADOR` queda vacío hasta tener
+  la TCC — si se pusiera ahora, el checkout mostraría precios de prueba a clientes reales.
+
+## Estado: qué está HECHO (v19 — carritos persistentes con expiración, 31-08-2026)
+> Detalle completo en `docs/CHANGELOG-V19.md`.
+- **Tabla `carritos_web` nueva** (`supabase/11-carritos-web.sql`, aplicada). El link de "Compartir
+  carrito" pasó de ir codificado en la URL (sin vencimiento) a `?t=<token>`, expira a las 24h; pasado
+  ese plazo la página avisa que expiró en vez de reconstruir el carrito viejo. Popup "Este link dura
+  24 horas" la primera vez que se comparte, recomendando captura de pantalla si se necesita después.
+- **Carrito de abandono**: apenas el cliente completa el correo en el checkout (antes de pagar) se
+  guarda el carrito con `POST /api/carrito/abandono`; si paga, `POST /api/checkout` lo marca
+  convertido. `GET /api/cron/recordar-carritos` (programado cada 15 min en `vercel.json`, protegido
+  con `CRON_SECRET`) manda el recordatorio 1h después si no volvió a comprar, revalidando los
+  productos contra el catálogo real antes de mandar el correo.
+- **Sigue dependiendo del mismo pendiente de Resend** (#1 abajo): el código funciona, probado de
+  punta a punta contra producción, pero sin dominio verificado el correo no le llega a un cliente
+  real. **Nuevo pendiente**: confirmar si el proyecto de Vercel es Hobby o Pro — Hobby limita los cron
+  jobs a una vez al día, no cada 15 minutos como quedó configurado.
+
 ## Arquitectura (resumen — ver README-ECOMMERCE-SEVELIN.md para el detalle completo)
 - Proyecto **separado** del POS (`sevelin-pos-oficial`), repo Git propio, deploy Vercel propio.
 - Conecta a su **propio** proyecto Supabase ("Supabase Web": `productos_web`, `pedidos_web`) — NUNCA
@@ -380,25 +423,47 @@ Next.js 16 (App Router) · TypeScript · Tailwind v4 · `@supabase/supabase-js`.
    la política **antes** de ese cambio, no después.
 
 **Resto de pendientes:**
-8. **Chilexpress**: sigue sin API key real, el checkout usa `COSTO_ENVIO_CHILEXPRESS_MOCK` para todo
-   envío fuera de Arica. Cuando el usuario consiga las credenciales del convenio corporativo: (a)
-   configurar `CHILEXPRESS_API_KEY`/`CHILEXPRESS_API_BASE`/`CHILEXPRESS_ORIGIN_COUNTY_CODE` en
-   Vercel, (b) resolver el TODO de `src/lib/chilexpress.ts` (mapear comuna → `countyCode`, nunca
-   verificado contra la API real), (c) confirmar el contrato completo (se implementó a partir del
-   código fuente del plugin de WooCommerce de Chilexpress, no de documentación oficial).
-9. **Flow en producción**: `POST /payment/create` está verificado solo contra **sandbox**. Falta (a)
-   cambiar a credenciales de producción reales en Vercel cuando el usuario las tenga, (b) probar el
-   flujo completo con un pago real (`getStatus`/`FLOW_ESTADO_PAGADO` nunca se confirmaron contra un
-   pago completado de verdad, solo contra la creación de la orden).
-10. **Productos que llegaron sin SKU YA se pueden publicar** (v16, sync ya no lo exige) — sigue
+8. **Confirmar el plan de Vercel del proyecto (Hobby vs Pro)** — el cron de recordatorio de carrito
+   abandonado (`vercel.json`, v19) quedó programado cada 15 minutos, pero Hobby limita los cron jobs a
+   una vez al día. Si es Hobby, el recordatorio va a llegar mucho más tarde de lo pensado (o hay que
+   ajustar el diseño) — ver `docs/CHANGELOG-V19.md`. Ambos proyectos ya están en Vercel (confirmado
+   31-08-2026), falta solo el plan.
+9. **Chilexpress — código validado de punta a punta el 31-08-2026, falta la TCC para producción.** El
+   dueño consiguió 3 suscripciones reales del portal de Chilexpress (Coberturas, Cotizador, Envíos),
+   cada una con su propia llave. Contra `services.wschilexpress.com` (producción) las 3 dieron 401 en
+   casi todo — pero contra `testservices.wschilexpress.com` (ambiente de PRUEBAS) las 3 funcionaron
+   perfecto, incluida la cotización real de tarifa:
+   - **API-COBERTURAS-CHILEXPRESS confirmada** — resuelve comuna → countyCode. Con esto se resolvió el
+     TODO viejo de `src/lib/chilexpress.ts` (mapear comuna a región de Chilexpress, ver
+     `src/lib/chilexpress-regiones.ts`, tabla completa de las 16 regiones confirmada contra la API).
+   - **API-COTIZADOR-CHILEXPRESS confirmada** — `rating/api/v1.0/rates/courier` respondió con tarifas
+     reales de prueba. De paso se encontró y corrigió un bug real: `serviceValue` viene como TEXTO
+     ("15172"), no número — el código original (adivinado de un plugin de WooCommerce, sin
+     documentación oficial) lo comparaba con `<` sin convertir, lo que habría elegido mal la tarifa
+     "más barata" (comparación de texto, no numérica).
+   - **Por qué no se activó en producción todavía**: según el FAQ del portal
+     (developers.wschilexpress.com/faq), las credenciales PRODUCTIVAS (con la tarifa preferencial real
+     del convenio corporativo) requieren una **TCC** (Tarjeta de Cliente Chilexpress) — un trámite
+     aparte (formulario "Quiero Ser Cliente" en portalempresa.chilexpress.cl), no algo que se resuelve
+     regenerando la key del portal de desarrolladores. Las 3 llaves que tiene el dueño son del registro
+     self-service (gratis, sin TCC) y solo devuelven precios de PRUEBA. **No poner
+     `CHILEXPRESS_API_KEY_COTIZADOR` en Vercel todavía** — mostraría un precio falso a un cliente real
+     en vez de la tarifa referencial (`COSTO_ENVIO_CHILEXPRESS_MOCK`). Cuando el dueño consiga la TCC y
+     las credenciales productivas: cambiar `CHILEXPRESS_API_BASE` a `services.wschilexpress.com` y
+     poner las 3 keys nuevas en Vercel — el código ya no necesita más cambios.
+10. **Flow en producción**: `POST /payment/create` está verificado solo contra **sandbox**. Falta (a)
+    cambiar a credenciales de producción reales en Vercel cuando el usuario las tenga, (b) probar el
+    flujo completo con un pago real (`getStatus`/`FLOW_ESTADO_PAGADO` nunca se confirmaron contra un
+    pago completado de verdad, solo contra la creación de la orden).
+11. **Productos que llegaron sin SKU YA se pueden publicar** (v16, sync ya no lo exige) — sigue
     pendiente curar el catálogo: clasificarlos/marcarlos `publicado_web=true` desde el modal del POS
     si se quiere que se vean en la tienda. Ya no es un bloqueo técnico.
-11. **Algunos productos con SKU sin foto real** (no tenían coincidencia confiable en `sevelin.cl`) —
+12. **Algunos productos con SKU sin foto real** (no tenían coincidencia confiable en `sevelin.cl`) —
     subirles foto a mano desde el modal del POS.
-12. **Dominio `sevelin.cl` sigue apuntando a Tiendanube**, no a esta tienda nueva (que vive en su URL
+13. **Dominio `sevelin.cl` sigue apuntando a Tiendanube**, no a esta tienda nueva (que vive en su URL
     de Vercel) — decidir cuándo hacer el cambio de DNS, y qué pasa con la tienda Tiendanube vieja
     (¿se da de baja, se deja como respaldo?).
-13. ~~OpenFactura~~, ~~Shipit~~, ~~migraciones SQL~~, ~~despliegue Vercel~~, ~~webhook del POS~~,
+14. ~~OpenFactura~~, ~~Shipit~~, ~~migraciones SQL~~, ~~despliegue Vercel~~, ~~webhook del POS~~,
     ~~primera carga del catálogo~~, ~~sistema de cuentas de cliente~~, ~~confirmar SUPABASE_WEB_URL
     en el POS~~, ~~banners de categoría con placeholder~~ — todo esto ya no es pendiente, quedó
     resuelto en sesiones anteriores (ver versiones abajo).

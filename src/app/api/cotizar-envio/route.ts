@@ -22,8 +22,8 @@ export async function POST(req: NextRequest) {
   }
 
   const direccion = cuerpo.direccion;
-  if (!direccion?.calle || !direccion?.numero || !direccion?.comuna) {
-    return NextResponse.json({ error: 'Falta la dirección de envío (calle, número, comuna)' }, { status: 400 });
+  if (!direccion?.calle || !direccion?.numero || !direccion?.comuna || !direccion?.region) {
+    return NextResponse.json({ error: 'Falta la dirección de envío (calle, número, comuna, región)' }, { status: 400 });
   }
 
   const items = (cuerpo.items || [])
@@ -39,6 +39,7 @@ export async function POST(req: NextRequest) {
         calle: direccion.calle,
         numero: direccion.numero,
         comuna: direccion.comuna,
+        region: direccion.region,
         referencia: direccion.referencia || null,
         // Valle declarado (Azapa/Lluta) + su kilómetro: la validación real
         // de que el valle existe la hace esValleValido() en envio.ts, acá

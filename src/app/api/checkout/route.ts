@@ -4,6 +4,7 @@ import { crearPedido, guardarPagoFlow, marcarPedidoFallido } from '@/lib/pedidos
 import { crearPagoFlow } from '@/lib/flow';
 import { confirmarEnvio } from '@/lib/envio';
 import { crearClienteServidor } from '@/lib/supabase-server';
+import { marcarCarritoConvertido } from '@/lib/carritos-web';
 import type { DatosFactura, DireccionEnvio, ItemPedido } from '@/lib/tipos';
 
 interface CuerpoCheckout {
@@ -26,6 +27,12 @@ interface CuerpoCheckout {
   // Checkbox obligatoria "Acepto los Términos y la Política de Privacidad"
   // (ver formulario-checkout.tsx) — sin esto en true, no hay pedido.
   consentimientoPrivacidad?: boolean;
+  // Id del carrito guardado en carritos_web (origen 'checkout') cuando el
+  // cliente completó el correo — si el pedido se crea, se marca como
+  // convertido para apagar el recordatorio de abandono (ver
+  // GET /api/cron/recordar-carritos). Opcional: si no llegó (falló al
+  // guardarlo, o JS deshabilitado), el checkout sigue igual.
+  carritoAbandonoId?: string;
 }
 
 /**
@@ -161,6 +168,7 @@ export async function POST(req: NextRequest) {
     });
     numeroPedido = pedido.numero_pedido;
     total = pedido.total;
+    await marcarCarritoConvertido(cuerpo.carritoAbandonoId, numeroPedido).catch(() => {});
   } catch (err) {
     const mensaje = err instanceof Error ? err.message : 'No se pudo crear el pedido';
     return NextResponse.json({ error: mensaje }, { status: 500 });

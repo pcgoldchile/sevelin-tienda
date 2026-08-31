@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent, type FocusEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
@@ -53,6 +53,39 @@ export function FormularioCheckout() {
   // inequívoco, nunca una casilla premarcada) — el submit queda bloqueado
   // mientras no se acepte a propósito.
   const [aceptaPrivacidad, setAceptaPrivacidad] = useState(false);
+  // Id del carrito guardado en carritos_web (origen 'checkout') — se llena
+  // apenas el cliente completa el correo (ver guardarAbandono más abajo) y
+  // viaja en el submit para que el servidor apague el recordatorio de
+  // abandono si el pedido se completa (ver POST /api/checkout).
+  const carritoAbandonoIdRef = useRef<string | null>(null);
+  const debounceAbandonoRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Se guarda al perder el foco del campo correo (no en cada tecla): es el
+  // momento en que el cliente "completó" el dato, pedido explícito para
+  // poder recordarle el carrito si no vuelve a comprar dentro de 24h. Mejor
+  // esfuerzo — si falla, el checkout sigue funcionando exactamente igual.
+  function guardarAbandono(evento: FocusEvent<HTMLInputElement>) {
+    const correo = evento.target.value.trim();
+    if (debounceAbandonoRef.current) clearTimeout(debounceAbandonoRef.current);
+    if (!correo || !correo.includes("@") || items.length === 0) return;
+    debounceAbandonoRef.current = setTimeout(async () => {
+      try {
+        const respuesta = await fetch("/api/carrito/abandono", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: carritoAbandonoIdRef.current || undefined,
+            correo,
+            items: items.map((item) => ({ sku: item.sku, cantidad: item.cantidad })),
+          }),
+        });
+        const data = await respuesta.json();
+        if (respuesta.ok && data.id) carritoAbandonoIdRef.current = data.id;
+      } catch {
+        // Best-effort — no bloquea el checkout.
+      }
+    }, 400);
+  }
 
   const opcionElegida = opciones?.find((o) => o.metodo === metodoElegido) ?? null;
   const total = subtotal + (opcionElegida?.costo ?? 0);
@@ -71,8 +104,9 @@ export function FormularioCheckout() {
     const calle = String(datos.get("calle") || "").trim();
     const numero = String(datos.get("numero") || "").trim();
     const comuna = String(datos.get("comuna") || "").trim();
-    if (!calle || !numero || !comuna) {
-      setErrorEnvio("Completa calle, número y comuna para calcular el envío.");
+    const region = String(datos.get("region") || "").trim();
+    if (!calle || !numero || !comuna || !region) {
+      setErrorEnvio("Completa región, calle, número y comuna para calcular el envío.");
       return;
     }
 
@@ -89,6 +123,7 @@ export function FormularioCheckout() {
             calle,
             numero,
             comuna,
+            region,
             valle: String(datos.get("valle") || "") || null,
             km_valle: datos.get("km_valle") ? Number(datos.get("km_valle")) : null,
           },
@@ -159,6 +194,7 @@ export function FormularioCheckout() {
           metodoEnvio: metodoElegido,
           nota: datos.get("nota"),
           consentimientoPrivacidad: aceptaPrivacidad,
+          carritoAbandonoId: carritoAbandonoIdRef.current || undefined,
           factura: quiereFactura
             ? {
                 razonSocial: datos.get("facturaRazonSocial"),
@@ -220,6 +256,7 @@ export function FormularioCheckout() {
             type="email"
             required
             defaultValue={usuario?.email || ""}
+            onBlur={guardarAbandono}
             placeholder="Correo electrónico"
             className={CAMPO}
           />

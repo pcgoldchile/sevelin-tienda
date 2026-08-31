@@ -1,5 +1,6 @@
 import { obtenerProductoPorSku } from './catalogo';
-import { chilexpressHabilitado, cotizarTarifasChilexpress } from './chilexpress';
+import { chilexpressHabilitado, buscarCountyCodePorComuna, cotizarTarifasChilexpress } from './chilexpress';
+import { CODIGO_REGION_CHILEXPRESS } from './chilexpress-regiones';
 import { distanciaDesdeTienda, distanciaValle, esValleValido, VALLES } from './distancia';
 import { estadoHorario } from './horarios';
 import { tarifaPorDistancia } from './tarifas-envio';
@@ -150,13 +151,23 @@ async function agregarPaquete(items: { sku: string; cantidad: number }[]) {
 }
 
 /**
- * Cotiza vía Chilexpress. Si CHILEXPRESS_API_KEY no está configurada, usa
- * una tarifa fija/mock (COSTO_ENVIO_CHILEXPRESS_MOCK) — pedido explícito
- * del usuario para no bloquear el checkout mientras consigue las
- * credenciales del convenio corporativo. El camino real queda escrito pero
- * con un TODO: resolver el countyCode de destino por comuna necesita saber
- * primero el código de región de Chilexpress de esa comuna, y no se pudo
- * mapear sin acceso real a su API (ver src/lib/chilexpress.ts).
+ * Cotiza vía Chilexpress. Si CHILEXPRESS_API_KEY_COTIZADOR no está
+ * configurada, usa una tarifa fija/mock (COSTO_ENVIO_CHILEXPRESS_MOCK) —
+ * pedido explícito del usuario para no bloquear el checkout mientras se
+ * consiguen credenciales productivas reales (ver el aviso completo en
+ * chilexpress.ts).
+ *
+ * El 31-08-2026 se probaron 3 suscripciones reales del portal de Chilexpress
+ * contra el ambiente de PRUEBAS (no producción): tanto la geo-referencia
+ * (resolver comuna → countyCode, por eso este código ya no necesita un
+ * countyCode de destino fijo como antes) como el endpoint que de verdad
+ * cotiza el precio funcionaron. Pero son llaves de prueba del registro
+ * self-service — según el FAQ del portal, las credenciales PRODUCTIVAS (con
+ * la tarifa preferencial real del convenio corporativo) necesitan una TCC
+ * (Tarjeta de Cliente Chilexpress), un trámite aparte. Por eso, aunque el
+ * código ya está validado de punta a punta, NO conviene poner
+ * CHILEXPRESS_API_KEY_COTIZADOR en producción todavía: mostraría precios de
+ * prueba (no reales) a un cliente real en vez de la tarifa referencial.
  */
 async function cotizarViaChilexpress(
   direccion: DireccionEnvio,
@@ -170,23 +181,18 @@ async function cotizarViaChilexpress(
     };
   }
 
-  const origenCountyCode = process.env.CHILEXPRESS_ORIGIN_COUNTY_CODE;
-  if (!origenCountyCode) {
-    throw new Error('Falta CHILEXPRESS_ORIGIN_COUNTY_CODE (ver .env.local.example).');
+  // "ARIC" (Arica) confirmado contra la API real — mismo criterio que las
+  // coordenadas de la tienda: un valor por defecto correcto en el código,
+  // la env var solo lo sobreescribe si la tienda cambia de comuna de origen.
+  const origenCountyCode = process.env.CHILEXPRESS_ORIGIN_COUNTY_CODE || 'ARIC';
+
+  const codigoRegion = direccion.region
+    ? CODIGO_REGION_CHILEXPRESS[direccion.region as keyof typeof CODIGO_REGION_CHILEXPRESS]
+    : undefined;
+  if (!codigoRegion) {
+    throw new Error('Falta la región para cotizar por courier.');
   }
-  // TODO: sin acceso real a la API no se pudo mapear comuna → región de
-  // Chilexpress para resolver el countyCode de destino automáticamente
-  // (buscarCountyCodePorComuna() en chilexpress.ts necesita el código de
-  // región primero). CHILEXPRESS_DESTINO_COUNTY_CODE_FIJO es solo para una
-  // prueba puntual con una comuna fija mientras se resuelve esto.
-  const destinoCountyCode = process.env.CHILEXPRESS_DESTINO_COUNTY_CODE_FIJO;
-  if (!destinoCountyCode) {
-    throw new Error(
-      'La resolución automática de comuna a código de Chilexpress todavía no está conectada. ' +
-        'Quita CHILEXPRESS_API_KEY para usar la tarifa referencial, o configura ' +
-        'CHILEXPRESS_DESTINO_COUNTY_CODE_FIJO para una prueba puntual.'
-    );
-  }
+  const destinoCountyCode = await buscarCountyCodePorComuna(codigoRegion, direccion.comuna);
 
   const paquete = await agregarPaquete(items);
   const tarifa = await cotizarTarifasChilexpress({
