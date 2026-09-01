@@ -56,6 +56,17 @@ export interface DireccionEnvio {
    */
   valle?: 'AZAPA' | 'LLUTA' | null;
   km_valle?: number | null;
+  /**
+   * Id de Google Places (New) de la sugerencia que el cliente eligió en el
+   * autocompletado del checkout (ver src/lib/places.ts). Cuando viene, el
+   * servidor resuelve las coordenadas EXACTAS vía Place Details en vez de
+   * geocodificar el texto — más preciso, y evita repetir la ambigüedad de
+   * "¿a qué punto de la calle corresponde este número?" (ver
+   * src/lib/distancia.ts, sección "por qué Google"). El servidor nunca
+   * confía en coordenadas que mande el cliente directo, solo en este id —
+   * lo resuelve él mismo contra Google.
+   */
+  placeId?: string | null;
 }
 
 /** Datos de facturación cuando el cliente marca "Solicitar factura" en el checkout.

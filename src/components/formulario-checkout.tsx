@@ -56,6 +56,19 @@ export function FormularioCheckout() {
   const [calleTexto, setCalleTexto] = useState("");
   const [numeroTexto, setNumeroTexto] = useState("");
   const [kmValleTexto, setKmValleTexto] = useState("");
+  // Autocompletado de direcciones (Google Places API New, ver
+  // src/lib/places.ts) — sugerencias en vivo mientras se escribe la calle.
+  const [sugerenciasDireccion, setSugerenciasDireccion] = useState<
+    { placeId: string; texto: string; textoSecundario: string | null }[]
+  >([]);
+  const [mostrarSugerencias, setMostrarSugerencias] = useState(false);
+  // Id de la sugerencia elegida — viaja en la cotización/pago para que el
+  // servidor use coordenadas exactas (Place Details) en vez de
+  // geocodificar el texto. Se limpia apenas el cliente vuelve a tocar
+  // calle/número/comuna a mano: esos datos ya no corresponden a la
+  // sugerencia que había elegido.
+  const [placeIdElegido, setPlaceIdElegido] = useState<string | null>(null);
+  const debounceAutocompletadoRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Advertencia visible, no bloqueante (ver punto 4 del pedido): un celular
   // chileno tiene 9 dígitos, pero el dato se manda tal cual lo escribió el
   // cliente aunque supere ese largo.
@@ -119,6 +132,11 @@ export function FormularioCheckout() {
     !!regionElegida && !!comunaElegida && !!calleTexto.trim() && !!numeroTexto.trim() &&
     (comunaElegida !== "Arica" || !valleElegido || !!kmValleTexto.trim());
 
+  // Ya no corresponde mostrar sugerencias si se eligió una (placeIdElegido)
+  // o si se borró casi todo el texto — derivado en vez de limpiar
+  // `sugerenciasDireccion` desde el efecto de abajo.
+  const sugerenciasVisibles = placeIdElegido || calleTexto.trim().length < 3 ? [] : sugerenciasDireccion;
+
   // "Firma" de cantidades — cambia de valor solo cuando la selección cambia
   // de verdad (sku o cantidad), para poder usarla como dependencia de efecto
   // sin recalcular en cada render.
@@ -149,6 +167,10 @@ export function FormularioCheckout() {
             region: regionElegida,
             valle: valleElegido || null,
             km_valle: kmValleTexto.trim() ? Number(kmValleTexto) : null,
+            // Si el cliente eligió una sugerencia del autocompletado, el
+            // servidor usa sus coordenadas exactas en vez de geocodificar
+            // el texto (ver src/lib/envio.ts).
+            placeId: placeIdElegido,
           },
           items: itemsSeleccionados.map((item) => ({ sku: item.sku, cantidad: item.cantidad })),
         }),
@@ -190,7 +212,71 @@ export function FormularioCheckout() {
     }, 600);
     return () => clearTimeout(temporizador);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- calcularEnvio se recrea cada render (lee el estado más reciente por closure); solo importa disparar cuando cambian estas dependencias.
-  }, [direccionCompleta, regionElegida, comunaElegida, valleElegido, kmValleTexto, calleTexto, numeroTexto, itemsFirma]);
+  }, [direccionCompleta, regionElegida, comunaElegida, valleElegido, kmValleTexto, calleTexto, numeroTexto, placeIdElegido, itemsFirma]);
+
+  // Sugerencias en vivo mientras se escribe la calle (Places Autocomplete,
+  // ver POST /api/autocompletar-direccion). Debounce corto: es solo una
+  // lista, no cambia ningún precio — no hace falta esperar tanto como el
+  // recálculo de envío de arriba.
+  useEffect(() => {
+    // Nada que limpiar acá si ya no corresponde pedir sugerencias — eso lo
+    // resuelve `sugerenciasVisibles` (más abajo) sin volver a tocar el
+    // estado desde el propio efecto.
+    if (placeIdElegido || calleTexto.trim().length < 3) return;
+
+    if (debounceAutocompletadoRef.current) clearTimeout(debounceAutocompletadoRef.current);
+    debounceAutocompletadoRef.current = setTimeout(async () => {
+      try {
+        const respuesta = await fetch("/api/autocompletar-direccion", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ input: calleTexto.trim() }),
+        });
+        const datos = await respuesta.json();
+        setSugerenciasDireccion(datos.sugerencias || []);
+      } catch {
+        // Autocompletado es un plus, no algo crítico — si falla, el campo
+        // de texto libre sigue funcionando exactamente igual.
+        setSugerenciasDireccion([]);
+      }
+    }, 300);
+    return () => {
+      if (debounceAutocompletadoRef.current) clearTimeout(debounceAutocompletadoRef.current);
+    };
+  }, [calleTexto, placeIdElegido]);
+
+  // El cliente eligió una sugerencia: rellena calle/número (si Google los
+  // separó), fija la comuna en Arica — el autocompletado solo tiene
+  // sentido para el despacho local — y guarda el placeId para que la
+  // cotización use coordenadas exactas en vez de geocodificar el texto.
+  async function elegirSugerencia(sugerencia: { placeId: string; texto: string }) {
+    setMostrarSugerencias(false);
+    setSugerenciasDireccion([]);
+    setRegionElegida("Arica y Parinacota");
+    setComunaElegida("Arica");
+    // ANTES de tocar calleTexto/numeroTexto: el efecto de arriba solo pide
+    // sugerencias nuevas cuando placeIdElegido está vacío, así que
+    // fijarlo primero evita un vaivén (rellenar el campo → dispara una
+    // búsqueda de sugerencias que nadie pidió → se pisa con esta).
+    setPlaceIdElegido(sugerencia.placeId);
+    try {
+      const respuesta = await fetch("/api/detalle-direccion", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ placeId: sugerencia.placeId }),
+      });
+      const datos = await respuesta.json();
+      if (respuesta.ok) {
+        if (datos.calle) setCalleTexto(datos.calle);
+        if (datos.numero) setNumeroTexto(datos.numero);
+      }
+    } catch {
+      // Sin detalle, se deja el texto de la sugerencia tal cual en el
+      // campo calle — igual sirve, el placeId es lo que importa para
+      // cotizar (ver calcularEnvio).
+      setCalleTexto(sugerencia.texto);
+    }
+  }
 
   async function manejarSubmit(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
@@ -231,6 +317,10 @@ export function FormularioCheckout() {
             // que el cliente vio y lo que termina pagando.
             valle: String(datos.get("valle") || "") || null,
             km_valle: datos.get("km_valle") ? Number(datos.get("km_valle")) : null,
+            // No es un campo del <form> (viaja por estado, no por
+            // FormData) — mismo id que ya vio la cotización previa, para
+            // que el pago use las mismas coordenadas exactas.
+            placeId: placeIdElegido,
           },
           items: itemsSeleccionados.map((item) => ({ sku: item.sku, cantidad: item.cantidad })),
           metodoEnvio: metodoElegido,
@@ -410,6 +500,7 @@ export function FormularioCheckout() {
             onChange={(e) => {
               setRegionElegida(e.target.value);
               setComunaElegida("");
+              setPlaceIdElegido(null);
               invalidarEnvio();
             }}
           >
@@ -430,6 +521,7 @@ export function FormularioCheckout() {
             className={`${CAMPO} disabled:cursor-not-allowed disabled:opacity-50`}
             onChange={(e) => {
               setComunaElegida(e.target.value);
+              setPlaceIdElegido(null);
               invalidarEnvio();
             }}
           >
@@ -486,29 +578,65 @@ export function FormularioCheckout() {
               explícito del dueño) — antes iban primero y el orden se sentía
               raro (se preguntaba el detalle antes que la ubicación general). */}
           <div className="flex gap-3">
-            <input
-              name="calle"
-              required
-              value={calleTexto}
-              onChange={(e) => {
-                setCalleTexto(e.target.value);
-                invalidarEnvio();
-              }}
-              placeholder="Calle"
-              className={`${CAMPO} flex-[2]`}
-            />
+            {/* `relative` en el propio campo (no en todo el <div>): el
+                dropdown de sugerencias debe quedar pegado a ESTE input,
+                no estirarse también bajo "Número". */}
+            <div className="relative flex-[2]">
+              <input
+                name="calle"
+                required
+                autoComplete="off"
+                value={calleTexto}
+                onChange={(e) => {
+                  setCalleTexto(e.target.value);
+                  // Texto libre otra vez: la sugerencia elegida ya no
+                  // corresponde a lo que se está escribiendo ahora.
+                  setPlaceIdElegido(null);
+                  invalidarEnvio();
+                }}
+                onFocus={() => setMostrarSugerencias(true)}
+                // Retardo antes de cerrar: sin él, el click en una
+                // sugerencia nunca llega a disparar — el blur del input
+                // se adelanta y el dropdown desaparece primero.
+                onBlur={() => setTimeout(() => setMostrarSugerencias(false), 150)}
+                placeholder="Calle"
+                className={`${CAMPO} w-full`}
+              />
+              {mostrarSugerencias && sugerenciasVisibles.length > 0 && (
+                <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded-xl border border-border bg-surface shadow-elevated-lg">
+                  {sugerenciasVisibles.map((sugerencia) => (
+                    <li key={sugerencia.placeId}>
+                      <button
+                        type="button"
+                        onClick={() => elegirSugerencia(sugerencia)}
+                        className="block w-full px-3.5 py-2.5 text-left text-sm hover:bg-surface-sunken"
+                      >
+                        <span className="block text-ink">{sugerencia.texto}</span>
+                        {sugerencia.textoSecundario && (
+                          <span className="block text-xs text-ink-faint">{sugerencia.textoSecundario}</span>
+                        )}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
             <input
               name="numero"
               required
               value={numeroTexto}
               onChange={(e) => {
                 setNumeroTexto(e.target.value);
+                setPlaceIdElegido(null);
                 invalidarEnvio();
               }}
               placeholder="Número"
               className={`${CAMPO} flex-1`}
             />
           </div>
+          {placeIdElegido && (
+            <p className="text-xs text-ink-faint">📍 Dirección confirmada con coordenadas exactas.</p>
+          )}
 
           <input name="referencia" placeholder="Referencia (opcional)" className={CAMPO} />
 

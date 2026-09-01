@@ -1,7 +1,7 @@
 import { obtenerProductoPorSku } from './catalogo';
 import { chilexpressHabilitado, buscarCountyCodePorComuna, cotizarTarifasChilexpress } from './chilexpress';
 import { CODIGO_REGION_CHILEXPRESS } from './chilexpress-regiones';
-import { distanciaDesdeTienda, distanciaValle, esValleValido, VALLES } from './distancia';
+import { distanciaDesdePlaceId, distanciaDesdeTienda, distanciaValle, esValleValido, VALLES } from './distancia';
 import { estadoHorario } from './horarios';
 import { tarifaPorDistancia } from './tarifas-envio';
 import type { DireccionEnvio, ProductoWeb } from './tipos';
@@ -62,7 +62,7 @@ function esComunaTienda(comuna: string): boolean {
 /**
  * Despacho dentro de Arica, tarificado por distancia real de manejo.
  *
- * Si NO se puede ubicar la dirección (Nominatim no la encuentra), se
+ * Si NO se puede ubicar la dirección (Google no la encuentra), se
  * devuelve null: el llamador ofrece retiro y courier, y pide coordinar por
  * WhatsApp. Es deliberado no caer a una tarifa por defecto — cobrar el
  * tramo mínimo a un domicilio de Azapa sería regalar el despacho, y cobrar
@@ -70,13 +70,21 @@ function esComunaTienda(comuna: string): boolean {
  * inventa un precio.
  */
 async function tarifaLocalPorDistancia(direccion: DireccionEnvio): Promise<OpcionEnvio | null> {
-  /* Valle (Azapa/Lluta): no se geocodifica. La distancia es la entrada del
-     valle más el kilómetro que declaró el cliente — en un camino rural la
-     numeración es un marcador de km y el geocodificador la ignora, así que
-     preguntarlo es más fiable que deducirlo. */
+  /* Tres formas de ubicar el destino, en orden de preferencia:
+     1. Valle (Azapa/Lluta): no se geocodifica — la distancia es la entrada
+        del valle más el kilómetro que declaró el cliente (numeración de
+        camino rural, el geocodificador la ignora).
+     2. placeId: el cliente eligió una sugerencia del autocompletado (ver
+        src/lib/places.ts) — coordenadas exactas de Place Details, sin
+        pasar por Geocoding (ver distanciaDesdePlaceId).
+     3. Texto libre (calle/número/comuna): respaldo cuando no hay
+        autocompletado disponible o el cliente escribió sin elegir
+        sugerencia — geocodifica el texto tal cual. */
   const distancia = esValleValido(direccion.valle)
     ? distanciaValle(direccion.valle, direccion.km_valle ?? 0)
-    : await distanciaDesdeTienda(direccion.calle, direccion.numero, direccion.comuna);
+    : direccion.placeId
+      ? await distanciaDesdePlaceId(direccion.placeId)
+      : await distanciaDesdeTienda(direccion.calle, direccion.numero, direccion.comuna);
 
   if (!distancia) return null;
 

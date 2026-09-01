@@ -1,3 +1,5 @@
+import { obtenerDetalleLugar } from './places';
+
 /**
  * Distancia real por carretera desde la tienda, con Google Maps Platform.
  *
@@ -336,6 +338,40 @@ export async function distanciaDesdeTienda(
   // la primera consulta de una dirección no debe quedar pegado para
   // siempre en esa instancia serverless — la próxima consulta siempre
   // reintenta la ruta real, y solo un éxito real queda guardado.
+  return {
+    km: haversineKm(origen, coordenadas) * FACTOR_RODEO,
+    estimada: true,
+    origen: 'estimacion-linea-recta',
+    coordenadas,
+  };
+}
+
+/**
+ * Distancia por carretera desde la tienda hasta un lugar ya elegido en el
+ * autocompletado del checkout (ver src/lib/places.ts). Salta Geocoding
+ * por completo: el cliente ya confirmó exactamente qué lugar quiso decir,
+ * así que se usan las coordenadas de Place Details directo (mismo nivel
+ * de precisión ROOFTOP) — mismo camino de ruta real + caché + reintento
+ * que `distanciaDesdeTienda`, solo cambia cómo se consiguen las
+ * coordenadas del destino.
+ */
+export async function distanciaDesdePlaceId(placeId: string): Promise<ResultadoDistancia | null> {
+  const clave = normalizar(`place:${placeId}`);
+  if (cacheDistancia.has(clave)) return cacheDistancia.get(clave) ?? null;
+
+  const detalle = await obtenerDetalleLugar(placeId);
+  if (!detalle) return null; // no se cachea: mismo motivo que el resto del módulo
+
+  const coordenadas = { lat: detalle.lat, lon: detalle.lon };
+  const origen = origenTienda();
+  const km = await distanciaRutaKm(origen, coordenadas);
+
+  if (km !== null) {
+    const resultado: ResultadoDistancia = { km, estimada: false, origen: 'ruta', coordenadas };
+    cacheDistancia.set(clave, resultado);
+    return resultado;
+  }
+
   return {
     km: haversineKm(origen, coordenadas) * FACTOR_RODEO,
     estimada: true,

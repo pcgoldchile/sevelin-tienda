@@ -158,6 +158,10 @@ export async function POST(req: NextRequest) {
        qué kilómetro despachar. */
     valle: direccion.valle ?? null,
     km_valle: Number.isFinite(Number(direccion.km_valle)) ? Number(direccion.km_valle) : null,
+    // Id de la sugerencia del autocompletado (ver src/lib/places.ts) — se
+    // vuelve a resolver acá (confirmarEnvio es la autoridad real), nunca
+    // se confía en coordenadas que mande el cliente directo.
+    placeId: direccion.placeId || null,
   };
 
   // Autoridad real del costo de envío: se recalcula acá aunque el cliente ya

@@ -46,6 +46,11 @@ export async function POST(req: NextRequest) {
         // solo se traslada lo que mandó el formulario.
         valle: direccion.valle ?? null,
         km_valle: Number.isFinite(Number(direccion.km_valle)) ? Number(direccion.km_valle) : null,
+        // Id de la sugerencia del autocompletado (ver src/lib/places.ts) —
+        // si viene, envio.ts lo resuelve directo con Place Details en vez
+        // de geocodificar el texto. Nunca se confía en coordenadas del
+        // cliente, solo en este id, que el servidor resuelve él mismo.
+        placeId: direccion.placeId || null,
       },
       items
     );
