@@ -267,14 +267,24 @@ export function FormularioCheckout() {
       });
       const datos = await respuesta.json();
       if (respuesta.ok) {
-        if (datos.calle) setCalleTexto(datos.calle);
-        if (datos.numero) setNumeroTexto(datos.numero);
+        // SIEMPRE se reemplaza, nunca condicionado a que venga un valor
+        // nuevo — el bug real (01-09-2026): al elegir una segunda
+        // sugerencia que Google no separa en calle/número, el número de
+        // la elección ANTERIOR se quedaba pegado en el campo (nunca se
+        // limpiaba), y quedaba mostrando un número que ya no correspondía
+        // a las coordenadas recién elegidas. Sin número separado, mejor
+        // dejar el campo vacío para que el cliente lo escriba — nunca
+        // un número viejo que ya no es el de este lugar.
+        setCalleTexto(datos.calle || sugerencia.texto);
+        setNumeroTexto(datos.numero || "");
       }
     } catch {
       // Sin detalle, se deja el texto de la sugerencia tal cual en el
       // campo calle — igual sirve, el placeId es lo que importa para
-      // cotizar (ver calcularEnvio).
+      // cotizar (ver calcularEnvio). El número también se limpia, mismo
+      // motivo de arriba.
       setCalleTexto(sugerencia.texto);
+      setNumeroTexto("");
     }
   }
 
