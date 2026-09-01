@@ -35,9 +35,32 @@ const rajdhani = Rajdhani({
   weight: ["600", "700"],
 });
 
+// URL real del sitio — mismo criterio que el resto del proyecto
+// (correo-carrito-abandonado.ts, etc.): valor por defecto real en el
+// código, la env var solo lo sobreescribe. Necesaria para que
+// metadataBase resuelva URLs absolutas de imágenes Open Graph y el
+// canonical de cada página — sin esto, Next arma URLs relativas que
+// Facebook/WhatsApp/Google no siempre resuelven bien al compartir un link.
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://sevelin.cl';
+
 export const metadata: Metadata = {
-  title: "Sevelin",
-  description: "Tienda online de Sevelin (Arica)",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: "Sevelin — Tienda de electrónica en Arica",
+    // Cada página de producto pone su propio título (ver generateMetadata
+    // en productos/[sku]/page.tsx) — este %s se reemplaza por ese título,
+    // así todas terminan con "— Sevelin" sin repetirlo a mano en cada una.
+    template: "%s — Sevelin",
+  },
+  description: "Tienda online de Sevelin (Arica): computadores, componentes PC, periféricos, audio y accesorios. Envíos a todo Chile, retiro en tienda.",
+  openGraph: {
+    siteName: "Sevelin",
+    locale: "es_CL",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+  },
 };
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {

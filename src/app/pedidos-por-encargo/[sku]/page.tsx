@@ -8,6 +8,7 @@ import { registrarVistaProducto } from "@/lib/eventos-web";
 import { GaleriaProducto } from "@/components/galeria-producto";
 import { AccionesProducto } from "@/components/acciones-producto";
 import { EtiquetaProductoBadge } from "@/components/etiqueta-producto-badge";
+import { InfoEnvioProducto } from "@/components/info-envio-producto";
 
 export const revalidate = 60;
 
@@ -89,6 +90,8 @@ export default async function FichaEncargo({ params }: PropsPagina) {
               />
             </div>
           )}
+
+          <InfoEnvioProducto />
         </div>
       </div>
     </main>

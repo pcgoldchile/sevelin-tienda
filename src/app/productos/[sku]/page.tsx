@@ -1,18 +1,59 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { after } from "next/server";
 import { obtenerProductoPorSku } from "@/lib/catalogo";
 import { formatoCLP } from "@/lib/formato";
 import { sanitizarDescripcionHtml } from "@/lib/sanitizar-html";
+import { textoPlanoDesdeHtml, recortarEnPalabra } from "@/lib/texto-plano";
 import { registrarVistaProducto } from "@/lib/eventos-web";
 import { GaleriaProducto } from "@/components/galeria-producto";
 import { AccionesProducto } from "@/components/acciones-producto";
 import { EtiquetaProductoBadge } from "@/components/etiqueta-producto-badge";
+import { InfoEnvioProducto } from "@/components/info-envio-producto";
 
 export const revalidate = 60;
 
 interface PropsPagina {
   params: Promise<{ sku: string }>;
+}
+
+/**
+ * SEO por producto — antes TODAS las fichas compartían el mismo
+ * title/description del layout raíz (ver docs/CHANGELOG, hallazgo de la
+ * sesión de SEO): Google las veía "iguales" entre sí, y compartir un link
+ * de un producto puntual en WhatsApp/Instagram mostraba el logo genérico
+ * del sitio en vez de la foto/precio real. `generateMetadata` corre en el
+ * servidor ANTES de renderizar la página — mismo `obtenerProductoPorSku`
+ * que ya usa el componente, sin pedirlo dos veces gracias al `fetch`
+ * cacheado de Next para la misma request.
+ */
+export async function generateMetadata({ params }: PropsPagina): Promise<Metadata> {
+  const { sku } = await params;
+  const producto = await obtenerProductoPorSku(sku).catch(() => null);
+  if (!producto || producto.es_pedido_encargo) return {};
+
+  const descripcionPlana = producto.descripcion_web
+    ? recortarEnPalabra(textoPlanoDesdeHtml(producto.descripcion_web), 155)
+    : `Compra ${producto.nombre} en Sevelin, Arica — ${formatoCLP.format(producto.precio_web)}. Envíos a todo Chile, retiro en tienda.`;
+  const imagen = producto.imagen_urls?.[0];
+
+  return {
+    title: producto.nombre,
+    description: descripcionPlana,
+    alternates: { canonical: `/productos/${producto.sku}` },
+    openGraph: {
+      title: producto.nombre,
+      description: descripcionPlana,
+      url: `/productos/${producto.sku}`,
+      images: imagen ? [{ url: imagen, width: 1000, height: 1000, alt: producto.nombre }] : undefined,
+    },
+    twitter: {
+      title: producto.nombre,
+      description: descripcionPlana,
+      images: imagen ? [imagen] : undefined,
+    },
+  };
 }
 
 export default async function FichaProducto({ params }: PropsPagina) {
@@ -44,8 +85,38 @@ export default async function FichaProducto({ params }: PropsPagina) {
     ? sanitizarDescripcionHtml(producto.descripcion_web)
     : '';
 
+  // Dato estructurado Product (schema.org) — lo que Google usa para
+  // mostrar precio/disponibilidad debajo del link en el buscador, y lo
+  // mismo que después va a pedir Google Merchant Center si se conecta
+  // Google Shopping/Ads. Solo se declaran campos que sabemos ciertos —
+  // "brand" queda afuera a propósito: Sevelin es el vendedor, no la marca
+  // real de cada producto, y ese dato no existe en el catálogo todavía.
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: producto.nombre,
+    sku: producto.sku,
+    image: producto.imagen_urls || [],
+    description: producto.descripcion_web ? textoPlanoDesdeHtml(producto.descripcion_web) : producto.nombre,
+    offers: {
+      '@type': 'Offer',
+      url: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://sevelin.cl'}/productos/${producto.sku}`,
+      priceCurrency: 'CLP',
+      price: producto.precio_web,
+      availability: producto.stock_web > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+    },
+  };
+
   return (
     <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
+      <script
+        type="application/ld+json"
+        // JSON.stringify no puede producir '</script>' válido dentro de un
+        // string HTML — se escapa '<' por si algún nombre/descripción de
+        // producto llegara a contenerlo (defensa en profundidad, mismo
+        // criterio que el resto del proyecto con texto de usuario).
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }}
+      />
       <nav className="mb-6 text-sm text-ink-faint">
         <Link href="/" className="transition-colors hover:text-accent">Inicio</Link>
         <span className="mx-1.5">/</span>
@@ -117,6 +188,8 @@ export default async function FichaProducto({ params }: PropsPagina) {
               />
             </div>
           )}
+
+          <InfoEnvioProducto />
         </div>
       </div>
     </main>
