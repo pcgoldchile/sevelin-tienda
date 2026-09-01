@@ -8,8 +8,12 @@ interface CuerpoDetalle {
 
 /**
  * POST /api/detalle-direccion — al elegir una sugerencia del
- * autocompletado, trae calle/número (si Google los separó) para rellenar
- * el formulario. Las coordenadas NO viajan de vuelta al navegador: el
+ * autocompletado, trae calle/número (si Google los separó) y la
+ * región/comuna real del lugar (ya validadas contra COMUNAS_POR_REGION,
+ * ver resolverComuna en places.ts) para rellenar el formulario — así una
+ * sugerencia de CUALQUIER ciudad de Chile deja la región/comuna
+ * sincronizadas con la dirección real, no fijas en Arica (ver v36 en
+ * places.ts). Las coordenadas NO viajan de vuelta al navegador: el
  * checkout solo necesita el placeId para cotizar (ver
  * src/app/api/cotizar-envio/route.ts) — el servidor las vuelve a resolver
  * él mismo cuando cotiza, nunca confía en coordenadas del cliente.
@@ -34,5 +38,5 @@ export async function POST(req: NextRequest) {
   const detalle = await obtenerDetalleLugar(placeId);
   if (!detalle) return NextResponse.json({ error: 'No se pudo obtener el detalle de esa dirección' }, { status: 404 });
 
-  return NextResponse.json({ calle: detalle.calle, numero: detalle.numero });
+  return NextResponse.json({ calle: detalle.calle, numero: detalle.numero, region: detalle.region, comuna: detalle.comuna });
 }

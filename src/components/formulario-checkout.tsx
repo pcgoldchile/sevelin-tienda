@@ -134,7 +134,10 @@ export function FormularioCheckout() {
 
   // Ya no corresponde mostrar sugerencias si se eligió una (placeIdElegido)
   // o si se borró casi todo el texto — derivado en vez de limpiar
-  // `sugerenciasDireccion` desde el efecto de abajo.
+  // `sugerenciasDireccion` desde el efecto de abajo. El autocompletado
+  // funciona para cualquier ciudad de Chile (ver v36 en src/lib/places.ts),
+  // no solo Arica — al elegir una sugerencia, elegirSugerencia() sincroniza
+  // región/comuna con el lugar real en vez de asumir Arica.
   const sugerenciasVisibles = placeIdElegido || calleTexto.trim().length < 3 ? [] : sugerenciasDireccion;
 
   // "Firma" de cantidades — cambia de valor solo cuando la selección cambia
@@ -245,20 +248,20 @@ export function FormularioCheckout() {
     };
   }, [calleTexto, placeIdElegido]);
 
-  // El cliente eligió una sugerencia: rellena calle/número (si Google los
-  // separó), fija la comuna en Arica — el autocompletado solo tiene
-  // sentido para el despacho local — y guarda el placeId para que la
-  // cotización use coordenadas exactas en vez de geocodificar el texto.
+  // El cliente eligió una sugerencia (de cualquier ciudad de Chile, ver v36
+  // en src/lib/places.ts): rellena calle/número (si Google los separó),
+  // sincroniza región/comuna con el lugar REAL que devuelve Google — nunca
+  // se asume Arica — y guarda el placeId para que la cotización use
+  // coordenadas exactas en vez de geocodificar el texto.
   async function elegirSugerencia(sugerencia: { placeId: string; texto: string }) {
     setMostrarSugerencias(false);
     setSugerenciasDireccion([]);
-    setRegionElegida("Arica y Parinacota");
-    setComunaElegida("Arica");
     // ANTES de tocar calleTexto/numeroTexto: el efecto de arriba solo pide
     // sugerencias nuevas cuando placeIdElegido está vacío, así que
     // fijarlo primero evita un vaivén (rellenar el campo → dispara una
     // búsqueda de sugerencias que nadie pidió → se pisa con esta).
     setPlaceIdElegido(sugerencia.placeId);
+    invalidarEnvio();
     try {
       const respuesta = await fetch("/api/detalle-direccion", {
         method: "POST",
@@ -277,6 +280,19 @@ export function FormularioCheckout() {
         // un número viejo que ya no es el de este lugar.
         setCalleTexto(datos.calle || sugerencia.texto);
         setNumeroTexto(datos.numero || "");
+        // Región/comuna real del lugar (v36) — si Google trajo un
+        // componente que calzó con nuestras 346 comunas (resolverComuna en
+        // places.ts), se reemplaza lo que hubiera elegido a mano; si no
+        // pudo resolverla, se deja la región/comuna que el cliente ya
+        // tenía puesta (mejor no tocar un dato bueno por uno incierto). El
+        // valle rural solo aplica dentro de Arica: si el lugar elegido es
+        // otra comuna, se limpia para no dejar un km de valle pegado a una
+        // dirección urbana de otra ciudad.
+        if (datos.region && datos.comuna) {
+          setRegionElegida(datos.region);
+          setComunaElegida(datos.comuna);
+          if (datos.comuna !== "Arica") setValleElegido("");
+        }
       }
     } catch {
       // Sin detalle, se deja el texto de la sugerencia tal cual en el
