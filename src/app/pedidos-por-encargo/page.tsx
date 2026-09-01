@@ -12,6 +12,8 @@ export const revalidate = 60;
  * buscarCatalogo() (ver src/lib/encargos.ts).
  */
 export default async function PedidosPorEncargo() {
+  const whatsapp = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER;
+
   let productos: Awaited<ReturnType<typeof listarEncargos>> = [];
   let error = false;
   try {
@@ -27,11 +29,27 @@ export default async function PedidosPorEncargo() {
         📦 Pedidos por Encargo
       </h1>
       <p className="mt-2 max-w-2xl text-sm text-ink-soft">
-        Productos que pedimos especialmente al proveedor una vez confirmado tu pedido. Elige
-        retiro en tienda o despacho a domicilio en el checkout — te avisamos por correo cuando
-        esté listo.
+        Traemos tus productos favoritos a pedido en cuanto confirmas tu compra. Elige retiro en
+        tienda o despacho a domicilio al finalizar tu pago y te avisaremos por correo apenas esté
+        disponible.
       </p>
-      <p className="mt-1 text-sm text-ink-soft">
+      <p className="mt-2 max-w-2xl text-sm text-ink-soft">
+        ¿Buscas algo que no ves en el catálogo? Pídelo o cotízalo directamente por nuestro{" "}
+        {whatsapp ? (
+          <a
+            href={`https://wa.me/${whatsapp}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-primary underline-offset-2 hover:underline"
+          >
+            WhatsApp
+          </a>
+        ) : (
+          "WhatsApp"
+        )}
+        . ¡Todos nuestros productos cuentan con 6 meses de garantía!
+      </p>
+      <p className="mt-3 text-sm text-ink-soft">
         {productos.length} producto{productos.length === 1 ? "" : "s"} disponible{productos.length === 1 ? "" : "s"} por encargo
       </p>
 

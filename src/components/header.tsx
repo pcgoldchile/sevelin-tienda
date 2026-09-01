@@ -171,12 +171,6 @@ export function Header({
           >
             Todos los productos
           </Link>
-          <Link
-            href="/pedidos-por-encargo"
-            className="rounded-md px-3 py-1.5 text-sm font-medium text-ink-soft transition-colors hover:bg-surface-sunken hover:text-primary"
-          >
-            📦 Encargos
-          </Link>
           {categoriasPrincipales.map((categoria) => {
             const subcategorias = arbolCategorias[categoria] || [];
             // Sin subcategorías: link plano, igual que antes. Con
@@ -325,6 +319,12 @@ export function Header({
               </AnimatePresence>
             </div>
           )}
+          <Link
+            href="/pedidos-por-encargo"
+            className="rounded-md px-3 py-1.5 text-sm font-medium text-ink-soft transition-colors hover:bg-surface-sunken hover:text-primary"
+          >
+            Encargos
+          </Link>
         </div>
       </nav>
 
@@ -352,9 +352,6 @@ export function Header({
               </form>
               <Link href="/productos" className="block py-1.5 text-sm font-medium text-ink-soft" onClick={() => setMenuMovilAbierto(false)}>
                 Todos los productos
-              </Link>
-              <Link href="/pedidos-por-encargo" className="block py-1.5 text-sm font-medium text-ink-soft" onClick={() => setMenuMovilAbierto(false)}>
-                📦 Encargos
               </Link>
               {!cargando && (
                 <Link
@@ -418,6 +415,10 @@ export function Header({
                   </div>
                 );
               })}
+
+              <Link href="/pedidos-por-encargo" className="block py-1.5 text-sm font-medium text-ink-soft" onClick={() => setMenuMovilAbierto(false)}>
+                Encargos
+              </Link>
 
               {/* Cerrar al final de la lista: con todas las categorías
                   desplegadas hay que hacer scroll hasta arriba para
