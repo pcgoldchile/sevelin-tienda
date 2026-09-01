@@ -64,14 +64,26 @@
 export const DIRECCION_TIENDA = 'San Rafael 896, Arica';
 
 /**
- * Coordenadas confirmadas por el dueño (30-08-2026). NO se geocodifican:
- * al resolver "San Rafael 896, Arica", Nominatim devolvía un punto ~4 km
- * al norte del local, y como el origen corre todas las tarifas a la vez,
- * el error era invisible (los precios salían plausibles, solo que mal).
- * Se pueden sobreescribir por entorno si el local se muda.
+ * Coordenadas ROOFTOP de Google Geocoding para "San Rafael 896, Arica,
+ * Chile" (verificadas a mano el 01-09-2026, `location_type: "ROOFTOP"` —
+ * el nivel de precisión más alto que da Google, anclado al edificio
+ * exacto, no interpolado).
+ *
+ * Reemplazan un valor anterior (-18.4619,-70.2976) que a su vez había
+ * reemplazado el geocoding de Nominatim (~4 km al norte del local) por
+ * "coordenadas confirmadas por el dueño" — pero ese valor manual TAMBIÉN
+ * estaba mal, por ~1,8 km. Se descubrió recién ahora, comparando contra
+ * Google Distance Matrix: el caso real "San Rafael 896 → Linderos 3736"
+ * debía dar 0,65 km (confirmado en Google Maps por el dueño) y con el
+ * origen viejo daba 2,9 km — con este origen da 0,67 km. Mismo chequeo
+ * con Héctor Ruiz 280: 8,3 km acá vs 8,4 km en Google Maps. Un origen
+ * equivocado corre TODAS las tarifas de despacho local a la vez, y es un
+ * error invisible (los números salen plausibles, solo que mal) — por eso
+ * quedó sin detectarse dos veces seguidas. Se pueden sobreescribir por
+ * entorno (TIENDA_LAT/TIENDA_LON) si el local se muda.
  */
-const TIENDA_LAT_POR_DEFECTO = -18.4619;
-const TIENDA_LON_POR_DEFECTO = -70.2976;
+const TIENDA_LAT_POR_DEFECTO = -18.4463734;
+const TIENDA_LON_POR_DEFECTO = -70.2877686;
 
 let origenCacheado: { lat: number; lon: number } | null = null;
 
