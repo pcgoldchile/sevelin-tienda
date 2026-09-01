@@ -5,6 +5,18 @@
  * Reemplaza la tarifa plana única de la v6: el negocio necesita que un
  * despacho a la vuelta de la esquina y uno al valle de Azapa no cuesten lo
  * mismo. Los tramos y la fórmula los definió el dueño.
+ *
+ * ESCALA RECALIBRADA (31-08-2026): el dueño usó Héctor Ruiz 280 (8,4 km
+ * reales por carretera desde la tienda, confirmado en Google Maps) como
+ * referencia — un despacho ahí le costó $6.000 en InDrive. Con la escala
+ * vieja esos 8,4 km caían en el tramo de $4.500, muy por debajo de lo que
+ * cuesta en la práctica moverse esa distancia en Arica. Se subió toda la
+ * escala urbana proporcionalmente (el tramo 7,51–9,5 km, donde cae ese
+ * caso, quedó en $5.800) y el piso de 0–1,5 km (al lado de la tienda) se
+ * mantiene en $2.000 a pedido explícito del dueño — no vale la pena cobrar
+ * más por una vuelta a la manzana. La fórmula de periferia se corrió en la
+ * misma proporción para no generar un salto brusco justo en el límite
+ * urbano (ver PERIFERIA_BASE).
  */
 
 /** Hasta acá se considera radio urbano de Arica. */
@@ -18,17 +30,19 @@ export const LIMITE_URBANO_KM = 9.5;
  */
 export const TRAMOS_URBANOS: { hasta: number; costo: number; ejemplo?: string }[] = [
   { hasta: 1.5, costo: 2000 },
-  { hasta: 2.5, costo: 2500 },
-  { hasta: 4.0, costo: 3000, ejemplo: 'Diego Portales / Terminal' },
-  { hasta: 5.5, costo: 3500, ejemplo: 'Saucache UTA / Agro / Centro' },
-  { hasta: 7.5, costo: 4000, ejemplo: 'Sector Norte / Silva Henríquez' },
-  { hasta: 9.5, costo: 4500, ejemplo: 'Las Machas / Costanera Sur' },
+  { hasta: 2.5, costo: 2800 },
+  { hasta: 4.0, costo: 3600, ejemplo: 'Diego Portales / Terminal' },
+  { hasta: 5.5, costo: 4300, ejemplo: 'Saucache UTA / Agro / Centro' },
+  { hasta: 7.5, costo: 5000, ejemplo: 'Sector Norte / Silva Henríquez' },
+  { hasta: 9.5, costo: 5800, ejemplo: 'Las Machas / Costanera Sur · ej. Héctor Ruiz (8,4 km)' },
 ];
 
-/** Base y escalón de la fórmula de valles/periferia (Azapa, Lluta, etc.). */
-export const PERIFERIA_BASE = 5000;
+/** Base y escalón de la fórmula de valles/periferia (Azapa, Lluta, etc.).
+ *  BASE continúa exactamente donde termina el último tramo urbano (5.800),
+ *  para que no haya una caída de precio justo al cruzar los 9,5 km. */
+export const PERIFERIA_BASE = 5800;
 export const PERIFERIA_ESCALON_KM = 1.5;
-export const PERIFERIA_ESCALON_COSTO = 500;
+export const PERIFERIA_ESCALON_COSTO = 650;
 
 export interface TarifaPorDistancia {
   costo: number;
