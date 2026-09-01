@@ -29,6 +29,9 @@ export async function crearPedido(datos: {
   cliente: DatosCliente;
   direccion: DireccionEnvio;
   items: ItemPedido[];
+  // 'ENCARGO' si todos los ítems son de Pedidos por Encargo, 'NORMAL' en
+  // cualquier otro caso — POST /api/checkout ya rechazó cualquier mezcla.
+  tipoPedido: 'NORMAL' | 'ENCARGO';
   metodoEnvio: MetodoEnvio;
   costoEnvio: number;
   nota: string | null;
@@ -76,6 +79,7 @@ export async function crearPedido(datos: {
       version_politica: VERSION_POLITICA_PRIVACIDAD,
       direccion_envio: datos.direccion,
       items: datos.items,
+      tipo_pedido: datos.tipoPedido,
       metodo_envio: datos.metodoEnvio,
       costo_envio: datos.costoEnvio,
       subtotal,

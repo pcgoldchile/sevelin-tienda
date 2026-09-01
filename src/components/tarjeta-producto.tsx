@@ -40,7 +40,11 @@ export function TarjetaProducto({ producto }: { producto: ProductoWeb }) {
   const [agregado, setAgregado] = useState(false);
   const [avisoStock, setAvisoStock] = useState<string | null>(null);
 
-  const sinStock = producto.stock_web <= 0;
+  // Un producto de Pedidos por Encargo no tiene stock propio a propósito
+  // (se pide al proveedor recién al confirmarse el pedido) — nunca se
+  // trata como "sin stock" acá, ver supabase/18-pedidos-por-encargo.sql.
+  const sinStock = !producto.es_pedido_encargo && producto.stock_web <= 0;
+  const topeCantidad = producto.es_pedido_encargo ? 99 : producto.stock_web;
 
   function cantidadEscrita() {
     return Math.max(1, parseInt(cantidadTexto, 10) || 1);
@@ -48,7 +52,7 @@ export function TarjetaProducto({ producto }: { producto: ProductoWeb }) {
 
   function ajustarCantidad(delta: number) {
     const siguiente =
-      delta > 0 ? Math.min(producto.stock_web, cantidadEscrita() + delta) : Math.max(1, cantidadEscrita() - 1);
+      delta > 0 ? Math.min(topeCantidad, cantidadEscrita() + delta) : Math.max(1, cantidadEscrita() - 1);
     setCantidadTexto(String(siguiente));
   }
 
@@ -146,7 +150,7 @@ export function TarjetaProducto({ producto }: { producto: ProductoWeb }) {
               disabled={sinStock}
               onClick={(e) => {
                 const cantidadDeseada = cantidadEscrita();
-                const cantidadFinal = Math.min(cantidadDeseada, producto.stock_web);
+                const cantidadFinal = Math.min(cantidadDeseada, topeCantidad);
 
                 const rect = e.currentTarget.getBoundingClientRect();
                 dispararConfetti({

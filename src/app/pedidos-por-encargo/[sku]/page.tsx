@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { after } from "next/server";
-import { obtenerProductoPorSku } from "@/lib/catalogo";
+import { obtenerEncargoPorSku } from "@/lib/encargos";
 import { formatoCLP } from "@/lib/formato";
 import { sanitizarDescripcionHtml } from "@/lib/sanitizar-html";
 import { registrarVistaProducto } from "@/lib/eventos-web";
@@ -15,29 +15,26 @@ interface PropsPagina {
   params: Promise<{ sku: string }>;
 }
 
-export default async function FichaProducto({ params }: PropsPagina) {
+/** Ficha de un producto de Pedidos por Encargo — mismo layout que
+ * /productos/[sku], solo cambia la fuente de datos (sin filtro de stock,
+ * ver src/lib/encargos.ts) y el aviso de "se pide al proveedor" que ya
+ * muestra AccionesProducto cuando producto.es_pedido_encargo es true. */
+export default async function FichaEncargo({ params }: PropsPagina) {
   const { sku } = await params;
 
-  // Mismo criterio que Home/Productos: si Supabase Web no responde, se
-  // muestra un estado de error en vez de tumbar la página con un 500.
-  let producto: Awaited<ReturnType<typeof obtenerProductoPorSku>>;
+  let producto: Awaited<ReturnType<typeof obtenerEncargoPorSku>>;
   try {
-    producto = await obtenerProductoPorSku(sku);
+    producto = await obtenerEncargoPorSku(sku);
   } catch (err) {
-    console.error("[FichaProducto] No se pudo cargar el producto:", err instanceof Error ? err.message : err);
+    console.error("[FichaEncargo] No se pudo cargar el producto:", err instanceof Error ? err.message : err);
     return (
       <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
-        <p className="text-ink-soft">El catálogo no está disponible en este momento.</p>
+        <p className="text-ink-soft">Esta sección no está disponible en este momento.</p>
       </main>
     );
   }
-  // Los productos de Encargo viven solo en /pedidos-por-encargo — mismo
-  // criterio de "sección aparte" que el resto del catálogo (ver
-  // src/app/pedidos-por-encargo/[sku]/page.tsx).
-  if (!producto || producto.es_pedido_encargo) notFound();
+  if (!producto) notFound();
 
-  // Se registra DESPUÉS de mandar la respuesta (after()), no retrasa la
-  // ficha — el POS la lee para el panel "Más buscados / más vistos".
   after(() => registrarVistaProducto(producto.producto_pos_id));
 
   const descripcionSegura = producto.descripcion_web
@@ -49,15 +46,7 @@ export default async function FichaProducto({ params }: PropsPagina) {
       <nav className="mb-6 text-sm text-ink-faint">
         <Link href="/" className="transition-colors hover:text-accent">Inicio</Link>
         <span className="mx-1.5">/</span>
-        <Link href="/productos" className="transition-colors hover:text-accent">Productos</Link>
-        {producto.categoria && (
-          <>
-            <span className="mx-1.5">/</span>
-            <Link href={`/productos?categoria=${encodeURIComponent(producto.categoria)}`} className="transition-colors hover:text-accent">
-              {producto.categoria}
-            </Link>
-          </>
-        )}
+        <Link href="/pedidos-por-encargo" className="transition-colors hover:text-accent">Pedidos por Encargo</Link>
       </nav>
 
       <div className="grid gap-10 lg:grid-cols-2">
@@ -68,15 +57,6 @@ export default async function FichaProducto({ params }: PropsPagina) {
           <h1 className="text-3xl font-semibold tracking-tight text-ink">{producto.nombre}</h1>
           <span className="precio-gamer text-3xl text-ink">{formatoCLP.format(producto.precio_web)}</span>
 
-          {/* El "buy box" va INMEDIATAMENTE después del precio, antes de
-              la descripción — no al final. Con descripciones largas (las
-              de servicios técnicos pasan de 2.500 caracteres) el botón
-              "Agregar al carrito" quedaba a un scroll largo de distancia.
-              `lg:sticky` además lo mantiene a la vista mientras se lee la
-              descripción en pantallas anchas, sin competir con el header
-              (que es sticky top-0 z-40): top-24 dejando el hueco y z-10
-              quedando siempre por debajo. En móvil no hace falta sticky:
-              el reordenamiento solo ya lo deja visible sin scroll. */}
           <div className="lg:sticky lg:top-24 lg:z-10">
             <AccionesProducto producto={producto} />
           </div>
@@ -86,14 +66,6 @@ export default async function FichaProducto({ params }: PropsPagina) {
               <h2 className="mb-4 flex items-center gap-2 font-display text-sm font-bold uppercase tracking-wide text-ink">
                 <span className="texto-glow-primary text-primary">/</span> Descripción
               </h2>
-              {/* El HTML que llega acá ya viene estructurado por
-                  sanitizarDescripcionHtml() (título / lista / párrafos —
-                  ver src/lib/formatear-descripcion.ts): el texto plano que
-                  guarda el POS pasa a tener jerarquía visual real en vez
-                  de un bloque plano. whitespace-pre-line se mantiene como
-                  red de seguridad: si el sanitizador falla, el respaldo
-                  devuelve texto escapado con saltos de línea sueltos, y
-                  sin esta clase se perderían. */}
               <div
                 className="whitespace-pre-line text-sm leading-relaxed text-ink-soft
                   [&_a]:text-accent [&_a]:underline [&_a:hover]:text-accent-deep

@@ -12,6 +12,10 @@ export function AccionesProducto({ producto }: { producto: ProductoWeb }) {
   const { mostrarToast } = useToast();
   const [cantidad, setCantidad] = useState(1);
   const [agregado, setAgregado] = useState(false);
+  // Un producto de Pedidos por Encargo no tiene stock propio a propósito
+  // (se pide al proveedor recién al confirmarse el pedido) — el tope de
+  // cantidad y el aviso de stock no aplican acá.
+  const topeCantidad = producto.es_pedido_encargo ? 99 : producto.stock_web;
 
   return (
     // "Buy box": envuelto en su propia tarjeta para que se lea como un
@@ -32,14 +36,18 @@ export function AccionesProducto({ producto }: { producto: ProductoWeb }) {
           <span className="min-w-8 text-center text-sm tabular-nums">{cantidad}</span>
           <button
             type="button"
-            onClick={() => setCantidad((c) => Math.min(producto.stock_web, c + 1))}
+            onClick={() => setCantidad((c) => Math.min(topeCantidad, c + 1))}
             className="px-3 py-2 text-ink-soft transition-colors hover:text-ink"
             aria-label="Sumar cantidad"
           >
             +
           </button>
         </div>
-        <span className="text-sm text-ink-faint">{formatoStock(producto.stock_web, producto.stock_umbral_web)}</span>
+        <span className="text-sm text-ink-faint">
+          {producto.es_pedido_encargo
+            ? "Se pide al proveedor al confirmarse el pedido"
+            : formatoStock(producto.stock_web, producto.stock_umbral_web)}
+        </span>
       </div>
 
       <motion.button

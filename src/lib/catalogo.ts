@@ -13,6 +13,7 @@ export async function listarCatalogo(): Promise<ProductoWeb[]> {
     .from('productos_web')
     .select('*')
     .eq('publicado_web', true)
+    .eq('es_pedido_encargo', false)
     .gt('stock_web', 0)
     .order('nombre', { ascending: true });
 
@@ -20,13 +21,24 @@ export async function listarCatalogo(): Promise<ProductoWeb[]> {
   return data || [];
 }
 
+/**
+ * Resuelve un producto por SKU sin importar su tipo — la usan tanto la
+ * ficha de /productos/[sku] como el checkout y la cotización de envío
+ * (src/lib/envio.ts), que necesitan poder resolver un producto de
+ * Pedidos por Encargo igual que uno normal. Por eso el filtro de stock es
+ * "stock_web > 0 O es de Encargo" en vez de exigir stock siempre — un
+ * Encargo no tiene stock propio a propósito (ver
+ * supabase/18-pedidos-por-encargo.sql). Quien solo quiere el catálogo
+ * normal ya filtra es_pedido_encargo=false en sus propias consultas
+ * (buscarCatalogo, listarCatalogo, etc.).
+ */
 export async function obtenerProductoPorSku(sku: string): Promise<ProductoWeb | null> {
   const { data, error } = await supabaseWeb
     .from('productos_web')
     .select('*')
     .eq('sku', sku)
     .eq('publicado_web', true)
-    .gt('stock_web', 0)
+    .or('stock_web.gt.0,es_pedido_encargo.eq.true')
     .maybeSingle();
 
   if (error) throw new Error(error.message);
@@ -46,6 +58,7 @@ export async function obtenerProductosPorSku(skus: string[]): Promise<Record<str
     .select('*')
     .in('sku', skus)
     .eq('publicado_web', true)
+    .eq('es_pedido_encargo', false)
     .gt('stock_web', 0);
 
   if (error) throw new Error(error.message);
@@ -64,6 +77,7 @@ export async function listarCategorias(): Promise<string[]> {
     .from('productos_web')
     .select('categoria')
     .eq('publicado_web', true)
+    .eq('es_pedido_encargo', false)
     .gt('stock_web', 0)
     .not('categoria', 'is', null);
 
@@ -85,6 +99,7 @@ export async function listarSubcategorias(categoria: string): Promise<string[]> 
     .from('productos_web')
     .select('subcategoria')
     .eq('publicado_web', true)
+    .eq('es_pedido_encargo', false)
     .gt('stock_web', 0)
     .eq('categoria', categoria)
     .not('subcategoria', 'is', null);
@@ -106,6 +121,7 @@ export async function listarArbolCategorias(): Promise<Record<string, string[]>>
     .from('productos_web')
     .select('categoria, subcategoria')
     .eq('publicado_web', true)
+    .eq('es_pedido_encargo', false)
     .gt('stock_web', 0)
     .not('categoria', 'is', null);
 
@@ -162,6 +178,7 @@ export async function listarMasVendidos(limite = 8): Promise<ProductoWeb[]> {
     .from('productos_web')
     .select('*')
     .eq('publicado_web', true)
+    .eq('es_pedido_encargo', false)
     .gt('stock_web', 0)
     .order('unidades_vendidas', { ascending: false })
     .order('nombre', { ascending: true })
@@ -193,6 +210,7 @@ export async function productoMasBaratoPorCategoria(
         .from('productos_web')
         .select('*')
         .eq('publicado_web', true)
+        .eq('es_pedido_encargo', false)
         .gt('stock_web', 0)
         .eq('categoria', categoria)
         .order('precio_web', { ascending: true })
@@ -225,6 +243,7 @@ export async function buscarCatalogo(filtros: {
     .from('productos_web')
     .select('*')
     .eq('publicado_web', true)
+    .eq('es_pedido_encargo', false)
     .gt('stock_web', 0)
     .order(columna, { ascending });
 

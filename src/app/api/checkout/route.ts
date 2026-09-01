@@ -100,25 +100,46 @@ export async function POST(req: NextRequest) {
   }
 
   let items: ItemPedido[];
+  let tipoPedido: 'NORMAL' | 'ENCARGO';
   try {
-    items = await Promise.all(
+    const resueltos = await Promise.all(
       itemsSolicitados.map(async (solicitado) => {
         const sku = (solicitado.sku || '').trim();
         const cantidad = Math.max(1, Math.round(Number(solicitado.cantidad) || 0));
         const producto = await obtenerProductoPorSku(sku);
         if (!producto) throw new Error(`El producto ${sku || '(sin SKU)'} ya no está disponible`);
-        if (cantidad > producto.stock_web) {
+        // Un producto de Pedidos por Encargo no tiene stock propio — se pide
+        // al proveedor recién al confirmarse el pedido, así que stock_web=0
+        // es normal y NO bloquea la compra (ver src/lib/encargos.ts).
+        if (!producto.es_pedido_encargo && cantidad > producto.stock_web) {
           throw new Error(`Sin stock suficiente de "${producto.nombre}" (quedan ${producto.stock_web})`);
         }
         return {
-          sku: producto.sku,
-          producto_pos_id: producto.producto_pos_id,
-          nombre: producto.nombre,
-          precio_web: producto.precio_web,
-          cantidad,
+          item: {
+            sku: producto.sku,
+            producto_pos_id: producto.producto_pos_id,
+            nombre: producto.nombre,
+            precio_web: producto.precio_web,
+            cantidad,
+          },
+          esEncargo: producto.es_pedido_encargo,
         };
       })
     );
+
+    // El fulfillment de un Encargo (se pide al proveedor) y el de un
+    // producto normal (stock propio) son procesos distintos — no se
+    // permite mezclarlos en un mismo pedido/pago.
+    const hayEncargo = resueltos.some((r) => r.esEncargo);
+    const hayNormal = resueltos.some((r) => !r.esEncargo);
+    if (hayEncargo && hayNormal) {
+      throw new Error(
+        'Los productos de Pedidos por Encargo se compran por separado del resto del carrito.'
+      );
+    }
+
+    items = resueltos.map((r) => r.item);
+    tipoPedido = hayEncargo ? 'ENCARGO' : 'NORMAL';
   } catch (err) {
     const mensaje = err instanceof Error ? err.message : 'No se pudo validar el carrito';
     return NextResponse.json({ error: mensaje }, { status: 409 });
@@ -170,6 +191,7 @@ export async function POST(req: NextRequest) {
       cliente: { nombre, apellido, email, telefono, rut: cuerpo.cliente?.rut?.trim() || null },
       direccion: direccionCompleta,
       items,
+      tipoPedido,
       metodoEnvio: cotizacion.metodo,
       costoEnvio: cotizacion.costo,
       nota: cuerpo.nota?.trim() || null,

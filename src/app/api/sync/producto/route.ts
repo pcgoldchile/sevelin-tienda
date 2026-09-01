@@ -111,6 +111,7 @@ export async function POST(req: NextRequest) {
     profundidad_cm: producto.profundidad_cm,
     stock_umbral_web: producto.stock_umbral_web ?? null,
     etiqueta_web: producto.etiqueta_web ?? null,
+    es_pedido_encargo: !!producto.es_pedido_encargo,
     sincronizado_en: new Date().toISOString()
   };
 

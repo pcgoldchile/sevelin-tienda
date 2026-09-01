@@ -24,6 +24,10 @@ export interface ProductoWeb {
   stock_umbral_web: number | null;
   // Etiqueta destacada, marcada a mano desde el POS — ver EtiquetaProducto abajo.
   etiqueta_web: EtiquetaProducto | null;
+  // Pedidos por Encargo (dropshipping/retiro en tienda) — marcado desde el
+  // POS. Un producto con esto en true vive solo en /pedidos-por-encargo y
+  // se puede comprar sin importar stock_web (ver src/lib/encargos.ts).
+  es_pedido_encargo: boolean;
   sincronizado_en: string;
 }
 
@@ -156,6 +160,10 @@ export interface PedidoWeb {
   // 'RETIRO' (gratis, en tienda) | 'LOCAL' (despacho a domicilio en Arica,
   // tarifa plana) | 'CHILEXPRESS' (courier regional) — ver src/lib/envio.ts.
   metodo_envio: 'RETIRO' | 'LOCAL' | 'CHILEXPRESS';
+  // 'ENCARGO' si TODOS los ítems del pedido son de Pedidos por Encargo (no
+  // se permite mezclar con ítems normales en un mismo checkout, ver
+  // POST /api/checkout) — ver supabase/18-pedidos-por-encargo.sql.
+  tipo_pedido: 'NORMAL' | 'ENCARGO';
   costo_envio: number;
   subtotal: number;
   total: number;
@@ -191,4 +199,6 @@ export interface ProductoPOS {
   // propósito: no tiene contraparte en este Supabase, solo se usa categoria_web.
   stock_umbral_web: number | null;
   etiqueta_web: EtiquetaProducto | null;
+  // Pedidos por Encargo — ver sevelin-pos-oficial/sql/30-pedidos-por-encargo.sql.
+  es_pedido_encargo: boolean;
 }
