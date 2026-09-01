@@ -129,6 +129,22 @@ export default async function FichaProducto({ params }: PropsPagina) {
             </Link>
           </>
         )}
+        {/* Antes el breadcrumb se cortaba en la categoría — un producto con
+            subcategoría asignada (ver producto_categorias en el POS) no lo
+            mostraba en ningún lado de la ficha, solo en el filtro de
+            /productos. Con esto, la página del producto también refleja la
+            subcategoría real, con el mismo link que ya arma el filtro. */}
+        {producto.subcategoria && (
+          <>
+            <span className="mx-1.5">/</span>
+            <Link
+              href={`/productos?categoria=${encodeURIComponent(producto.categoria || "")}&subcategoria=${encodeURIComponent(producto.subcategoria)}`}
+              className="transition-colors hover:text-accent"
+            >
+              {producto.subcategoria}
+            </Link>
+          </>
+        )}
       </nav>
 
       <div className="grid gap-10 lg:grid-cols-2">
