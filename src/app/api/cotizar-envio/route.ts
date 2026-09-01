@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cotizarOpcionesEnvio } from '@/lib/envio';
 import type { DireccionEnvio } from '@/lib/tipos';
+import { chequearLimite, ipReal, respuestaLimiteExcedido } from '@/lib/rate-limit';
 
 interface CuerpoCotizarEnvio {
   direccion?: Partial<DireccionEnvio>;
@@ -12,8 +13,22 @@ interface CuerpoCotizarEnvio {
  * (README-ECOMMERCE-SEVELIN.md sección 5). Solo para mostrarle algo al
  * cliente en /checkout: POST /api/checkout vuelve a cotizar por su cuenta
  * al crear el pedido, esto no es la fuente de verdad.
+ *
+ * Freno de tasa por IP (ver src/lib/rate-limit.ts): esta ruta dispara
+ * Geocoding + Distance Matrix (o Distance Matrix directo si viene
+ * placeId) — ambas APIs pagadas de Google, mismo criterio que las otras
+ * dos rutas de direcciones. NO se aplica acá el freno a POST /api/checkout
+ * (que también cotiza) porque ese endpoint ya crea un pedido real y una
+ * orden de pago en Flow — un freno agresivo ahí arriesga bloquear una
+ * compra legítima; la protección de costo de Google se resuelve
+ * conteniendo esta ruta de vista previa, que es la que un script puede
+ * golpear sin fricción alguna (no crea nada, no cuesta nada dispararla
+ * salvo el costo de Google).
  */
 export async function POST(req: NextRequest) {
+  const limite = await chequearLimite('cotizar-envio', ipReal(req));
+  if (!limite.permitido) return respuestaLimiteExcedido(limite);
+
   let cuerpo: CuerpoCotizarEnvio;
   try {
     cuerpo = await req.json();

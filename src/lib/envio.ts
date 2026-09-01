@@ -3,6 +3,7 @@ import { chilexpressHabilitado, buscarCountyCodePorComuna, cotizarTarifasChilexp
 import { CODIGO_REGION_CHILEXPRESS } from './chilexpress-regiones';
 import { distanciaDesdePlaceId, distanciaDesdeTienda, distanciaValle, esValleValido, VALLES } from './distancia';
 import { estadoHorario } from './horarios';
+import { buscarCodigoCiudadDestino, cotizarTarifaStarken, starkenHabilitado } from './starken';
 import { tarifaPorDistancia } from './tarifas-envio';
 import type { DireccionEnvio, ProductoWeb } from './tipos';
 
@@ -31,7 +32,7 @@ import type { DireccionEnvio, ProductoWeb } from './tipos';
 
 export const COMUNA_TIENDA = 'Arica';
 
-export type MetodoEnvio = 'RETIRO' | 'LOCAL' | 'CHILEXPRESS';
+export type MetodoEnvio = 'RETIRO' | 'LOCAL' | 'CHILEXPRESS' | 'STARKEN';
 
 export interface OpcionEnvio {
   metodo: MetodoEnvio;
@@ -220,6 +221,50 @@ async function cotizarViaChilexpress(
   return { metodo: 'CHILEXPRESS', costo: tarifa.precio, detalle: `Chilexpress · ${formatearServicio(tarifa.servicio)}` };
 }
 
+/**
+ * Cotiza vía Starken — SEGUNDA opción de courier, junto a Chilexpress
+ * (nunca lo reemplaza, decisión explícita del dueño): reutiliza
+ * agregarPaquete() tal cual (mismo criterio de peso/dimensiones ya usado
+ * para Chilexpress, ver el comentario ahí arriba sobre "una empresa más
+ * adelante" — es justo esto). Starken tarifica por CIUDAD, no por comuna
+ * directo, así que primero hay que resolver a qué ciudad pertenece la
+ * comuna elegida (buscarCodigoCiudadDestino, en starken.ts).
+ *
+ * A diferencia de Chilexpress, Starken no tiene un modo "mock" — sin
+ * STARKEN_RUT/STARKEN_CLAVE configuradas explícitamente como vacías, la
+ * cotización real (contra QA, con las credenciales de prueba de la propia
+ * documentación) siempre se intenta. Si falla por cualquier motivo, el
+ * llamador (cotizarOpcionesEnvio) ya lo trata como "mejor esfuerzo" —
+ * simplemente no aparece esta opción, Chilexpress y retiro/local siguen
+ * disponibles.
+ */
+async function cotizarViaStarken(
+  direccion: DireccionEnvio,
+  items: { sku: string; cantidad: number }[]
+): Promise<OpcionEnvio> {
+  if (!starkenHabilitado()) {
+    throw new Error('Starken deshabilitado (STARKEN_RUT/STARKEN_CLAVE vacías a propósito).');
+  }
+  if (!direccion.region) {
+    throw new Error('Falta la región para cotizar por courier.');
+  }
+
+  const codigoCiudadDestino = await buscarCodigoCiudadDestino(direccion.region, direccion.comuna);
+  const paquete = await agregarPaquete(items);
+  const tarifa = await cotizarTarifaStarken({
+    codigoCiudadDestino,
+    pesoKg: paquete.pesoKg,
+    altoCm: paquete.altoCm,
+    anchoCm: paquete.anchoCm,
+    largoCm: paquete.largoCm,
+  });
+
+  // "Starken" en el detalle, mismo criterio que "Chilexpress ·" arriba —
+  // con dos couriers en pantalla a la vez, la marca tiene que estar
+  // siempre visible, no solo el tipo de entrega.
+  return { metodo: 'STARKEN', costo: tarifa.costo, detalle: `Starken · ${tarifa.tipoEntrega === 'DOMICILIO' ? 'A domicilio' : 'Retiro en agencia'}` };
+}
+
 /** Chilexpress devuelve el nombre del servicio en mayúsculas fijas
  * ("BASICO", "EXPRESS", "PRIORITARIO") — se pasa a Título para que no
  * desentone con el resto de los textos del checkout. */
@@ -262,13 +307,19 @@ export async function cotizarOpcionesEnvio(
     const local = await tarifaLocalPorDistancia(direccion);
     if (local) opciones.push(local);
 
-    /* El courier se agrega en modo "mejor esfuerzo": si falla su
-       cotización no puede tumbar las opciones que sí funcionan (sobre
-       todo el retiro, que no depende de nada externo). */
+    /* Cada courier se agrega en modo "mejor esfuerzo", cada uno por
+       separado: si Chilexpress falla no debe tumbar a Starken (ni
+       viceversa), y si fallan los dos no deben tumbar las opciones que sí
+       funcionan (sobre todo el retiro, que no depende de nada externo). */
     try {
       opciones.push(await cotizarViaChilexpress(direccion, items));
     } catch {
-      // Sin courier disponible: quedan retiro y/o despacho propio.
+      // Sin Chilexpress disponible: puede que quede Starken.
+    }
+    try {
+      opciones.push(await cotizarViaStarken(direccion, items));
+    } catch {
+      // Sin Starken disponible: puede que quede Chilexpress.
     }
 
     return {
@@ -283,7 +334,12 @@ export async function cotizarOpcionesEnvio(
   try {
     opciones.push(await cotizarViaChilexpress(direccion, items));
   } catch {
-    // Sin courier disponible fuera de Arica: queda solo el retiro en tienda.
+    // Sin Chilexpress disponible fuera de Arica: puede que quede Starken.
+  }
+  try {
+    opciones.push(await cotizarViaStarken(direccion, items));
+  } catch {
+    // Sin Starken disponible fuera de Arica: puede que quede Chilexpress.
   }
 
   return { opciones };
@@ -322,11 +378,13 @@ export async function confirmarEnvio(
     }
 
     if (metodoElegido === 'CHILEXPRESS') return cotizarViaChilexpress(direccion, items);
+    if (metodoElegido === 'STARKEN') return cotizarViaStarken(direccion, items);
 
     throw new Error('Elige una forma de envío: retiro en tienda, despacho a domicilio o courier.');
   }
 
   if (metodoElegido === 'CHILEXPRESS') return cotizarViaChilexpress(direccion, items);
+  if (metodoElegido === 'STARKEN') return cotizarViaStarken(direccion, items);
 
   throw new Error('Elige una forma de envío: retiro en tienda o courier.');
 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseWeb } from '@/lib/supabase-web';
+import { verificarSecretoSync } from '@/lib/verificar-secreto';
 import type { ProductoPOS } from '@/lib/tipos';
 
 /**
@@ -46,15 +47,8 @@ function slugDeRespaldo(nombre: string, productoPosId: number): string {
   return `${base || 'producto'}-${productoPosId}`;
 }
 
-function verificarSecreto(req: NextRequest): boolean {
-  const secreto = process.env.SYNC_SECRET;
-  if (!secreto) return false; // sin secreto configurado, se rechaza todo por defecto
-  const recibido = req.headers.get('x-sync-secret');
-  return recibido === secreto;
-}
-
 export async function POST(req: NextRequest) {
-  if (!verificarSecreto(req)) {
+  if (!verificarSecretoSync(req)) {
     return NextResponse.json({ error: 'Secreto de sincronización inválido' }, { status: 401 });
   }
 

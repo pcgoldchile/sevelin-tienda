@@ -76,9 +76,17 @@ export function estadoHorario(referencia: Date = new Date()): EstadoHorario {
     minuto,
     despachoHoy,
     retiroHoy,
+    // La nota entre paréntesis va SOLO acá (despacho propio, "LOCAL" en
+    // src/lib/envio.ts) y no en avisoRetiro ni en el detalle de Chilexpress:
+    // es aclarar que ESTE envío lo hace Sevelin directamente, a diferencia
+    // del courier de terceros — pedido explícito del dueño para acelerar la
+    // coordinación de la entrega contactando por WhatsApp o correo apenas
+    // se completa la compra.
     avisoDespacho: despachoHoy
-      ? `Sale hoy — compras antes de las ${CORTE_DESPACHO_HORA}:00 se despachan el mismo día.`
-      : `Pasadas las ${CORTE_DESPACHO_HORA}:00 el despacho se programa para ${proximoDiaHabil(diaSemana)}.`,
+      ? `Sale hoy — compras antes de las ${CORTE_DESPACHO_HORA}:00 se despachan el mismo día. ` +
+        '(Despacho realizado directamente por Sevelin — escríbenos por WhatsApp o correo al finalizar tu compra para coordinar y acelerar la entrega.)'
+      : `Pasadas las ${CORTE_DESPACHO_HORA}:00 el despacho se programa para ${proximoDiaHabil(diaSemana)}. ` +
+        '(Despacho realizado directamente por Sevelin — escríbenos por WhatsApp o correo al finalizar tu compra para coordinar y acelerar la entrega.)',
     avisoRetiro: retiroHoy
       ? `Puedes retirar hoy mismo — hasta las ${CORTE_RETIRO_HORA}:00.`
       : `Pasadas las ${CORTE_RETIRO_HORA}:00 el retiro queda disponible ${proximoDiaHabil(diaSemana)}.`,

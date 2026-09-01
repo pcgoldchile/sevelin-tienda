@@ -135,7 +135,14 @@ export type EstadoPedido =
   | 'ENVIADO'
   | 'ENTREGADO'
   | 'CANCELADO'
-  | 'FALLIDO';
+  | 'FALLIDO'
+  // El pago se confirmó en Flow pero el ajuste de stock en el POS falló
+  // (STOCK_INSUFICIENTE por una carrera entre dos checkouts casi
+  // simultáneos de la última unidad) — ver POST /api/flow-webhook y
+  // src/lib/pedidos.ts::marcarErrorStockSinDespacho. Requiere revisión
+  // manual del dueño (reembolso, conseguir stock, contactar al cliente);
+  // el sistema nunca reembolsa ni cancela por su cuenta.
+  | 'ERROR_STOCK_SIN_DESPACHO';
 
 /** Espejo de `pedidos_web` — ver README-ECOMMERCE-SEVELIN.md sección 4.2. */
 export interface PedidoWeb {
@@ -169,8 +176,9 @@ export interface PedidoWeb {
   direccion_envio: DireccionEnvio;
   items: ItemPedido[];
   // 'RETIRO' (gratis, en tienda) | 'LOCAL' (despacho a domicilio en Arica,
-  // tarifa plana) | 'CHILEXPRESS' (courier regional) — ver src/lib/envio.ts.
-  metodo_envio: 'RETIRO' | 'LOCAL' | 'CHILEXPRESS';
+  // tarifa plana) | 'CHILEXPRESS' | 'STARKEN' (couriers regionales, el
+  // cliente elige entre los dos si ambos cotizan) — ver src/lib/envio.ts.
+  metodo_envio: 'RETIRO' | 'LOCAL' | 'CHILEXPRESS' | 'STARKEN';
   // 'ENCARGO' si TODOS los ítems del pedido son de Pedidos por Encargo (no
   // se permite mezclar con ítems normales en un mismo checkout, ver
   // POST /api/checkout) — ver supabase/18-pedidos-por-encargo.sql.
@@ -183,6 +191,10 @@ export interface PedidoWeb {
   url_boleta_sii: string | null;
   folio_dte: string | null;
   tracking_courier: string | null;
+  // Nota administrativa, nunca visible al cliente (ver
+  // supabase/19-alerta-stock-sin-despacho.sql) — hoy la usa el estado
+  // ERROR_STOCK_SIN_DESPACHO para guardar el detalle técnico del error.
+  nota_interna: string | null;
   creado_en: string;
 }
 

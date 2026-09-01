@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { obtenerPedidoPorNumero } from '@/lib/pedidos';
 import { correoCancelacionPedido } from '@/lib/correo-pedido';
 import { enviarCorreo } from '@/lib/resend';
+import { verificarSecretoSync } from '@/lib/verificar-secreto';
 
 /**
  * El POS (sevelin-pos-oficial) llama acá justo después de cancelar un
@@ -9,18 +10,11 @@ import { enviarCorreo } from '@/lib/resend';
  * no tiene ni la API key de Resend ni la plantilla del correo; centralizar
  * el envío acá evita mantener dos copias del HTML y de la lógica de envío.
  * Protegido con el mismo SYNC_SECRET que ya comparten los dos proyectos
- * (ver POST /api/sync/producto) — quien llama es el propio backend del
- * POS, no una persona logueada.
+ * (ver POST /api/sync/producto y src/lib/verificar-secreto.ts) — quien
+ * llama es el propio backend del POS, no una persona logueada.
  */
-function verificarSecreto(req: NextRequest): boolean {
-  const secreto = process.env.SYNC_SECRET;
-  if (!secreto) return false;
-  const recibido = req.headers.get('x-sync-secret');
-  return recibido === secreto;
-}
-
 export async function POST(req: NextRequest) {
-  if (!verificarSecreto(req)) {
+  if (!verificarSecretoSync(req)) {
     return NextResponse.json({ error: 'Secreto de sincronización inválido' }, { status: 401 });
   }
 

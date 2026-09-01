@@ -2,9 +2,25 @@ import { NextRequest, NextResponse } from 'next/server';
 import { FLOW_ESTADO_PAGADO, obtenerEstadoPagoFlow } from '@/lib/flow';
 import { emitirBoleta, openFacturaHabilitada } from '@/lib/openfactura';
 import { ajustarStockPos } from '@/lib/pos-interno';
-import { guardarDatosBoleta, marcarPedidoPagado, obtenerPedidoPorNumero } from '@/lib/pedidos';
-import { correoConfirmacionPedido } from '@/lib/correo-pedido';
+import {
+  guardarDatosBoleta,
+  marcarErrorStockSinDespacho,
+  marcarPedidoPagado,
+  obtenerPedidoPorNumero,
+} from '@/lib/pedidos';
+import { correoAlertaStockSinDespacho, correoConfirmacionPedido } from '@/lib/correo-pedido';
 import { enviarCorreo } from '@/lib/resend';
+
+/**
+ * A dónde avisar cuando un pago se cobra pero no hay stock (ver el bloque
+ * ajustarStockPos más abajo). Mismo criterio que /privacidad con
+ * NEXT_PUBLIC_PRIVACIDAD_EMAIL: valor por defecto real en el código para
+ * que SIEMPRE haya un canal, la variable solo lo sobreescribe si el dueño
+ * quiere mandarlo a otro correo específico para esto.
+ */
+function obtenerCorreoAlertaStock(): string {
+  return process.env.ALERTA_STOCK_EMAIL || process.env.NEXT_PUBLIC_PRIVACIDAD_EMAIL || 'sevelin.contacto@gmail.com';
+}
 
 // Regla dura de Flow (README sección 6, paso 3): responder 200 en menos de
 // 15s. maxDuration necesita plan Vercel Pro para superar los 10s del plan
@@ -69,12 +85,43 @@ export async function POST(req: NextRequest) {
 
   // El pago ya está capturado y el pedido en PAGADO. Un fallo desde acá en
   // adelante (POS caído, OpenFactura caído) queda logueado fuerte para
-  // revisión manual — no hay panel de reconciliación en esta fase, es una
-  // limitación conocida (ver docs/SNAPSHOT.md), no un fallo silencioso.
+  // revisión manual.
+  //
+  // CASO ESPECIAL — sobreventa (Reporte de Seguridad Consolidado B,
+  // hallazgo #4): dos checkouts casi simultáneos de la última unidad
+  // pueden pagar los dos en Flow, pero el descuento de stock en el POS es
+  // atómico (descontarStockNoLotes, con FOR UPDATE) — el primero gana, el
+  // segundo recibe STOCK_INSUFICIENTE (409). ANTES ese error solo se
+  // logueaba y el pedido quedaba en PAGADO como cualquier otro, sin
+  // ninguna señal de que hay dinero cobrado sin producto para entregar.
+  //
+  // El sistema NUNCA reembolsa ni cancela por su cuenta acá — Flow no
+  // tiene una integración de reembolsos en este proyecto, y automatizar
+  // el movimiento de dinero de un cliente sin revisión humana es un riesgo
+  // mayor que el problema que resuelve (decisión explícita del dueño). En
+  // vez de eso: el pedido queda marcado ERROR_STOCK_SIN_DESPACHO (visible
+  // en el panel "Pedidos Web" del POS, inconfundible con un pedido
+  // normal) y se manda una alerta por correo — la decisión de reembolsar,
+  // conseguir el producto u ofrecer un cambio queda en manos del dueño.
   try {
     await ajustarStockPos(pedido.items);
   } catch (err) {
-    console.error(`[flow-webhook] ${numeroPedido}: no se pudo ajustar stock en el POS:`, err instanceof Error ? err.message : err);
+    const detalleTecnico = err instanceof Error ? err.message : String(err);
+    console.error(`[flow-webhook] ${numeroPedido}: ALERTA — pago cobrado, sin stock para despachar:`, detalleTecnico);
+
+    await marcarErrorStockSinDespacho(numeroPedido, detalleTecnico).catch((errMarcar) => {
+      console.error(
+        `[flow-webhook] ${numeroPedido}: además falló al marcar ERROR_STOCK_SIN_DESPACHO ` +
+          '(el pedido queda en PAGADO sin la alerta visible, revisar a mano):',
+        errMarcar instanceof Error ? errMarcar.message : errMarcar
+      );
+    });
+
+    // Mejor esfuerzo, igual que el resto de los envíos de este archivo: si
+    // Resend falla, el error ya quedó logueado arriba y el pedido ya quedó
+    // marcado en la base — no es la única forma de enterarse.
+    const { subject, html } = correoAlertaStockSinDespacho(pedido, detalleTecnico);
+    await enviarCorreo({ to: obtenerCorreoAlertaStock(), subject, html }).catch(() => {});
   }
 
   // Correo de confirmación — mejor esfuerzo, igual que el ajuste de stock

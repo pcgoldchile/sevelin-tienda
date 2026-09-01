@@ -88,6 +88,31 @@ export function correoCarritoAbandonado(items: { nombre: string; cantidad: numbe
   };
 }
 
+/** Alerta interna de sobreventa — se la manda la tienda A SÍ MISMA (al
+ * correo del dueño, ver ALERTA_STOCK_EMAIL/obtenerCorreoAlertaStock en
+ * POST /api/flow-webhook), nunca al cliente: un pago se confirmó pero el
+ * stock ya no alcanzaba. Ver Reporte de Seguridad Consolidado B, hallazgo
+ * #4 — el sistema no reembolsa ni cancela solo, esto es lo que reemplaza
+ * al console.error silencioso de antes. */
+export function correoAlertaStockSinDespacho(pedido: PedidoWeb, detalleTecnico: string): { subject: string; html: string } {
+  const filas = pedido.items.map((it) => filaItem(it.nombre, it.cantidad, it.precio_web * it.cantidad)).join('');
+  const contenido = `
+    <p style="margin:0 0 16px;font-size:14px;color:${TEXTO_SUAVE};">
+      El pedido <strong style="color:${TEXTO};">${pedido.numero_pedido}</strong> se pagó de verdad en Flow
+      (${formatoCLP.format(pedido.total)}), pero al intentar descontar el stock en el POS el sistema
+      respondió que ya no alcanza. Nadie reembolsó ni canceló nada automáticamente — hay que decidirlo
+      a mano (reembolso por Flow, conseguir el producto, ofrecer un cambio, contactar al cliente).
+    </p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">${filas}</table>
+    <p style="margin:0 0 4px;font-size:13px;color:${TEXTO};"><strong>Cliente:</strong> ${pedido.cliente_nombre || ''} ${pedido.cliente_apellido || ''} — ${pedido.cliente_email || 'sin correo'} — ${pedido.cliente_telefono || 'sin teléfono'}</p>
+    <p style="margin:0;font-size:12px;color:${TEXTO_SUAVE};font-family:monospace;">Detalle técnico: ${detalleTecnico}</p>
+  `;
+  return {
+    subject: `⚠️ Pago cobrado sin stock — pedido ${pedido.numero_pedido}`,
+    html: envoltorio('Revisar manualmente: pago sin stock', contenido),
+  };
+}
+
 /** Cancelación de pedido — misma estructura, la usa el POS (Pedidos Web →
  * Cancelar) llamando a esta misma tienda vía POST /api/pos/notificar-cancelacion
  * (el POS no tiene acceso directo a Resend con este remitente ni a este

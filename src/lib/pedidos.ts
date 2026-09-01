@@ -3,6 +3,20 @@ import { VERSION_POLITICA_PRIVACIDAD } from './politica-privacidad';
 import type { DatosFactura, DireccionEnvio, ItemPedido, PedidoWeb } from './tipos';
 import type { MetodoEnvio } from './envio';
 
+/**
+ * Lanza un error genérico ante un fallo de Supabase, sin reenviar
+ * `error.message` crudo (nombres de tabla/columna/constraint) hacia quien
+ * llame más arriba — las rutas de checkout/webhook capturan el error y
+ * devuelven su `.message` directo al cliente en la respuesta HTTP, así que
+ * el mensaje con el que se lanza ACÁ es el que termina viéndose. El
+ * detalle real queda solo en el log del servidor (Vercel). Reporte de
+ * Seguridad Consolidado B, hallazgo #10.
+ */
+function lanzarErrorBD(contexto: string, error: { message: string }): never {
+  console.error(`[pedidos] ${contexto}:`, error.message);
+  throw new Error('No se pudo procesar el pedido. Intenta de nuevo en unos minutos.');
+}
+
 interface DatosCliente {
   nombre: string;
   apellido: string;
@@ -49,7 +63,7 @@ export async function crearPedido(datos: {
   }
 
   const { data: numeroPedido, error: errorNumero } = await supabaseWeb.rpc('generar_numero_pedido');
-  if (errorNumero) throw new Error(errorNumero.message);
+  if (errorNumero) lanzarErrorBD('crearPedido: generar_numero_pedido', errorNumero);
 
   const subtotal = datos.items.reduce((acc, item) => acc + item.precio_web * item.cantidad, 0);
 
@@ -88,7 +102,7 @@ export async function crearPedido(datos: {
     .select()
     .single();
 
-  if (error) throw new Error(error.message);
+  if (error) lanzarErrorBD('crearPedido: insert pedidos_web', error);
   return data;
 }
 
@@ -99,7 +113,7 @@ export async function obtenerPedidoPorNumero(numeroPedido: string): Promise<Pedi
     .eq('numero_pedido', numeroPedido)
     .maybeSingle();
 
-  if (error) throw new Error(error.message);
+  if (error) lanzarErrorBD('obtenerPedidoPorNumero', error);
   return data;
 }
 
@@ -113,7 +127,7 @@ export async function guardarPagoFlow(
     .update({ flow_token: flowToken, flow_order: flowOrder })
     .eq('numero_pedido', numeroPedido);
 
-  if (error) throw new Error(error.message);
+  if (error) lanzarErrorBD('guardarPagoFlow', error);
 }
 
 export async function marcarPedidoFallido(numeroPedido: string): Promise<void> {
@@ -123,7 +137,7 @@ export async function marcarPedidoFallido(numeroPedido: string): Promise<void> {
     .eq('numero_pedido', numeroPedido)
     .eq('estado', 'CREADO');
 
-  if (error) throw new Error(error.message);
+  if (error) lanzarErrorBD('marcarPedidoFallido', error);
 }
 
 /**
@@ -143,8 +157,31 @@ export async function marcarPedidoPagado(numeroPedido: string): Promise<PedidoWe
     .select()
     .maybeSingle();
 
-  if (error) throw new Error(error.message);
+  if (error) lanzarErrorBD('marcarPedidoPagado', error);
   return data;
+}
+
+/**
+ * Transición PAGADO → ERROR_STOCK_SIN_DESPACHO — el pago YA está confirmado
+ * en Flow (dinero real cobrado) pero el ajuste de stock en el POS falló
+ * (ver POST /api/flow-webhook). El sistema NUNCA reembolsa ni cancela por
+ * su cuenta: solo deja el pedido marcado de forma inconfundible para que
+ * el dueño lo revise a mano (reembolso, conseguir stock, contactar al
+ * cliente) — ver Reporte de Seguridad Consolidado B, hallazgo #4.
+ *
+ * Condicionado a `estado = 'PAGADO'` por el mismo motivo que
+ * marcarPedidoPagado(): si el webhook de Flow se reintenta y esta función
+ * se llama dos veces, la segunda no pisa una transición manual posterior
+ * (ej. si el dueño ya lo movió a CANCELADO a mano mientras tanto).
+ */
+export async function marcarErrorStockSinDespacho(numeroPedido: string, detalleTecnico: string): Promise<void> {
+  const { error } = await supabaseWeb
+    .from('pedidos_web')
+    .update({ estado: 'ERROR_STOCK_SIN_DESPACHO', nota_interna: detalleTecnico })
+    .eq('numero_pedido', numeroPedido)
+    .eq('estado', 'PAGADO');
+
+  if (error) lanzarErrorBD('marcarErrorStockSinDespacho', error);
 }
 
 export async function guardarDatosBoleta(
@@ -157,5 +194,5 @@ export async function guardarDatosBoleta(
     .update({ folio_dte: folioDte, url_boleta_sii: urlBoletaSii })
     .eq('numero_pedido', numeroPedido);
 
-  if (error) throw new Error(error.message);
+  if (error) lanzarErrorBD('guardarDatosBoleta', error);
 }
