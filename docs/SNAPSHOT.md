@@ -4,7 +4,26 @@
 > arquitectura completo (todas las fases) vive en `README-ECOMMERCE-SEVELIN.md`, en el repo del POS
 > (`sevelin-pos-oficial`) — este documento es el estado de ESTE repo (`sevelin-tienda`) nada más.
 
-**Fecha:** 01-09-2026 · **Versión activa:** v34 (**despacho local reescrito sobre Google Maps
+**Fecha:** 01-09-2026 · **Versión activa:** v38 (**seguridad + Starken + SEO + autocompletado
+nacional** — rate limiting con Upstash Redis en los 3 endpoints de Maps [autocompletar-direccion
+60/día, detalle-direccion 30/día, cotizar-envio 40/día por IP, más burst de 10-20/10s], CSP + HSTS +
+X-Frame-Options + X-Content-Type-Options + Referrer-Policy agregados en `next.config.ts`,
+`verificarSecretoSync()` compartido con comparación timing-safe [se encontró una copia insegura
+duplicada en `pos/notificar-cancelacion` que nadie había revisado], alerta por correo cuando el ajuste
+de stock del POS falla tras un pago Flow confirmado [antes quedaba en silencio, riesgo de vender sin
+stock real]. **Starken integrado como SEGUNDA opción de courier** (nunca reemplaza Chilexpress) —
+`src/lib/starken.ts`, verificado contra el ambiente QA real de Starken, en espera de credenciales de
+producción. **Bug real corregido**: el autocompletado de direcciones solo mostraba sugerencias de
+Arica (círculo de 50 km) sin importar la región que el cliente escribiera — se quitó la restricción
+geográfica, ahora es nacional, con región/comuna auto-sincronizados desde el lugar elegido en Google
+Places. **SEO real por producto**: `generateMetadata()` (title/description/OG/Twitter propios por
+SKU, antes todas las fichas compartían el meta del layout raíz) + JSON-LD `Product` (schema.org) —
+base para conectar Google Merchant Center/Ads y Meta más adelante (cuentas creadas, faltan IDs). **Pie
+fijo de Envíos/WhatsApp/Instagram/Garantía/Pago** pasó de texto que escribía Gemini en cada
+descripción a un componente real (`InfoEnvioProducto`) en la ficha de producto y en Pedidos por
+Encargo — el prompt de descripciones ya no debe pedirlo. Fix de breadcrumb: la subcategoría de un
+producto no se mostraba en la ficha (solo en el filtro de `/productos`), aunque sí estuviera guardada
+— ahora el breadcrumb la incluye. · **También v34**: **despacho local reescrito sobre Google Maps
 Platform** — Geocoding + Distance Matrix + Places API (New) para autocompletado, reemplazando
 Nominatim/OSRM: se detectaron y corrigieron 3 bugs reales encadenados — la coordenada de la
 tienda estaba mal por ~1,8 km [origen equivocado corre TODAS las tarifas a la vez, error
@@ -570,7 +589,23 @@ Next.js 16 (App Router) · TypeScript · Tailwind v4 · `@supabase/supabase-js`.
 
 ## Pendiente (real, verificado al 01-09-2026 — no repetir lo ya hecho)
 
-**Despacho local / Google Maps — lo más reciente, v34:**
+**Seguridad / Starken / SEO — lo más reciente, v35-v38 (fuera de código, del dueño):**
+-1a. **Starken**: revisar si ya se envió/respondió el correo de seguimiento a Belén Carreño
+    (`asistenciaplugin@starken.cl`) pidiendo credenciales de producción, cuenta corriente y URL base
+    productiva — `src/lib/starken.ts` está verificado contra QA, pero sin esas credenciales no se
+    puede activar en producción como segunda opción junto a Chilexpress.
+-1b. **Google Ads / Meta Ads** (opcional, no bloqueante): el SEO por producto (`generateMetadata`,
+    JSON-LD `Product`) ya quedó listo como base. Falta el ID+label de conversión de Google Ads
+    (Herramientas → Conversiones) y crear el Catálogo de Meta Commerce Manager (no existe aún) +
+    conseguir el Pixel ID (Events Manager) para conectar de verdad.
+-1c. **Confirmar en Vercel del POS** (proyecto `sevelin-pos-oficial`, no este repo) que
+    `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` también están puestas ahí — en este repo
+    (`sevelin-tienda`) ya se confirmaron esta sesión, pero el freno de login del POS es una variable
+    separada.
+-1d. **Tope de gasto en Google Cloud** para Geocoding/Distance Matrix/Places — sigue sin confirmarse
+    si se puso la alerta de presupuesto (ver también ítem 0a más abajo, mismo pendiente).
+
+**Despacho local / Google Maps — v34:**
 0a. **Vigilar el costo de Google Cloud.** Geocoding, Distance Matrix y Places API (New) son APIs
     PAGADAS — no hay tope automático configurado. Con el volumen de una tienda chica no debería
     ser significativo, pero conviene revisar la facturación de Google Cloud pasado el primer mes y
