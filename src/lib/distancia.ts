@@ -1,10 +1,9 @@
 /**
- * Distancia real por carretera desde la tienda, con LocationIQ.
+ * Distancia real por carretera desde la tienda, con Google Maps Platform.
  *
- *   1. Search API (geocoding) convierte la dirección escrita en
- *      coordenadas.
- *   2. Directions API calcula la ruta manejando entre la tienda y esas
- *      coordenadas.
+ *   1. Geocoding API convierte la dirección escrita en coordenadas.
+ *   2. Distance Matrix API calcula la ruta manejando entre la tienda y
+ *      esas coordenadas.
  *
  * POR QUÉ RUTA Y NO LÍNEA RECTA
  * La Fase 4 usaba Haversine (línea recta). En Arica eso subestima: el río,
@@ -12,32 +11,39 @@
  * domicilio "a 4 km" podía estar a 6,5 km de manejo real y quedaba cobrado
  * en el tramo equivocado. Por eso ahora manda la distancia de ruta.
  *
- * POR QUÉ LOCATIONIQ Y NO NOMINATIM/OSRM DIRECTO (versión original)
- * Nominatim resolvía mal direcciones reales de Arica. Caso real
- * (31-08-2026): "Linderos 3736, Arica" (el dueño dice que queda a pocas
- * cuadras de la tienda) geocodificaba a ~36 km de distancia. La causa NO
- * era un homónimo en otra región: "Linderos" también es el nombre de una
- * localidad rural real DENTRO de la propia comuna de Arica, y el texto
- * libre ("Linderos 3736, Arica, Chile") calzaba con esa localidad en vez
- * de con la calle real "Avenida Linderos" que sí existe en Arica urbana —
- * un `viewbox` no alcanza para distinguirlas porque las dos caen dentro
- * de la misma comuna. El fix real fue separar la consulta en campos
- * estructurados (`street`/`city`, ver `geocodificar()` más abajo): eso le
- * dice al buscador "esto es una calle", y ya no compite contra el nombre
- * de una localidad. LocationIQ agrega además `viewbox` + `bounded=1`
- * (ver `CAJA_ARICA_GRADOS`), que sigue sumando como red de seguridad
- * contra cualquier otro homónimo fuera de la región. (31-08-2026, primer
- * intento: se probó Google Geocoding + Distance Matrix, pero se descartó
- * a pedido del dueño por la fricción de configurar facturación/
- * restricciones en Google Cloud — LocationIQ no lo exige.)
+ * POR QUÉ GOOGLE (segundo intento, 01-09-2026) Y NO LOCATIONIQ/NOMINATIM
+ * Se probó primero LocationIQ (compatible con Nominatim/OSM, sin la
+ * fricción de facturación de Google). Pero OpenStreetMap NO tiene mapeado
+ * el número de casa exacto para varias calles de Arica (ej. "Avenida
+ * Linderos", "Héctor Ruiz") — solo sabe que la calle existe, no en qué
+ * punto cae el número. Se confirmó pidiendo la MISMA dirección varias
+ * veces: devolvía puntos distintos de la misma calle cada vez (entre 2 y
+ * 4,4 km de la tienda para un domicilio real a ~650 m). Ningún ajuste de
+ * consulta arregla esto: el dato simplemente no existe en esa base. Google
+ * sí tiene ese nivel de precisión para Arica (confirmado a mano contra
+ * Google Maps para las mismas direcciones) — a cambio de la fricción de
+ * configurar facturación y restricciones en Google Cloud.
  *
- * LÍMITE: un solo `LOCATIONIQ_API_KEY` para ambas llamadas (geocoding y
- * ruta) — a diferencia de Google, que exige una key por API. Plan gratuito
- * de LocationIQ: 5.000 peticiones/día, de sobra para una tienda chica.
+ * LÍMITES (ambas son APIs PAGADAS de Google Maps Platform — requieren
+ * facturación habilitada en la cuenta de Google Cloud del dueño; no hay
+ * volumen mensual gratis garantizado)
+ * - `GOOGLE_GEOCODING_API_KEY` (Geocoding API): su "Restricción de la
+ *   aplicación" debe ser "Ninguna" o "Direcciones IP" — NUNCA "Referencias
+ *   HTTP", porque esta llamada la hace el servidor (Vercel), que no manda
+ *   ese header (así falló la primera vez, 31-08-2026).
+ * - `GOOGLE_DISTANCE_MATRIX_API_KEY` (Distance Matrix API): el proyecto de
+ *   Google Cloud debe tener facturación habilitada (así falló la primera
+ *   vez también).
+ * - Ambas deben estar habilitadas en el proyecto de Google Cloud
+ *   correspondiente a cada key.
  *
- * Se cachea en memoria por dirección normalizada: el checkout cotiza varias
+ * Se cachea en memoria SOLO un resultado de ruta exitoso — nunca un fallo
+ * ni una estimación por línea recta (bug real encontrado el 01-09-2026:
+ * un fallo transitorio en la primera consulta de una dirección quedaba
+ * cacheado "para siempre" en esa instancia serverless, aunque reintentar
+ * un segundo después funcionara perfecto). El checkout cotiza varias
  * veces mientras el cliente edita el formulario, y sin caché cada tecla
- * podría gatillar una petición nueva por nada.
+ * podría gatillar una petición nueva (y un cobro extra) por nada.
  */
 
 /**
@@ -111,18 +117,18 @@ export function distanciaValle(valle: ClaveValle, km: number): ResultadoDistanci
   };
 }
 
-const LOCATIONIQ_BASE = 'https://us1.locationiq.com/v1';
+const GOOGLE_GEOCODING_URL = 'https://maps.googleapis.com/maps/api/geocode/json';
+const GOOGLE_DISTANCE_MATRIX_URL = 'https://maps.googleapis.com/maps/api/distancematrix/json';
 
 const TIMEOUT_MS = 7000;
 
 /**
  * Medio grado (~55 km) alrededor de la tienda, en cada dirección. Cubre
- * Arica urbana + Azapa/Lluta + un margen amplio, y descarta de raíz
- * cualquier homónimo lejano (el caso real: "Linderos" también es una
- * localidad de Buin, Región Metropolitana). Con `bounded=1` esto es un
- * límite DURO (no un sesgo): si no hay nada dentro de la caja, la
- * geocodificación no devuelve nada — mejor "no se pudo ubicar" (ver
- * distanciaDesdeTienda) que inventar un domicilio a miles de km.
+ * Arica urbana + Azapa/Lluta + un margen amplio, y sesga el resultado
+ * hacia Arica cuando el nombre de una calle se repite en otra parte de
+ * Chile. En Google `bounds` es un SESGO (no un límite duro como el
+ * `bounded=1` de Nominatim/LocationIQ): puede devolver algo fuera de la
+ * caja si no encuentra nada mejor adentro.
  */
 const CAJA_ARICA_GRADOS = 0.6;
 
@@ -146,7 +152,7 @@ function normalizar(texto: string): string {
     .replace(/\s+/g, ' ');
 }
 
-/** fetch con corte por tiempo: si LocationIQ se cuelga, el checkout no
+/** fetch con corte por tiempo: si Google Maps se cuelga, el checkout no
  *  puede quedarse esperando indefinidamente. */
 async function fetchConTimeout(url: string, init?: RequestInit): Promise<Response> {
   const control = new AbortController();
@@ -158,79 +164,50 @@ async function fetchConTimeout(url: string, init?: RequestInit): Promise<Respons
   }
 }
 
-/** Una búsqueda concreta contra LocationIQ Search — devuelve el primer
- *  resultado, o null si no hay nada o falla la petición. Sin reintento a
- *  propósito (a diferencia de distanciaRutaKm): un fallo acá solo hace
- *  que falte la opción de despacho local esta vez — nunca cachea un
- *  número equivocado — así que no vale la pena alargar el checkout con
- *  otro intento; el siguiente llamado (recotizar, o el propio checkout)
- *  ya vuelve a probar. */
-async function buscarLocationIQ(params: Record<string, string>): Promise<{ lat: number; lon: number } | null> {
-  const url = `${LOCATIONIQ_BASE}/search?${new URLSearchParams(params).toString()}`;
-
-  try {
-    const res = await fetchConTimeout(url);
-    if (!res.ok) return null;
-
-    const datos = (await res.json()) as { lat?: string; lon?: string }[];
-    const primero = datos?.[0];
-    if (!primero?.lat || !primero?.lon) return null;
-
-    const lat = Number(primero.lat);
-    const lon = Number(primero.lon);
-    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
-
-    return { lat, lon };
-  } catch {
-    return null;
-  }
-}
-
 /**
- * Dirección escrita → coordenadas, vía LocationIQ Search (geocoding).
- * `viewbox` + `bounded=1` (ver CAJA_ARICA_GRADOS) restringen la búsqueda
- * a Arica. Sin `LOCATIONIQ_API_KEY` configurada, devuelve null de una
- * (mismo criterio de "degradar, no romper" que el resto del módulo).
- *
- * PRIMERO estructurada (street/city separados), NO texto libre. Caso real
- * (31-08-2026): "Linderos 3736" con `q` de texto libre resolvía a
- * "Linderos", una localidad rural real a 36 km — DENTRO de la misma
- * comuna de Arica, así que `bounded=1` no la descartaba. Con la búsqueda
- * separada en `street="Linderos 3736"` + `city="Arica"` el resultado es
- * otro: "Avenida Linderos" en Arica urbana, a 3 km de la tienda — que es
- * lo que el dueño esperaba. Separar los campos le da al buscador la
- * intención real ("esto es una calle", no "encuéntrame cualquier lugar
- * con este nombre"), en vez de dejarlo adivinar de un texto ambiguo.
- * Si la estructurada no encuentra nada (direcciones atípicas, sin
- * número, etc.) cae a texto libre como respaldo.
+ * Dirección escrita → coordenadas, vía Google Geocoding API. `bounds`
+ * (ver CAJA_ARICA_GRADOS) sesga el resultado hacia Arica, y `region=cl`
+ * refuerza el país. Sin `GOOGLE_GEOCODING_API_KEY` configurada, devuelve
+ * null de una (mismo criterio de "degradar, no romper" que el resto del
+ * módulo).
  */
 export async function geocodificar(
   calle: string,
   numero: string,
   comuna: string
 ): Promise<{ lat: number; lon: number } | null> {
-  const apiKey = process.env.LOCATIONIQ_API_KEY;
+  const apiKey = process.env.GOOGLE_GEOCODING_API_KEY;
   if (!apiKey) return null;
 
   const origen = origenTienda();
-  // viewbox = left,top,right,bottom (minLon,maxLat,maxLon,minLat).
-  const viewbox = [
-    origen.lon - CAJA_ARICA_GRADOS,
-    origen.lat + CAJA_ARICA_GRADOS,
-    origen.lon + CAJA_ARICA_GRADOS,
-    origen.lat - CAJA_ARICA_GRADOS,
-  ].join(',');
-  const base = { key: apiKey, format: 'json', countrycodes: 'cl', viewbox, bounded: '1', limit: '1' };
-
-  const estructurada = await buscarLocationIQ({
-    ...base,
-    street: `${calle} ${numero}`,
-    city: comuna,
-    country: 'Chile',
+  const bounds =
+    `${origen.lat - CAJA_ARICA_GRADOS},${origen.lon - CAJA_ARICA_GRADOS}` +
+    `|${origen.lat + CAJA_ARICA_GRADOS},${origen.lon + CAJA_ARICA_GRADOS}`;
+  const params = new URLSearchParams({
+    address: `${calle} ${numero}, ${comuna}, Chile`,
+    region: 'cl',
+    bounds,
+    key: apiKey,
   });
-  if (estructurada) return estructurada;
+  const url = `${GOOGLE_GEOCODING_URL}?${params.toString()}`;
 
-  return buscarLocationIQ({ ...base, q: `${calle} ${numero}, ${comuna}, Chile` });
+  try {
+    const res = await fetchConTimeout(url);
+    if (!res.ok) return null;
+
+    const datos = (await res.json()) as {
+      status?: string;
+      results?: { geometry?: { location?: { lat?: number; lng?: number } } }[];
+    };
+    if (datos.status !== 'OK') return null;
+
+    const loc = datos.results?.[0]?.geometry?.location;
+    if (typeof loc?.lat !== 'number' || typeof loc?.lng !== 'number') return null;
+
+    return { lat: loc.lat, lon: loc.lng };
+  } catch {
+    return null;
+  }
 }
 
 /** Distancia en línea recta (Haversine). Solo se usa como respaldo cuando
@@ -253,26 +230,35 @@ function haversineKm(a: { lat: number; lon: number }, b: { lat: number; lon: num
  */
 const FACTOR_RODEO = 1.35;
 
-/** Un intento de pedir la ruta a LocationIQ Directions. */
+/** Un intento de pedir la ruta a Google Distance Matrix. */
 async function intentarRutaKm(
   origen: { lat: number; lon: number },
   destino: { lat: number; lon: number },
   apiKey: string
 ): Promise<number | null> {
-  // Igual que OSRM: la ruta va en lon,lat (al revés de lo habitual) —
-  // invertirlo da rutas silenciosamente equivocadas, no un error.
-  const coords = `${origen.lon},${origen.lat};${destino.lon},${destino.lat}`;
-  const params = new URLSearchParams({ key: apiKey, overview: 'false', alternatives: 'false' });
-  const url = `${LOCATIONIQ_BASE}/directions/driving/${coords}?${params.toString()}`;
+  const params = new URLSearchParams({
+    origins: `${origen.lat},${origen.lon}`,
+    destinations: `${destino.lat},${destino.lon}`,
+    mode: 'driving',
+    units: 'metric',
+    key: apiKey,
+  });
+  const url = `${GOOGLE_DISTANCE_MATRIX_URL}?${params.toString()}`;
 
   try {
     const res = await fetchConTimeout(url);
     if (!res.ok) return null;
 
-    const datos = (await res.json()) as { code?: string; routes?: { distance?: number }[] };
-    if (datos.code !== 'Ok') return null;
+    const datos = (await res.json()) as {
+      status?: string;
+      rows?: { elements?: { status?: string; distance?: { value?: number } }[] }[];
+    };
+    if (datos.status !== 'OK') return null;
 
-    const metros = datos.routes?.[0]?.distance;
+    const elemento = datos.rows?.[0]?.elements?.[0];
+    if (elemento?.status !== 'OK') return null;
+
+    const metros = elemento.distance?.value;
     if (typeof metros !== 'number' || !Number.isFinite(metros)) return null;
 
     return metros / 1000;
@@ -281,21 +267,17 @@ async function intentarRutaKm(
   }
 }
 
-/** Distancia de manejo entre la tienda y un punto, vía LocationIQ
- *  Directions (compatible con OSRM). Sin `LOCATIONIQ_API_KEY` configurada,
- *  devuelve null (cae al respaldo de línea recta, ver
- *  distanciaDesdeTienda).
+/** Distancia de manejo entre la tienda y un punto, vía Google Distance
+ *  Matrix API. Sin `GOOGLE_DISTANCE_MATRIX_API_KEY` configurada, devuelve
+ *  null (cae al respaldo de línea recta, ver distanciaDesdeTienda).
  *
- *  Un reintento tras una pausa corta: el plan gratuito de LocationIQ
- *  aplica un límite de ~2 peticiones/segundo, y un choque pasajero con
- *  ese límite (o un timeout de red) no debería condenar a una dirección
- *  a la estimación por línea recta — con un segundo intento casi siempre
- *  alcanza. */
+ *  Un reintento tras una pausa corta: un timeout de red pasajero no
+ *  debería condenar a una dirección a la estimación por línea recta. */
 async function distanciaRutaKm(
   origen: { lat: number; lon: number },
   destino: { lat: number; lon: number }
 ): Promise<number | null> {
-  const apiKey = process.env.LOCATIONIQ_API_KEY;
+  const apiKey = process.env.GOOGLE_DISTANCE_MATRIX_API_KEY;
   if (!apiKey) return null;
 
   const primero = await intentarRutaKm(origen, destino, apiKey);
@@ -321,10 +303,10 @@ export async function distanciaDesdeTienda(
   const coordenadas = await geocodificar(calle, numero, comuna);
   if (!coordenadas) {
     // NO se cachea el null: un fallo de geocodificación puede ser
-    // transitorio (LocationIQ caído, timeout, rate limit) — cachearlo
-    // dejaría a esa dirección puntual sin despacho local hasta que la
-    // función serverless se reciclara, aunque el servicio ya hubiera
-    // vuelto. Mismo motivo que abajo con la estimación por línea recta.
+    // transitorio (Google caído, timeout) — cachearlo dejaría a esa
+    // dirección puntual sin despacho local hasta que la función
+    // serverless se reciclara, aunque el servicio ya hubiera vuelto.
+    // Mismo motivo que abajo con la estimación por línea recta.
     return null;
   }
 
@@ -337,12 +319,10 @@ export async function distanciaDesdeTienda(
     return resultado;
   }
 
-  // LocationIQ Directions no respondió (o falta la API key): se estima
-  // con línea recta + factor de rodeo. Caso real (01-09-2026): un fallo
-  // transitorio justo en la primera consulta de una dirección quedaba
-  // cacheado como "estimada" PARA SIEMPRE (mientras viviera la instancia
-  // serverless), aunque reintentar un segundo después funcionara
-  // perfecto — por eso este resultado NO se cachea: cada consulta nueva
+  // Distance Matrix no respondió (o falta la API key): se estima con
+  // línea recta + factor de rodeo. NO se cachea: un fallo transitorio en
+  // la primera consulta de una dirección no debe quedar pegado para
+  // siempre en esa instancia serverless — la próxima consulta siempre
   // reintenta la ruta real, y solo un éxito real queda guardado.
   return {
     km: haversineKm(origen, coordenadas) * FACTOR_RODEO,
