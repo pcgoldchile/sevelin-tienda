@@ -1,9 +1,10 @@
 /**
- * Distancia real por carretera desde la tienda, con Google Maps Platform.
+ * Distancia real por carretera desde la tienda, con LocationIQ.
  *
- *   1. Geocoding API convierte la dirección escrita en coordenadas.
- *   2. Distance Matrix API calcula la ruta manejando entre la tienda y
- *      esas coordenadas.
+ *   1. Search API (geocoding) convierte la dirección escrita en
+ *      coordenadas.
+ *   2. Directions API calcula la ruta manejando entre la tienda y esas
+ *      coordenadas.
  *
  * POR QUÉ RUTA Y NO LÍNEA RECTA
  * La Fase 4 usaba Haversine (línea recta). En Arica eso subestima: el río,
@@ -11,27 +12,32 @@
  * domicilio "a 4 km" podía estar a 6,5 km de manejo real y quedaba cobrado
  * en el tramo equivocado. Por eso ahora manda la distancia de ruta.
  *
- * POR QUÉ GOOGLE Y NO NOMINATIM/OSRM (gratuitos, versión anterior)
- * Nominatim resolvía mal direcciones reales de Arica — el caso encontrado
- * el 31-08-2026: "Linderos 3736, Arica" (a media cuadra de la tienda)
- * geocodificaba a ~35 km de distancia, probablemente confundiéndose con la
- * localidad "Linderos" de Buin (Región Metropolitana) pese al sufijo
- * ", Arica, Chile" de la consulta. Con Nominatim no hay forma de acotar la
- * búsqueda a una caja geográfica; con Google Geocoding sí (`bounds`, ver
- * `CAJA_ARICA_GRADOS` más abajo), lo que descarta homónimos lejanos de raíz
- * en vez de confiar en que el ranking del buscador acierte.
+ * POR QUÉ LOCATIONIQ Y NO NOMINATIM/OSRM DIRECTO (versión original)
+ * Nominatim resolvía mal direcciones reales de Arica. Caso real
+ * (31-08-2026): "Linderos 3736, Arica" (el dueño dice que queda a pocas
+ * cuadras de la tienda) geocodificaba a ~36 km de distancia. La causa NO
+ * era un homónimo en otra región: "Linderos" también es el nombre de una
+ * localidad rural real DENTRO de la propia comuna de Arica, y el texto
+ * libre ("Linderos 3736, Arica, Chile") calzaba con esa localidad en vez
+ * de con la calle real "Avenida Linderos" que sí existe en Arica urbana —
+ * un `viewbox` no alcanza para distinguirlas porque las dos caen dentro
+ * de la misma comuna. El fix real fue separar la consulta en campos
+ * estructurados (`street`/`city`, ver `geocodificar()` más abajo): eso le
+ * dice al buscador "esto es una calle", y ya no compite contra el nombre
+ * de una localidad. LocationIQ agrega además `viewbox` + `bounded=1`
+ * (ver `CAJA_ARICA_GRADOS`), que sigue sumando como red de seguridad
+ * contra cualquier otro homónimo fuera de la región. (31-08-2026, primer
+ * intento: se probó Google Geocoding + Distance Matrix, pero se descartó
+ * a pedido del dueño por la fricción de configurar facturación/
+ * restricciones en Google Cloud — LocationIQ no lo exige.)
  *
- * LÍMITES (ambas son APIs PAGADAS de Google Maps Platform — requieren
- * facturación habilitada en la cuenta de Google Cloud del dueño; no hay
- * volumen mensual gratis garantizado como con Nominatim/OSRM)
- * - `GOOGLE_GEOCODING_API_KEY` (Geocoding API) y
- *   `GOOGLE_DISTANCE_MATRIX_API_KEY` (Distance Matrix API) — ver
- *   .env.local.example. Ambas deben estar habilitadas en el proyecto de
- *   Google Cloud correspondiente a cada key.
+ * LÍMITE: un solo `LOCATIONIQ_API_KEY` para ambas llamadas (geocoding y
+ * ruta) — a diferencia de Google, que exige una key por API. Plan gratuito
+ * de LocationIQ: 5.000 peticiones/día, de sobra para una tienda chica.
  *
  * Se cachea en memoria por dirección normalizada: el checkout cotiza varias
  * veces mientras el cliente edita el formulario, y sin caché cada tecla
- * podría gatillar una petición nueva (y un cobro extra) por nada.
+ * podría gatillar una petición nueva por nada.
  */
 
 /**
@@ -105,8 +111,7 @@ export function distanciaValle(valle: ClaveValle, km: number): ResultadoDistanci
   };
 }
 
-const GOOGLE_GEOCODING_URL = 'https://maps.googleapis.com/maps/api/geocode/json';
-const GOOGLE_DISTANCE_MATRIX_URL = 'https://maps.googleapis.com/maps/api/distancematrix/json';
+const LOCATIONIQ_BASE = 'https://us1.locationiq.com/v1';
 
 const TIMEOUT_MS = 7000;
 
@@ -114,11 +119,10 @@ const TIMEOUT_MS = 7000;
  * Medio grado (~55 km) alrededor de la tienda, en cada dirección. Cubre
  * Arica urbana + Azapa/Lluta + un margen amplio, y descarta de raíz
  * cualquier homónimo lejano (el caso real: "Linderos" también es una
- * localidad de Buin, Región Metropolitana — sin esta caja, Google podía
- * preferirla igual que Nominatim lo hacía). El geocoder puede salirse un
- * poco de la caja si no encuentra nada mejor adentro (es un sesgo, no un
- * límite duro), pero en la práctica siempre hay una calle real de Arica
- * que calza.
+ * localidad de Buin, Región Metropolitana). Con `bounded=1` esto es un
+ * límite DURO (no un sesgo): si no hay nada dentro de la caja, la
+ * geocodificación no devuelve nada — mejor "no se pudo ubicar" (ver
+ * distanciaDesdeTienda) que inventar un domicilio a miles de km.
  */
 const CAJA_ARICA_GRADOS = 0.6;
 
@@ -142,7 +146,7 @@ function normalizar(texto: string): string {
     .replace(/\s+/g, ' ');
 }
 
-/** fetch con corte por tiempo: si Google Maps se cuelga, el checkout no
+/** fetch con corte por tiempo: si LocationIQ se cuelga, el checkout no
  *  puede quedarse esperando indefinidamente. */
 async function fetchConTimeout(url: string, init?: RequestInit): Promise<Response> {
   const control = new AbortController();
@@ -154,51 +158,74 @@ async function fetchConTimeout(url: string, init?: RequestInit): Promise<Respons
   }
 }
 
+/** Una búsqueda concreta contra LocationIQ Search — devuelve el primer
+ *  resultado, o null si no hay nada o falla la petición. */
+async function buscarLocationIQ(params: Record<string, string>): Promise<{ lat: number; lon: number } | null> {
+  const url = `${LOCATIONIQ_BASE}/search?${new URLSearchParams(params).toString()}`;
+
+  try {
+    const res = await fetchConTimeout(url);
+    if (!res.ok) return null;
+
+    const datos = (await res.json()) as { lat?: string; lon?: string }[];
+    const primero = datos?.[0];
+    if (!primero?.lat || !primero?.lon) return null;
+
+    const lat = Number(primero.lat);
+    const lon = Number(primero.lon);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+
+    return { lat, lon };
+  } catch {
+    return null;
+  }
+}
+
 /**
- * Dirección escrita → coordenadas, vía Google Geocoding API. `bounds`
- * (ver CAJA_ARICA_GRADOS) sesga el resultado hacia Arica, y `region=cl`
- * refuerza el país — entre los dos evitan el caso real de "Linderos 3736"
- * resolviendo a la localidad homónima de Buin en vez de la calle de Arica.
- * Sin `GOOGLE_GEOCODING_API_KEY` configurada, devuelve null de una (mismo
- * criterio de "degradar, no romper" que el resto del módulo).
+ * Dirección escrita → coordenadas, vía LocationIQ Search (geocoding).
+ * `viewbox` + `bounded=1` (ver CAJA_ARICA_GRADOS) restringen la búsqueda
+ * a Arica. Sin `LOCATIONIQ_API_KEY` configurada, devuelve null de una
+ * (mismo criterio de "degradar, no romper" que el resto del módulo).
+ *
+ * PRIMERO estructurada (street/city separados), NO texto libre. Caso real
+ * (31-08-2026): "Linderos 3736" con `q` de texto libre resolvía a
+ * "Linderos", una localidad rural real a 36 km — DENTRO de la misma
+ * comuna de Arica, así que `bounded=1` no la descartaba. Con la búsqueda
+ * separada en `street="Linderos 3736"` + `city="Arica"` el resultado es
+ * otro: "Avenida Linderos" en Arica urbana, a 3 km de la tienda — que es
+ * lo que el dueño esperaba. Separar los campos le da al buscador la
+ * intención real ("esto es una calle", no "encuéntrame cualquier lugar
+ * con este nombre"), en vez de dejarlo adivinar de un texto ambiguo.
+ * Si la estructurada no encuentra nada (direcciones atípicas, sin
+ * número, etc.) cae a texto libre como respaldo.
  */
 export async function geocodificar(
   calle: string,
   numero: string,
   comuna: string
 ): Promise<{ lat: number; lon: number } | null> {
-  const apiKey = process.env.GOOGLE_GEOCODING_API_KEY;
+  const apiKey = process.env.LOCATIONIQ_API_KEY;
   if (!apiKey) return null;
 
   const origen = origenTienda();
-  const bounds =
-    `${origen.lat - CAJA_ARICA_GRADOS},${origen.lon - CAJA_ARICA_GRADOS}` +
-    `|${origen.lat + CAJA_ARICA_GRADOS},${origen.lon + CAJA_ARICA_GRADOS}`;
-  const params = new URLSearchParams({
-    address: `${calle} ${numero}, ${comuna}, Chile`,
-    region: 'cl',
-    bounds,
-    key: apiKey,
+  // viewbox = left,top,right,bottom (minLon,maxLat,maxLon,minLat).
+  const viewbox = [
+    origen.lon - CAJA_ARICA_GRADOS,
+    origen.lat + CAJA_ARICA_GRADOS,
+    origen.lon + CAJA_ARICA_GRADOS,
+    origen.lat - CAJA_ARICA_GRADOS,
+  ].join(',');
+  const base = { key: apiKey, format: 'json', countrycodes: 'cl', viewbox, bounded: '1', limit: '1' };
+
+  const estructurada = await buscarLocationIQ({
+    ...base,
+    street: `${calle} ${numero}`,
+    city: comuna,
+    country: 'Chile',
   });
-  const url = `${GOOGLE_GEOCODING_URL}?${params.toString()}`;
+  if (estructurada) return estructurada;
 
-  try {
-    const res = await fetchConTimeout(url);
-    if (!res.ok) return null;
-
-    const datos = (await res.json()) as {
-      status?: string;
-      results?: { geometry?: { location?: { lat?: number; lng?: number } } }[];
-    };
-    if (datos.status !== 'OK') return null;
-
-    const loc = datos.results?.[0]?.geometry?.location;
-    if (typeof loc?.lat !== 'number' || typeof loc?.lng !== 'number') return null;
-
-    return { lat: loc.lat, lon: loc.lng };
-  } catch {
-    return null;
-  }
+  return buscarLocationIQ({ ...base, q: `${calle} ${numero}, ${comuna}, Chile` });
 }
 
 /** Distancia en línea recta (Haversine). Solo se usa como respaldo cuando
@@ -221,39 +248,31 @@ function haversineKm(a: { lat: number; lon: number }, b: { lat: number; lon: num
  */
 const FACTOR_RODEO = 1.35;
 
-/** Distancia de manejo entre la tienda y un punto, vía Google Distance
- *  Matrix API. Sin `GOOGLE_DISTANCE_MATRIX_API_KEY` configurada, devuelve
- *  null (cae al respaldo de línea recta, ver distanciaDesdeTienda). */
+/** Distancia de manejo entre la tienda y un punto, vía LocationIQ
+ *  Directions (compatible con OSRM). Sin `LOCATIONIQ_API_KEY` configurada,
+ *  devuelve null (cae al respaldo de línea recta, ver
+ *  distanciaDesdeTienda). */
 async function distanciaRutaKm(
   origen: { lat: number; lon: number },
   destino: { lat: number; lon: number }
 ): Promise<number | null> {
-  const apiKey = process.env.GOOGLE_DISTANCE_MATRIX_API_KEY;
+  const apiKey = process.env.LOCATIONIQ_API_KEY;
   if (!apiKey) return null;
 
-  const params = new URLSearchParams({
-    origins: `${origen.lat},${origen.lon}`,
-    destinations: `${destino.lat},${destino.lon}`,
-    mode: 'driving',
-    units: 'metric',
-    key: apiKey,
-  });
-  const url = `${GOOGLE_DISTANCE_MATRIX_URL}?${params.toString()}`;
+  // Igual que OSRM: la ruta va en lon,lat (al revés de lo habitual) —
+  // invertirlo da rutas silenciosamente equivocadas, no un error.
+  const coords = `${origen.lon},${origen.lat};${destino.lon},${destino.lat}`;
+  const params = new URLSearchParams({ key: apiKey, overview: 'false', alternatives: 'false' });
+  const url = `${LOCATIONIQ_BASE}/directions/driving/${coords}?${params.toString()}`;
 
   try {
     const res = await fetchConTimeout(url);
     if (!res.ok) return null;
 
-    const datos = (await res.json()) as {
-      status?: string;
-      rows?: { elements?: { status?: string; distance?: { value?: number } }[] }[];
-    };
-    if (datos.status !== 'OK') return null;
+    const datos = (await res.json()) as { code?: string; routes?: { distance?: number }[] };
+    if (datos.code !== 'Ok') return null;
 
-    const elemento = datos.rows?.[0]?.elements?.[0];
-    if (elemento?.status !== 'OK') return null;
-
-    const metros = elemento.distance?.value;
+    const metros = datos.routes?.[0]?.distance;
     if (typeof metros !== 'number' || !Number.isFinite(metros)) return null;
 
     return metros / 1000;
@@ -287,9 +306,9 @@ export async function distanciaDesdeTienda(
   const resultado: ResultadoDistancia = km !== null
     ? { km, estimada: false, origen: 'ruta', coordenadas }
     : {
-        // Distance Matrix no respondió (o falta la API key): se estima con
-        // línea recta + factor de rodeo. Queda marcado como estimado para
-        // poder avisarlo en la interfaz.
+        // LocationIQ Directions no respondió (o falta la API key): se
+        // estima con línea recta + factor de rodeo. Queda marcado como
+        // estimado para poder avisarlo en la interfaz.
         km: haversineKm(origen, coordenadas) * FACTOR_RODEO,
         estimada: true,
         origen: 'estimacion-linea-recta',
