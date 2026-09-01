@@ -159,7 +159,12 @@ async function fetchConTimeout(url: string, init?: RequestInit): Promise<Respons
 }
 
 /** Una búsqueda concreta contra LocationIQ Search — devuelve el primer
- *  resultado, o null si no hay nada o falla la petición. */
+ *  resultado, o null si no hay nada o falla la petición. Sin reintento a
+ *  propósito (a diferencia de distanciaRutaKm): un fallo acá solo hace
+ *  que falte la opción de despacho local esta vez — nunca cachea un
+ *  número equivocado — así que no vale la pena alargar el checkout con
+ *  otro intento; el siguiente llamado (recotizar, o el propio checkout)
+ *  ya vuelve a probar. */
 async function buscarLocationIQ(params: Record<string, string>): Promise<{ lat: number; lon: number } | null> {
   const url = `${LOCATIONIQ_BASE}/search?${new URLSearchParams(params).toString()}`;
 
@@ -248,17 +253,12 @@ function haversineKm(a: { lat: number; lon: number }, b: { lat: number; lon: num
  */
 const FACTOR_RODEO = 1.35;
 
-/** Distancia de manejo entre la tienda y un punto, vía LocationIQ
- *  Directions (compatible con OSRM). Sin `LOCATIONIQ_API_KEY` configurada,
- *  devuelve null (cae al respaldo de línea recta, ver
- *  distanciaDesdeTienda). */
-async function distanciaRutaKm(
+/** Un intento de pedir la ruta a LocationIQ Directions. */
+async function intentarRutaKm(
   origen: { lat: number; lon: number },
-  destino: { lat: number; lon: number }
+  destino: { lat: number; lon: number },
+  apiKey: string
 ): Promise<number | null> {
-  const apiKey = process.env.LOCATIONIQ_API_KEY;
-  if (!apiKey) return null;
-
   // Igual que OSRM: la ruta va en lon,lat (al revés de lo habitual) —
   // invertirlo da rutas silenciosamente equivocadas, no un error.
   const coords = `${origen.lon},${origen.lat};${destino.lon},${destino.lat}`;
@@ -281,6 +281,30 @@ async function distanciaRutaKm(
   }
 }
 
+/** Distancia de manejo entre la tienda y un punto, vía LocationIQ
+ *  Directions (compatible con OSRM). Sin `LOCATIONIQ_API_KEY` configurada,
+ *  devuelve null (cae al respaldo de línea recta, ver
+ *  distanciaDesdeTienda).
+ *
+ *  Un reintento tras una pausa corta: el plan gratuito de LocationIQ
+ *  aplica un límite de ~2 peticiones/segundo, y un choque pasajero con
+ *  ese límite (o un timeout de red) no debería condenar a una dirección
+ *  a la estimación por línea recta — con un segundo intento casi siempre
+ *  alcanza. */
+async function distanciaRutaKm(
+  origen: { lat: number; lon: number },
+  destino: { lat: number; lon: number }
+): Promise<number | null> {
+  const apiKey = process.env.LOCATIONIQ_API_KEY;
+  if (!apiKey) return null;
+
+  const primero = await intentarRutaKm(origen, destino, apiKey);
+  if (primero !== null) return primero;
+
+  await new Promise((resolve) => setTimeout(resolve, 600));
+  return intentarRutaKm(origen, destino, apiKey);
+}
+
 /**
  * Distancia por carretera desde la tienda hasta la dirección dada.
  * Devuelve `null` solo si ni siquiera se pudo ubicar la dirección — en ese
@@ -296,25 +320,34 @@ export async function distanciaDesdeTienda(
 
   const coordenadas = await geocodificar(calle, numero, comuna);
   if (!coordenadas) {
-    cacheDistancia.set(clave, null);
+    // NO se cachea el null: un fallo de geocodificación puede ser
+    // transitorio (LocationIQ caído, timeout, rate limit) — cachearlo
+    // dejaría a esa dirección puntual sin despacho local hasta que la
+    // función serverless se reciclara, aunque el servicio ya hubiera
+    // vuelto. Mismo motivo que abajo con la estimación por línea recta.
     return null;
   }
 
   const origen = origenTienda();
   const km = await distanciaRutaKm(origen, coordenadas);
 
-  const resultado: ResultadoDistancia = km !== null
-    ? { km, estimada: false, origen: 'ruta', coordenadas }
-    : {
-        // LocationIQ Directions no respondió (o falta la API key): se
-        // estima con línea recta + factor de rodeo. Queda marcado como
-        // estimado para poder avisarlo en la interfaz.
-        km: haversineKm(origen, coordenadas) * FACTOR_RODEO,
-        estimada: true,
-        origen: 'estimacion-linea-recta',
-        coordenadas,
-      };
+  if (km !== null) {
+    const resultado: ResultadoDistancia = { km, estimada: false, origen: 'ruta', coordenadas };
+    cacheDistancia.set(clave, resultado);
+    return resultado;
+  }
 
-  cacheDistancia.set(clave, resultado);
-  return resultado;
+  // LocationIQ Directions no respondió (o falta la API key): se estima
+  // con línea recta + factor de rodeo. Caso real (01-09-2026): un fallo
+  // transitorio justo en la primera consulta de una dirección quedaba
+  // cacheado como "estimada" PARA SIEMPRE (mientras viviera la instancia
+  // serverless), aunque reintentar un segundo después funcionara
+  // perfecto — por eso este resultado NO se cachea: cada consulta nueva
+  // reintenta la ruta real, y solo un éxito real queda guardado.
+  return {
+    km: haversineKm(origen, coordenadas) * FACTOR_RODEO,
+    estimada: true,
+    origen: 'estimacion-linea-recta',
+    coordenadas,
+  };
 }
