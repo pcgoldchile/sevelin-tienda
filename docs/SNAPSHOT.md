@@ -4,11 +4,23 @@
 > arquitectura completo (todas las fases) vive en `README-ECOMMERCE-SEVELIN.md`, en el repo del POS
 > (`sevelin-pos-oficial`) — este documento es el estado de ESTE repo (`sevelin-tienda`) nada más.
 
-**Fecha:** 31-08-2026 · **Versión activa:** v32 (detalle de envío reubicado en su propia línea del
+**Fecha:** 01-09-2026 · **Versión activa:** v34 (**despacho local reescrito sobre Google Maps
+Platform** — Geocoding + Distance Matrix + Places API (New) para autocompletado, reemplazando
+Nominatim/OSRM: se detectaron y corrigieron 3 bugs reales encadenados — la coordenada de la
+tienda estaba mal por ~1,8 km [origen equivocado corre TODAS las tarifas a la vez, error
+invisible], un resultado degradado por línea recta quedaba cacheado para siempre tras un fallo
+transitorio, y OpenStreetMap no tiene el número de casa exacto para varias calles de Arica.
+Escala de tarifas urbanas recalibrada con una referencia real del dueño (Héctor Ruiz 280 ≈ 8,4 km
+≈ $6.000 en InDrive). Autocompletado nuevo: sugerencias en vivo al escribir la calle, restringidas
+duro a un círculo de 50 km alrededor de la tienda, coordenadas exactas de la sugerencia elegida
+viajan por `placeId` (nunca coordenadas crudas del cliente) — ver "v34" abajo; también v33:
+**sección "Pedidos por Encargo"** (dropshipping/retiro en tienda) — catálogo aparte para
+productos sin stock propio, sincronizados desde el POS con `es_pedido_encargo=true`, sin exigir
+`stock_web` para mostrarse ni comprarse; también v32: detalle de envío reubicado en su propia línea del
 resumen, fotos de banners de categoría sin recortar (`object-contain`), 90 productos revisados y
 subcategorizados donde tenía sentido (16 subcategorías nuevas, 5 productos con categoría corregida),
 y el menú del header ahora permite desplegar subcategorías desde cualquier categoría principal, no
-solo "Más categorías" — ver "v32" abajo; también v31: "Método de envío" visible con texto guía antes
+solo "Más categorías"; también v31: "Método de envío" visible con texto guía antes
 de completar la dirección, y "Retiro en tienda" disponible sin importar la región/comuna de envío —
 pensado para que un familiar en Arica retire un pedido comprado desde otra ciudad; selección de
 método siempre manual, nunca preseleccionada; también v30: carrito y checkout
@@ -43,7 +55,8 @@ publicados y categorizados en 12 categorías (más subcategorías reales expuest
 v16), **75+ con fotos reales**. **Rediseño visual completo cyberpunk/gamer** (paleta cian/magenta,
 coherente con el POS que también se rediseñó esta sesión) reemplaza la paleta azul eléctrico
 anterior. Flow: `POST /payment/create` **verificado contra sandbox real** (no producción todavía).
-Chilexpress: **sigue en mock**, sin API key real. Cuentas de cliente reales (Supabase Auth,
+Chilexpress: **credenciales productivas reales activas** desde v26/v27 (ver SNAPSHOT del POS) —
+esta línea decía "sigue en mock" desde antes de esa sesión, ya no es cierto. Cuentas de cliente reales (Supabase Auth,
 `/cuenta/**`) funcionando. **Cumplimiento Ley 21.719**: brechas del Art. 14 ter cerradas (política
 v1.2), 14 quáter/quinquies/sexies documentados — lo que queda es operativo (ver "Pendiente" #4-6).
 **Correo transaccional con Resend integrado y probado con un envío real** — confirmación de pedido
@@ -54,6 +67,61 @@ envíos a clientes reales fallan en silencio hasta verificarlo (ver "Pendiente" 
 
 ## Stack
 Next.js 16 (App Router) · TypeScript · Tailwind v4 · `@supabase/supabase-js`.
+
+## Estado: qué está HECHO (v34 — despacho local sobre Google Maps + autocompletado — 01-09-2026)
+- **Reemplazado Nominatim/OSRM por Google Maps Platform** en `src/lib/distancia.ts`: Geocoding API
+  (dirección → coordenadas) + Distance Matrix API (ruta real). Se probó primero volver a
+  LocationIQ/OpenStreetMap (más barato, sin fricción de Google Cloud) pero se descartó: OSM no
+  tiene el número de casa exacto para varias calles de Arica — confirmado pidiendo la misma
+  dirección varias veces y recibiendo puntos distintos de la misma calle cada vez.
+- **3 bugs reales encontrados y corregidos en el camino**, todos con evidencia de producción:
+  1. La coordenada por defecto de la tienda (`TIENDA_LAT_POR_DEFECTO`/`TIENDA_LON_POR_DEFECTO`)
+     estaba mal por ~1,8 km — un origen equivocado corre TODAS las tarifas a la vez y es invisible
+     (los números salen plausibles, solo que mal). Corregida al valor ROOFTOP real de Google para
+     "San Rafael 896, Arica" (`-18.4463734, -70.2877686`).
+  2. Un resultado degradado (estimación por línea recta, cuando Distance Matrix no respondía)
+     quedaba **cacheado para siempre** en la instancia serverless — un fallo transitorio (rate
+     limit, timeout) condenaba esa dirección a mostrar "Distancia estimada" hasta que Vercel
+     reciclara la función. Ahora solo se cachea un resultado de ruta EXITOSO.
+  3. Al elegir una segunda sugerencia del autocompletado que Google no separa en calle/número, el
+     número de la elección ANTERIOR se quedaba pegado en el campo (nunca se limpiaba) —
+     `formulario-checkout.tsx` ahora siempre reemplaza el campo (vacío si no hay número nuevo).
+- **Escala de tarifas urbanas recalibrada** (`src/lib/tarifas-envio.ts`) con una referencia real
+  del dueño: Héctor Ruiz 280 (8,4 km reales) le costó $6.000 en InDrive — el tramo 7,51–9,5 km subió
+  de $4.500 a $5.800. El piso de 0–1,5 km se mantiene en $2.000 a pedido explícito. La fórmula de
+  periferia se corrió en la misma proporción para no generar un salto de precio en el límite urbano.
+- **Autocompletado de direcciones** (`src/lib/places.ts`, nuevo) — Places API (New): sugerencias
+  en vivo mientras se escribe la calle, restringidas DURO (`locationRestriction`, no `locationBias`
+  — probado a mano: con bias, "Buin" seguía apareciendo entre las sugerencias de "Linderos") a un
+  círculo de 50 km alrededor de la tienda. Al elegir una sugerencia se autocompleta calle/número, se
+  fija la comuna en Arica, y el `placeId` viaja en la cotización/pago para que el servidor pida la
+  distancia con coordenadas EXACTAS (Place Details → Distance Matrix directo, sin geocodificar el
+  texto) — nuevo campo `DireccionEnvio.placeId`, nuevas rutas `POST /api/autocompletar-direccion` y
+  `POST /api/detalle-direccion`. El servidor nunca confía en coordenadas del cliente, solo en el
+  placeId, que resuelve él mismo contra Google.
+- **3 llaves nuevas de Google Cloud** (`GOOGLE_GEOCODING_API_KEY`, `GOOGLE_DISTANCE_MATRIX_API_KEY`,
+  `GOOGLE_PLACES_API_KEY`), restringidas por API (no por referrer) — puestas en `.env.local` y en
+  Vercel Production con la CLI. Son APIs PAGADAS de Google Cloud (facturación habilitada).
+- Verificado en producción real (no solo local): Linderos 3736 → 0,67 km → $2.000 (antes: $14.000
+  por una distancia fantasma de 35,9 km); Héctor Ruiz 280 → 8,29 km → $5.800 (Google Maps real:
+  8,4 km). Flujo de autocompletado probado de punta a punta en el navegador.
+
+## Estado: qué está HECHO (v33 — sección Pedidos por Encargo — 01-09-2026)
+- Nueva sección `/pedidos-por-encargo`, separada del catálogo normal, para productos sincronizados
+  desde el POS con `productos_web.es_pedido_encargo=true` — se muestran y se pueden comprar SIN
+  exigir `stock_web` (a diferencia de `/productos`, que sí lo exige siempre): es dropshipping, el
+  dueño no mantiene stock propio, lo pide al proveedor recién al confirmarse el pedido.
+- `src/lib/encargos.ts` (nuevo): `listarEncargos()`/`obtenerEncargoPorSku()`, mismo criterio que
+  `catalogo.ts` pero sin el filtro de stock. Las funciones del catálogo normal (`buscarCatalogo`,
+  `listarCatalogo`, etc.) ganan `.eq('es_pedido_encargo', false)` para que un producto de Encargo
+  nunca aparezca mezclado ahí.
+- Checkout: no se permite mezclar ítems normales y de Encargo en un mismo pedido (fulfillment
+  distinto). `pedidos_web.tipo_pedido` (`NORMAL`/`ENCARGO`) nuevo, para que el panel "Pedidos Web"
+  del POS los distinga.
+- Header: "Encargos" a la derecha de "Más categorías" (se probó primero junto a "Todos los
+  productos", con emoji — se veía mal por la mezcla de alineación con el resto de links de texto
+  plano; corregido en la misma sesión).
+- Migración `supabase/18-pedidos-por-encargo.sql` aplicada en producción.
 
 ## Estado: qué está HECHO (v09-v11 — catálogo real, categorías, fotos, header)
 - **v09:** `productos_web.stock_umbral_web` (migración `supabase/04-stock-umbral-web.sql`, aplicada)
@@ -500,7 +568,25 @@ Next.js 16 (App Router) · TypeScript · Tailwind v4 · `@supabase/supabase-js`.
 - `docs/README-SUPABASE-WEB.md`, `docs/README-WEBHOOK-POS.md`: pasos manuales para crear el proyecto
   Supabase Web y configurar el webhook.
 
-## Pendiente (real, verificado al 31-08-2026 — no repetir lo ya hecho)
+## Pendiente (real, verificado al 01-09-2026 — no repetir lo ya hecho)
+
+**Despacho local / Google Maps — lo más reciente, v34:**
+0a. **Vigilar el costo de Google Cloud.** Geocoding, Distance Matrix y Places API (New) son APIs
+    PAGADAS — no hay tope automático configurado. Con el volumen de una tienda chica no debería
+    ser significativo, pero conviene revisar la facturación de Google Cloud pasado el primer mes y
+    considerar poner una alerta de presupuesto (`console.cloud.google.com/billing/budgets`) si no
+    existe ya.
+0b. **El autocompletado y el cálculo de distancia se probaron con curl y en el navegador local
+    (Chrome del entorno de desarrollo)**, incluyendo contra producción real — pero nunca con un
+    pago real de punta a punta (ver ítem 10 más abajo, sigue siendo el mismo pendiente de Flow).
+0c. **Escala de tarifas recalibrada con UNA sola referencia real** (Héctor Ruiz 280 / $6.000
+    InDrive) — si el dueño tiene más referencias de lo que le cuesta despachar a otras distancias,
+    vale la pena ajustar `TRAMOS_URBANOS`/`PERIFERIA_*` en `src/lib/tarifas-envio.ts` con más datos.
+0d. **Direcciones sin autocompletar (texto libre, sin elegir sugerencia) siguen geocodificando con
+    Google Geocoding solo** — más confiable que OpenStreetMap, pero no tiene el nivel de garantía
+    que da confirmar una sugerencia real del autocompletado. Si en el futuro se ven casos raros,
+    revisar esa dirección puntual antes de asumir que es un bug general (mismo criterio que ya
+    resolvió el caso "Linderos").
 
 **Notificaciones (correo/WhatsApp) — lo más reciente, v16:**
 1. **Verificar un dominio propio en Resend** (dashboard.resend.com, cuenta con
@@ -584,6 +670,11 @@ Next.js 16 (App Router) · TypeScript · Tailwind v4 · `@supabase/supabase-js`.
     ~~primera carga del catálogo~~, ~~sistema de cuentas de cliente~~, ~~confirmar SUPABASE_WEB_URL
     en el POS~~, ~~banners de categoría con placeholder~~ — todo esto ya no es pendiente, quedó
     resuelto en sesiones anteriores (ver versiones abajo).
+15. **`/pedidos-por-encargo` (v33) nunca se probó con una compra real de punta a punta** — se
+    verificó por código y con curl que el listado/ficha/checkout distinguen bien los productos de
+    Encargo, pero falta marcar un producto real como `es_pedido_encargo=true` desde el POS y
+    comprarlo de verdad en la tienda para confirmar el flujo completo (incluido el correo de
+    confirmación y el panel "Pedidos Web" del POS mostrando el tipo correcto).
 
 ## Cómo probar (mientras no haya Supabase Web real)
 - `npm run build`: compila TypeScript, corre el linter implícito, prerenderiza `/` (con manejo de
