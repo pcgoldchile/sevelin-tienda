@@ -33,23 +33,30 @@ export async function generateMetadata({ params }: PropsPagina): Promise<Metadat
   const producto = await obtenerProductoPorSku(sku).catch(() => null);
   if (!producto || producto.es_pedido_encargo) return {};
 
-  const descripcionPlana = producto.descripcion_web
-    ? recortarEnPalabra(textoPlanoDesdeHtml(producto.descripcion_web), 155)
-    : `Compra ${producto.nombre} en Sevelin, Arica — ${formatoCLP.format(producto.precio_web)}. Envíos a todo Chile, retiro en tienda.`;
+  // meta_titulo_web/meta_descripcion_web (opcionales, a mano o con el botón
+  // "Generar con IA" del modal de producto en el POS) tienen prioridad; sin
+  // ellos, se sigue armando uno automático como antes — ninguna ficha vieja
+  // pierde su SEO por no tener estos campos todavía.
+  const tituloSeo = producto.meta_titulo_web || producto.nombre;
+  const descripcionPlana = producto.meta_descripcion_web
+    ? producto.meta_descripcion_web
+    : producto.descripcion_web
+      ? recortarEnPalabra(textoPlanoDesdeHtml(producto.descripcion_web), 155)
+      : `Compra ${producto.nombre} en Sevelin, Arica — ${formatoCLP.format(producto.precio_web)}. Envíos a todo Chile, retiro en tienda.`;
   const imagen = producto.imagen_urls?.[0];
 
   return {
-    title: producto.nombre,
+    title: tituloSeo,
     description: descripcionPlana,
     alternates: { canonical: `/productos/${producto.sku}` },
     openGraph: {
-      title: producto.nombre,
+      title: tituloSeo,
       description: descripcionPlana,
       url: `/productos/${producto.sku}`,
       images: imagen ? [{ url: imagen, width: 1000, height: 1000, alt: producto.nombre }] : undefined,
     },
     twitter: {
-      title: producto.nombre,
+      title: tituloSeo,
       description: descripcionPlana,
       images: imagen ? [imagen] : undefined,
     },
@@ -148,7 +155,7 @@ export default async function FichaProducto({ params }: PropsPagina) {
       </nav>
 
       <div className="grid gap-10 lg:grid-cols-2">
-        <GaleriaProducto imagenes={producto.imagen_urls || []} nombre={producto.nombre} />
+        <GaleriaProducto imagenes={producto.imagen_urls || []} nombre={producto.nombre} categoria={producto.categoria} />
 
         <div className="flex flex-col gap-4">
           <EtiquetaProductoBadge etiqueta={producto.etiqueta_web} />

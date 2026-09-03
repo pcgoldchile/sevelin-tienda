@@ -21,6 +21,10 @@ const ORDEN_CATEGORIAS_PRINCIPALES = [
   "Audio",
   "Cables y Adaptadores",
   "Energía Portátil",
+  // Pedido explícito del dueño (03-09-2026): más visible, no escondida
+  // dentro de "Más categorías" — es un servicio real del negocio, no solo
+  // otro rubro de producto.
+  "Servicios Técnicos",
 ];
 
 export function Header({

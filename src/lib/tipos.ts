@@ -28,6 +28,12 @@ export interface ProductoWeb {
   // POS. Un producto con esto en true vive solo en /pedidos-por-encargo y
   // se puede comprar sin importar stock_web (ver src/lib/encargos.ts).
   es_pedido_encargo: boolean;
+  // SEO — título/meta-descripción propios para Google, distintos del
+  // nombre/descripcion_web que ve el cliente. NULL = generateMetadata()
+  // arma uno automático (ver productos/[sku]/page.tsx). Se llenan a mano o
+  // con el botón "Generar con IA" del modal de producto en el POS.
+  meta_titulo_web: string | null;
+  meta_descripcion_web: string | null;
   sincronizado_en: string;
 }
 
@@ -224,4 +230,7 @@ export interface ProductoPOS {
   etiqueta_web: EtiquetaProducto | null;
   // Pedidos por Encargo — ver sevelin-pos-oficial/sql/30-pedidos-por-encargo.sql.
   es_pedido_encargo: boolean;
+  // SEO con IA — ver sevelin-pos-oficial/sql/33-seo-ia.sql.
+  meta_titulo_web: string | null;
+  meta_descripcion_web: string | null;
 }

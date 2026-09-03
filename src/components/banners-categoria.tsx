@@ -71,10 +71,17 @@ export async function BannersCategoria() {
                   {foto ? (
                     <Image
                       src={foto}
-                      alt={c.etiqueta}
+                      alt={`${c.etiqueta} — accesorios y equipos disponibles en Sevelin, Arica`}
                       fill
                       className="object-contain transition-transform duration-500 group-hover:scale-110"
                       sizes="(min-width: 640px) 33vw, 100vw"
+                      // El hero (arriba) no tiene imagen — este banner es el
+                      // primer elemento visual grande de la portada, así que
+                      // el primero de los 3 es casi siempre el candidato a
+                      // LCP. `priority` salta el lazy-loading solo para ese
+                      // (los otros 2 siguen lazy — marcarlos todos diluye el
+                      // beneficio, ver docs de next/image).
+                      priority={i === 0}
                     />
                   ) : (
                     <div className="absolute inset-0 bg-surface-sunken" />

@@ -66,7 +66,11 @@ export function TarjetaProducto({ producto }: { producto: ProductoWeb }) {
         {producto.imagen_urls?.[0] ? (
           <Image
             src={producto.imagen_urls[0]}
-            alt={producto.nombre}
+            // Alt descriptivo real (nombre + categoría, sin inventar nada
+            // que no esté ya en el catálogo) — antes era solo el nombre.
+            // Ayuda a que Google Images entienda de qué es la foto, no solo
+            // el nombre del producto que ya lee en el texto de al lado.
+            alt={producto.categoria ? `${producto.nombre} — ${producto.categoria}, Sevelin Arica` : `${producto.nombre} — Sevelin Arica`}
             fill
             className="object-cover"
             sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"

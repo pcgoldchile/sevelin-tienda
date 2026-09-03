@@ -51,7 +51,7 @@ export default async function FichaEncargo({ params }: PropsPagina) {
       </nav>
 
       <div className="grid gap-10 lg:grid-cols-2">
-        <GaleriaProducto imagenes={producto.imagen_urls || []} nombre={producto.nombre} />
+        <GaleriaProducto imagenes={producto.imagen_urls || []} nombre={producto.nombre} categoria={producto.categoria} />
 
         <div className="flex flex-col gap-4">
           <EtiquetaProductoBadge etiqueta={producto.etiqueta_web} />

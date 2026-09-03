@@ -106,6 +106,8 @@ export async function POST(req: NextRequest) {
     stock_umbral_web: producto.stock_umbral_web ?? null,
     etiqueta_web: producto.etiqueta_web ?? null,
     es_pedido_encargo: !!producto.es_pedido_encargo,
+    meta_titulo_web: producto.meta_titulo_web || null,
+    meta_descripcion_web: producto.meta_descripcion_web || null,
     sincronizado_en: new Date().toISOString()
   };
 

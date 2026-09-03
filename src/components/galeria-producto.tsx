@@ -4,8 +4,19 @@ import Image from "next/image";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
-export function GaleriaProducto({ imagenes, nombre }: { imagenes: string[]; nombre: string }) {
+export function GaleriaProducto({
+  imagenes,
+  nombre,
+  categoria,
+}: {
+  imagenes: string[];
+  nombre: string;
+  // Opcional: arma un alt más descriptivo para Google Images sin inventar
+  // nada — solo la categoría real del catálogo, si el llamador la pasa.
+  categoria?: string | null;
+}) {
   const [activa, setActiva] = useState(0);
+  const altPrincipal = categoria ? `${nombre} — ${categoria}, Sevelin Arica` : `${nombre} — Sevelin Arica`;
 
   if (imagenes.length === 0) {
     return (
@@ -27,7 +38,7 @@ export function GaleriaProducto({ imagenes, nombre }: { imagenes: string[]; nomb
             transition={{ duration: 0.15 }}
             className="absolute inset-0"
           >
-            <Image src={imagenes[activa]} alt={nombre} fill className="object-cover" sizes="(min-width: 1024px) 50vw, 100vw" priority />
+            <Image src={imagenes[activa]} alt={altPrincipal} fill className="object-cover" sizes="(min-width: 1024px) 50vw, 100vw" priority />
           </motion.div>
         </AnimatePresence>
       </div>
