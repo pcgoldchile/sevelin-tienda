@@ -1,22 +1,25 @@
 /**
  * Tarifas de despacho a domicilio según la distancia REAL por carretera
- * desde San Rafael 896, Arica (ver src/lib/distancia.ts).
+ * desde la tienda (ver src/lib/distancia.ts — hoy Avenida Linderos 3736,
+ * mientras el dueño no se muda a San Rafael 896).
  *
  * Reemplaza la tarifa plana única de la v6: el negocio necesita que un
  * despacho a la vuelta de la esquina y uno al valle de Azapa no cuesten lo
  * mismo. Los tramos y la fórmula los definió el dueño.
  *
- * ESCALA RECALIBRADA (31-08-2026): el dueño usó Héctor Ruiz 280 (8,4 km
- * reales por carretera desde la tienda, confirmado en Google Maps) como
- * referencia — un despacho ahí le costó $6.000 en InDrive. Con la escala
- * vieja esos 8,4 km caían en el tramo de $4.500, muy por debajo de lo que
- * cuesta en la práctica moverse esa distancia en Arica. Se subió toda la
- * escala urbana proporcionalmente (el tramo 7,51–9,5 km, donde cae ese
- * caso, quedó en $5.800) y el piso de 0–1,5 km (al lado de la tienda) se
- * mantiene en $2.000 a pedido explícito del dueño — no vale la pena cobrar
- * más por una vuelta a la manzana. La fórmula de periferia se corrió en la
- * misma proporción para no generar un salto brusco justo en el límite
- * urbano (ver PERIFERIA_BASE).
+ * ESCALA RECALIBRADA DE NUEVO (02-09-2026): la escala anterior (31-08-2026)
+ * tenía tramos que NO eran múltiplos limpios de $500 (2.800 / 4.300 / 5.800)
+ * — pedido explícito del dueño: todo precio debe caer en un múltiplo de
+ * $500, nunca un número raro tipo $2.750. Dos anclas reales que dio:
+ * 1) un viaje corto (~2,5 km) debe quedar en $3.000 — InDrive cobra desde
+ *    $2.490 para ese tramo, $3.000 deja margen sin espantar al conductor;
+ * 2) Héctor Ruiz 280 (8,4 km, mismo caso ya usado en la calibración
+ *    anterior) debe seguir en $6.000. Los tramos por km NO se tocaron (ya
+ *    estaban documentados contra barrios reales de Arica) — solo se
+ *    recalcularon los costos para que sean limpios y toquen esas dos
+ *    anclas exactas; los saltos entre tramos no son todos iguales (a veces
+ *    $500, a veces $1.000) porque los tramos de distancia tampoco lo son,
+ *    pero cada valor en la tabla es SIEMPRE un múltiplo de $500.
  */
 
 /** Hasta acá se considera radio urbano de Arica. */
@@ -30,19 +33,21 @@ export const LIMITE_URBANO_KM = 9.5;
  */
 export const TRAMOS_URBANOS: { hasta: number; costo: number; ejemplo?: string }[] = [
   { hasta: 1.5, costo: 2000 },
-  { hasta: 2.5, costo: 2800 },
-  { hasta: 4.0, costo: 3600, ejemplo: 'Diego Portales / Terminal' },
-  { hasta: 5.5, costo: 4300, ejemplo: 'Saucache UTA / Agro / Centro' },
+  { hasta: 2.5, costo: 3000 },
+  { hasta: 4.0, costo: 3500, ejemplo: 'Diego Portales / Terminal' },
+  { hasta: 5.5, costo: 4500, ejemplo: 'Saucache UTA / Agro / Centro' },
   { hasta: 7.5, costo: 5000, ejemplo: 'Sector Norte / Silva Henríquez' },
-  { hasta: 9.5, costo: 5800, ejemplo: 'Las Machas / Costanera Sur · ej. Héctor Ruiz (8,4 km)' },
+  { hasta: 9.5, costo: 6000, ejemplo: 'Las Machas / Costanera Sur · ej. Héctor Ruiz (8,4 km)' },
 ];
 
 /** Base y escalón de la fórmula de valles/periferia (Azapa, Lluta, etc.).
- *  BASE continúa exactamente donde termina el último tramo urbano (5.800),
- *  para que no haya una caída de precio justo al cruzar los 9,5 km. */
-export const PERIFERIA_BASE = 5800;
+ *  BASE continúa exactamente donde termina el último tramo urbano (6.000),
+ *  para que no haya una caída de precio justo al cruzar los 9,5 km. El
+ *  escalón quedó en $500 limpios (antes $650) por el mismo pedido de
+ *  precios siempre múltiplos de $500. */
+export const PERIFERIA_BASE = 6000;
 export const PERIFERIA_ESCALON_KM = 1.5;
-export const PERIFERIA_ESCALON_COSTO = 650;
+export const PERIFERIA_ESCALON_COSTO = 500;
 
 export interface TarifaPorDistancia {
   costo: number;

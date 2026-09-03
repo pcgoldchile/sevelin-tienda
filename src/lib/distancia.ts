@@ -49,7 +49,12 @@ import { obtenerDetalleLugar } from './places';
  */
 
 /**
- * San Rafael 896, Arica — origen de todos los despachos.
+ * Origen de todos los despachos — HOY es "Avenida Linderos 3736, Arica"
+ * (02-09-2026): el dueño todavía no se muda al local de San Rafael 896,
+ * está operando desde Linderos mientras tanto. Cuando se mude, este valor
+ * y `TIENDA_LAT`/`TIENDA_LON` en Vercel vuelven a San Rafael 896 (ver ese
+ * historial más abajo — NO se le cambia el nombre a la constante ni se
+ * borra el registro, solo se actualiza el valor).
  *
  * NO se codifican coordenadas a mano. Se resuelven geocodificando la
  * propia dirección de la tienda con el MISMO servicio que las
@@ -63,7 +68,7 @@ import { obtenerDetalleLugar } from './places';
  * en cada despacho. Resolver origen y destino con el mismo geocodificador
  * también evita que un sesgo del servicio afecte solo a un extremo.
  */
-export const DIRECCION_TIENDA = 'San Rafael 896, Arica';
+export const DIRECCION_TIENDA = 'Avenida Linderos 3736, Arica';
 
 /**
  * Coordenadas ROOFTOP de Google Geocoding para "San Rafael 896, Arica,

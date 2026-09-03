@@ -1,3 +1,4 @@
+import { DIRECCION_TIENDA } from './distancia';
 import { formatoCLP } from './formato';
 import type { PedidoWeb } from './tipos';
 
@@ -48,7 +49,7 @@ export function correoConfirmacionPedido(pedido: PedidoWeb): { subject: string; 
   const nombre = pedido.cliente_nombre || 'Hola';
   const filas = pedido.items.map((it) => filaItem(it.nombre, it.cantidad, it.precio_web * it.cantidad)).join('');
   const metodo = pedido.metodo_envio === 'RETIRO'
-    ? 'Retiro en tienda (San Rafael 896, Arica)'
+    ? `Retiro en tienda (${DIRECCION_TIENDA})`
     : pedido.metodo_envio === 'LOCAL'
       ? `Despacho a domicilio en Arica — ${pedido.direccion_envio.calle} ${pedido.direccion_envio.numero}, ${pedido.direccion_envio.comuna}`
       : `Envío por Chilexpress — ${pedido.direccion_envio.calle} ${pedido.direccion_envio.numero}, ${pedido.direccion_envio.comuna}`;

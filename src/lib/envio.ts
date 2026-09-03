@@ -1,7 +1,7 @@
 import { obtenerProductoPorSku } from './catalogo';
 import { chilexpressHabilitado, buscarCountyCodePorComuna, cotizarTarifasChilexpress } from './chilexpress';
 import { CODIGO_REGION_CHILEXPRESS } from './chilexpress-regiones';
-import { distanciaDesdePlaceId, distanciaDesdeTienda, distanciaValle, esValleValido, VALLES } from './distancia';
+import { DIRECCION_TIENDA, distanciaDesdePlaceId, distanciaDesdeTienda, distanciaValle, esValleValido, VALLES } from './distancia';
 import { estadoHorario } from './horarios';
 import { buscarCodigoCiudadDestino, cotizarTarifaStarken, starkenHabilitado } from './starken';
 import { tarifaPorDistancia } from './tarifas-envio';
@@ -278,7 +278,7 @@ function opcionRetiro(): OpcionEnvio {
   return {
     metodo: 'RETIRO',
     costo: 0,
-    detalle: 'Retiro en tienda (San Rafael 896, Arica)',
+    detalle: `Retiro en tienda (${DIRECCION_TIENDA})`,
     aviso: estadoHorario().avisoRetiro,
   };
 }
