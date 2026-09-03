@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { Share2, Check } from "lucide-react";
 import { useCarrito } from "@/context/carrito-context";
 import { useToast } from "@/context/toast-context";
 import { formatoStock } from "@/lib/formato";
@@ -12,6 +13,35 @@ export function AccionesProducto({ producto }: { producto: ProductoWeb }) {
   const { mostrarToast } = useToast();
   const [cantidad, setCantidad] = useState(1);
   const [agregado, setAgregado] = useState(false);
+  const [enlaceCopiado, setEnlaceCopiado] = useState(false);
+
+  // Pedido explícito: cada ficha (producto o servicio) necesita un botón
+  // de compartir visible, no escondido en un menú. Usa el share nativo
+  // del celular (WhatsApp/Instagram salen ahí directo) cuando existe, y
+  // cae a copiar el link con feedback en el propio botón si no —
+  // funciona igual para productos normales y Pedidos por Encargo, cada
+  // uno con su propia ruta real.
+  async function compartir() {
+    const ruta = producto.es_pedido_encargo ? "/pedidos-por-encargo" : "/productos";
+    const url = `${window.location.origin}${ruta}/${producto.sku}`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: producto.nombre, url });
+      } catch {
+        // El usuario cerró el panel de compartir sin elegir nada — no es un error.
+      }
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(url);
+      setEnlaceCopiado(true);
+      setTimeout(() => setEnlaceCopiado(false), 2000);
+    } catch {
+      // Sin permiso de portapapeles (poco común) — no hay nada más que ofrecer acá.
+    }
+  }
   // Un producto de Pedidos por Encargo no tiene stock propio a propósito
   // (se pide al proveedor recién al confirmarse el pedido) — el tope de
   // cantidad y el aviso de stock no aplican acá.
@@ -71,6 +101,22 @@ export function AccionesProducto({ producto }: { producto: ProductoWeb }) {
       >
         {agregado ? "¡Agregado! ✓" : "Agregar al carrito"}
       </motion.button>
+
+      <button
+        type="button"
+        onClick={compartir}
+        className="flex w-full items-center justify-center gap-2 rounded-full border border-primary/30 px-6 py-2.5 text-sm font-medium text-primary transition-colors hover:bg-primary/10"
+      >
+        {enlaceCopiado ? (
+          <>
+            <Check className="h-4 w-4" /> ¡Enlace copiado!
+          </>
+        ) : (
+          <>
+            <Share2 className="h-4 w-4" /> ¿Te interesa? Compártelo
+          </>
+        )}
+      </button>
     </div>
   );
 }
