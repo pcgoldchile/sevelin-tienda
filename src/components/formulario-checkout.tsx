@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type FormEvent, type FocusEvent } from "re
 import Image from "next/image";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
+import { NeonSpinner } from "@/components/neon-spinner";
 import { formatoCLP } from "@/lib/formato";
 import { useCarrito } from "@/context/carrito-context";
 import { useSesion } from "@/context/sesion-context";
@@ -427,10 +428,10 @@ export function FormularioCheckout() {
             <span className="tabular-nums">{formatoCLP.format(subtotalSeleccionado)}</span>
           </div>
           <div className="flex flex-col gap-0.5">
-            {/* El detalle (ej. "Retiro en tienda (San Rafael 896, Arica)")
+            {/* El detalle (ej. "Retiro en tienda (Avenida Linderos 3736, Arica)")
                 va en su propia línea, no entre paréntesis junto al precio —
                 pegado ahí se leía como una sola frase confusa
-                ("Envío (Retiro en tienda (San Rafael 896, Arica)) Gratis"). */}
+                ("Envío (Retiro en tienda (Avenida Linderos 3736, Arica)) Gratis"). */}
             <div className="flex justify-between text-ink-soft">
               <span>Envío</span>
               <span className="tabular-nums">
@@ -681,11 +682,24 @@ export function FormularioCheckout() {
 
           {/* Sin botón: el envío se recalcula solo apenas la dirección está
               completa (pedido explícito del dueño), y de nuevo cada vez que
-              cambia la dirección o las cantidades seleccionadas. Este texto
-              es el único indicio de que algo está pasando en segundo plano. */}
-          {calculandoEnvio && (
-            <p className="text-xs text-ink-faint">Calculando el envío…</p>
-          )}
+              cambia la dirección o las cantidades seleccionadas. El
+              spinner neón (mismo look que el resto del sitio, ver
+              globals.css) es el indicio de que algo está pasando en
+              segundo plano — antes era solo texto plano, sin ninguna
+              pista visual de carga. */}
+          <AnimatePresence>
+            {calculandoEnvio && (
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="flex items-center gap-2 text-xs text-ink-faint"
+              >
+                <NeonSpinner />
+                Calculando el envío…
+              </motion.p>
+            )}
+          </AnimatePresence>
 
           <AnimatePresence>
             {opciones && opciones.length > 0 && (
