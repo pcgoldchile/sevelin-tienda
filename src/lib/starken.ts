@@ -39,9 +39,15 @@ const STARKEN_RUT_QA_DEFECTO = '76211240';
 const STARKEN_CLAVE_QA_DEFECTO = 'key';
 
 export function starkenHabilitado(): boolean {
-  // Con las credenciales QA de la documentación siempre hay algo que
-  // probar — "deshabilitado" acá solo significa que alguien las borró a
-  // propósito (STARKEN_RUT='' explícito), no que falten sin más.
+  // PAUSADO a pedido explícito del dueño (02-09-2026): las credenciales que
+  // hay hoy en Vercel siguen siendo las de prueba QA (ver
+  // STARKEN_RUT_QA_DEFECTO arriba), no las reales de producción — no debe
+  // ofrecerse a un cliente real hasta que Starken entregue las suyas. Antes
+  // esta función solo miraba si RUT/CLAVE estaban vacíos a propósito, y con
+  // las QA de la documentación siempre daba "habilitado". Ahora exige un
+  // opt-in explícito: reactivar poniendo STARKEN_HABILITADO=true en Vercel
+  // el mismo día que se carguen las credenciales reales.
+  if (process.env.STARKEN_HABILITADO !== 'true') return false;
   return process.env.STARKEN_RUT !== '' && process.env.STARKEN_CLAVE !== '';
 }
 

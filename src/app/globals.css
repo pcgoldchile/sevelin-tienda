@@ -172,6 +172,35 @@ h4 {
   z-index: 2;
 }
 
+/* Anillo de carga neón (ver neon-spinner.tsx) — mismo conic-gradient +
+   `--angulo` que .panel-hud, enmascarado a un anillo delgado en vez de un
+   borde de tarjeta. El `filter: drop-shadow` (no box-shadow) es a
+   propósito: box-shadow no sigue la forma del mask, drop-shadow sí. */
+.spinner-neon {
+  --angulo: 0deg;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: conic-gradient(
+    from var(--angulo, 0deg),
+    transparent 0deg,
+    var(--color-primary) 90deg,
+    var(--color-accent) 180deg,
+    transparent 270deg
+  );
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2.5px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2.5px));
+  animation: borde-neon-giro 0.85s linear infinite;
+  filter: drop-shadow(0 0 3px var(--color-primary)) drop-shadow(0 0 7px color-mix(in oklab, var(--color-accent) 55%, transparent));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner-neon {
+    animation: none;
+    opacity: 0.85;
+  }
+}
+
 .texto-glow-primary {
   text-shadow: 0 0 12px color-mix(in oklab, var(--color-primary) 65%, transparent), 0 0 32px color-mix(in oklab, var(--color-primary) 35%, transparent);
 }
@@ -188,4 +217,28 @@ h4 {
   font-weight: 700;
   letter-spacing: 0.02em;
   font-variant-numeric: tabular-nums;
+}
+
+/* ========== FIESTAS PATRIAS (temporal — ver src/lib/tema-estacional.ts) ==========
+   Apagar el tema: FIESTAS_PATRIAS_ACTIVO = false en ese archivo. Este bloque
+   se puede borrar entero el día que se retire el componente para siempre;
+   mientras el flag exista, se queda (no hace daño estar sin usar). */
+.banderin-fiestas-patrias {
+  display: inline-block;
+  width: 13px;
+  height: 17px;
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  transform-origin: 50% 0%;
+  animation: banderin-mecer 2.6s var(--ease-in-out, cubic-bezier(0.77, 0, 0.175, 1)) infinite alternate;
+  animation-delay: var(--retraso, 0s);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+@keyframes banderin-mecer {
+  from { transform: rotate(-4deg); }
+  to { transform: rotate(4deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .banderin-fiestas-patrias { animation: none; }
 }

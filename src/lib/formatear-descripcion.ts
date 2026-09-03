@@ -22,6 +22,11 @@ import { escaparParaSanitizar } from './escapar-html';
  * REGLAS (pensadas para lo que hay hoy en el catálogo, no genéricas)
  *   - Un bloque de una sola línea, corto, que termina en ":" → título de
  *     sección (h3). Ej: "✨ Características principales:".
+ *   - Un bloque de una sola línea que empieza con "### " (estilo Markdown,
+ *     el prompt oficial de fichas de producto genera "### ✨ Características
+ *     principales" / "### ⚠️ Importante") → también título de sección, se
+ *     quitan los "#" del texto. Sin esta regla esa línea quedaba como texto
+ *     plano roto ("### ✨ ...") en vez de convertirse en <h3>.
  *   - Un bloque donde TODAS las líneas empiezan con una viñeta conocida
  *     (✅ ✔ ✓ ☑ • - * o "1.") → lista. Se quita la viñeta del texto: el
  *     diseño pone su propio ícono, consistente entre productos aunque el
@@ -49,6 +54,11 @@ function quitarVineta(linea: string): string | null {
  *  que termine en ":" (como el cierre de un párrafo largo) no debe
  *  convertirse en encabezado. */
 const LARGO_MAXIMO_TITULO = 100;
+
+/** "### Título" (1 a 6 "#", con o sin espacio después) — mismo estilo que
+ *  usa el prompt oficial de fichas para "### ✨ Características
+ *  principales" y "### ⚠️ Importante". */
+const PATRON_TITULO_MARKDOWN = /^#{1,6}\s*(.+)$/;
 
 /**
  * Énfasis MUY limitado dentro de una línea: `**negrita**` y
@@ -119,8 +129,13 @@ export function formatearDescripcionPlana(texto: string): string {
 
     cerrarLista();
 
-    const esTitulo = lineas.length === 1 && lineas[0].length <= LARGO_MAXIMO_TITULO && /[:：]$/.test(lineas[0]);
-    if (esTitulo) {
+    const tituloMarkdown = lineas.length === 1 ? lineas[0].match(PATRON_TITULO_MARKDOWN) : null;
+    const esTituloConDosPuntos = lineas.length === 1 && lineas[0].length <= LARGO_MAXIMO_TITULO && /[:：]$/.test(lineas[0]);
+    if (tituloMarkdown && tituloMarkdown[1].length <= LARGO_MAXIMO_TITULO) {
+      html += `<h3>${conEnfasis(tituloMarkdown[1].trim())}</h3>`;
+      continue;
+    }
+    if (esTituloConDosPuntos) {
       html += `<h3>${conEnfasis(lineas[0])}</h3>`;
       continue;
     }

@@ -8,6 +8,7 @@ import { ToastProvider } from "@/context/toast-context";
 import { SesionProvider } from "@/context/sesion-context";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
+import { BannerFiestasPatrias } from "@/components/banner-fiestas-patrias";
 import { WhatsappFlotante } from "@/components/whatsapp-flotante";
 import { FondoCinematico } from "@/components/fx/fondo-cinematico";
 import { VisitTracker } from "@/components/visit-tracker";
@@ -101,6 +102,10 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           <SesionProvider>
             <ToastProvider>
               <CarritoProvider>
+                {/* Antes del Header a propósito — no es sticky, así que se
+                    desplaza fuera de vista con el primer scroll en vez de
+                    competir por espacio fijo arriba de la pantalla. */}
+                <BannerFiestasPatrias />
                 <Header categorias={categorias} arbolCategorias={arbolCategorias} />
                 <div id="contenido">{children}</div>
                 <Footer />
