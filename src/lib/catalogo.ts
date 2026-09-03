@@ -229,6 +229,53 @@ export async function productoMasBaratoPorCategoria(
   return porCategoria;
 }
 
+/**
+ * Otros productos de la MISMA categoría, para "También te puede
+ * interesar" en la ficha de producto (ver productos/[sku]/page.tsx).
+ * No es solo UX: son links internos que Google sigue para descubrir e
+ * indexar el resto del catálogo — antes una ficha de producto no
+ * enlazaba a ninguna otra.
+ *
+ * Prioriza la MISMA subcategoría cuando el producto tiene una (más
+ * relevante para quien está mirando esa ficha); si no alcanza el
+ * `limite`, completa con el resto de la categoría. Sin categoría no hay
+ * "relacionados" que armar — devuelve vacío en vez de traer productos al
+ * azar que no tendrían ninguna relación real.
+ */
+export async function productosRelacionados(
+  producto: Pick<ProductoWeb, 'id' | 'categoria' | 'subcategoria'>,
+  limite = 4
+): Promise<ProductoWeb[]> {
+  if (!producto.categoria) return [];
+
+  const base = () =>
+    supabaseWeb
+      .from('productos_web')
+      .select('*')
+      .eq('publicado_web', true)
+      .eq('es_pedido_encargo', false)
+      .gt('stock_web', 0)
+      .eq('categoria', producto.categoria as string)
+      .neq('id', producto.id);
+
+  let resultado: ProductoWeb[] = [];
+
+  if (producto.subcategoria) {
+    const { data, error } = await base().eq('subcategoria', producto.subcategoria).order('nombre').limit(limite);
+    if (!error) resultado = data || [];
+  }
+
+  if (resultado.length < limite) {
+    const yaIncluidos = resultado.map((p) => p.id);
+    let query = base().order('nombre').limit(limite - resultado.length);
+    if (yaIncluidos.length > 0) query = query.not('id', 'in', `(${yaIncluidos.join(',')})`);
+    const { data, error } = await query;
+    if (!error && data) resultado = [...resultado, ...data];
+  }
+
+  return resultado;
+}
+
 /** Catálogo publicado filtrado por categoría y/o texto libre, para /productos. */
 export async function buscarCatalogo(filtros: {
   categoria?: string;

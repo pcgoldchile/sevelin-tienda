@@ -2,12 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { after } from "next/server";
-import { obtenerProductoPorSku } from "@/lib/catalogo";
+import { obtenerProductoPorSku, productosRelacionados } from "@/lib/catalogo";
 import { formatoCLP } from "@/lib/formato";
 import { sanitizarDescripcionHtml } from "@/lib/sanitizar-html";
 import { textoPlanoDesdeHtml, recortarEnPalabra } from "@/lib/texto-plano";
 import { registrarVistaProducto } from "@/lib/eventos-web";
 import { GaleriaProducto } from "@/components/galeria-producto";
+import { TarjetaProducto } from "@/components/tarjeta-producto";
 import { AccionesProducto } from "@/components/acciones-producto";
 import { EtiquetaProductoBadge } from "@/components/etiqueta-producto-badge";
 import { InfoEnvioProducto } from "@/components/info-envio-producto";
@@ -83,6 +84,10 @@ export default async function FichaProducto({ params }: PropsPagina) {
   // criterio de "sección aparte" que el resto del catálogo (ver
   // src/app/pedidos-por-encargo/[sku]/page.tsx).
   if (!producto || producto.es_pedido_encargo) notFound();
+
+  // Relacionados: mismo criterio de resiliencia que el resto de la página
+  // — si falla, la ficha se muestra igual, solo sin esa sección.
+  const relacionados = await productosRelacionados(producto).catch(() => []);
 
   // Se registra DESPUÉS de mandar la respuesta (after()), no retrasa la
   // ficha — el POS la lee para el panel "Más buscados / más vistos".
@@ -215,6 +220,23 @@ export default async function FichaProducto({ params }: PropsPagina) {
           <InfoEnvioProducto />
         </div>
       </div>
+
+      {/* "También te puede interesar": antes ninguna ficha de producto
+          enlazaba a otra — sin links internos, Google tiene que descubrir
+          el resto del catálogo solo por el sitemap, más lento que
+          seguir enlaces reales entre fichas relacionadas. */}
+      {relacionados.length > 0 && (
+        <section className="mt-16">
+          <h2 className="font-display mb-5 text-xl font-bold uppercase tracking-tight text-ink">
+            También te puede interesar
+          </h2>
+          <div className="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4">
+            {relacionados.map((p) => (
+              <TarjetaProducto key={p.id} producto={p} />
+            ))}
+          </div>
+        </section>
+      )}
     </main>
   );
 }

@@ -1,7 +1,9 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { after } from "next/server";
 import { buscarCatalogo, esOrdenCatalogoValido, listarCategorias, listarSubcategorias } from "@/lib/catalogo";
 import { registrarBusqueda } from "@/lib/eventos-web";
+import { DESCRIPCIONES_CATEGORIA } from "@/lib/descripciones-categoria";
 import { TarjetaProducto } from "@/components/tarjeta-producto";
 import { SelectorOrden } from "@/components/selector-orden";
 import { ScrollReveal } from "@/components/fx/scroll-reveal";
@@ -10,6 +12,28 @@ export const revalidate = 60;
 
 interface PropsPagina {
   searchParams: Promise<{ categoria?: string; subcategoria?: string; q?: string; orden?: string }>;
+}
+
+/**
+ * Antes /productos?categoria=X compartía el title/description genérico
+ * del layout raíz para CUALQUIER categoría — mismo hallazgo que ya se
+ * corrigió para las fichas de producto (ver productos/[sku]/page.tsx),
+ * aplicado acá. Sin categoría (o con `q`/búsqueda), se deja vacío para
+ * heredar el meta del layout, como siempre.
+ */
+export async function generateMetadata({ searchParams }: PropsPagina): Promise<Metadata> {
+  const { categoria, subcategoria } = await searchParams;
+  if (!categoria) return {};
+
+  const titulo = subcategoria ? `${subcategoria} — ${categoria}` : categoria;
+  const descripcion = DESCRIPCIONES_CATEGORIA[categoria] || `${titulo} en Sevelin, Arica — despacho a todo Chile.`;
+
+  return {
+    title: titulo,
+    description: descripcion,
+    alternates: { canonical: `/productos?categoria=${encodeURIComponent(categoria)}` },
+    openGraph: { title: titulo, description: descripcion },
+  };
 }
 
 export default async function Productos({ searchParams }: PropsPagina) {
@@ -48,6 +72,15 @@ export default async function Productos({ searchParams }: PropsPagina) {
       <p className="mt-1 text-sm text-ink-soft">
         {productos.length} producto{productos.length === 1 ? "" : "s"} disponible{productos.length === 1 ? "" : "s"}
       </p>
+
+      {/* Párrafo real de la categoría (no solo el grid de productos) — ver
+          src/lib/descripciones-categoria.ts. Solo aparece filtrando por
+          categoría, nunca en "Todos los productos" ni en una búsqueda. */}
+      {categoria && DESCRIPCIONES_CATEGORIA[categoria] && (
+        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-ink-soft">
+          {DESCRIPCIONES_CATEGORIA[categoria]}
+        </p>
+      )}
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-wrap gap-2">
