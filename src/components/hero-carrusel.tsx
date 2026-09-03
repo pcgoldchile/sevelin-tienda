@@ -58,9 +58,9 @@ export function HeroCarrusel() {
         <AnimatePresence mode="wait">
           <motion.div
             key={indice}
-            initial={{ opacity: 0, y: 16, filter: "blur(4px)" }}
-            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-            exit={{ opacity: 0, y: -16, filter: "blur(4px)" }}
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -16 }}
             transition={{ duration: 0.5, ease: EASE_OUT }}
             className="flex flex-col items-start gap-4"
           >

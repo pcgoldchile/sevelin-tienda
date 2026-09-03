@@ -265,11 +265,19 @@ async function cotizarViaStarken(
   return { metodo: 'STARKEN', costo: tarifa.costo, detalle: `Starken · ${tarifa.tipoEntrega === 'DOMICILIO' ? 'A domicilio' : 'Retiro en agencia'}` };
 }
 
-/** Chilexpress devuelve el nombre del servicio en mayúsculas fijas
- * ("BASICO", "EXPRESS", "PRIORITARIO") — se pasa a Título para que no
- * desentone con el resto de los textos del checkout. */
+/** Chilexpress devuelve el nombre del servicio en mayúsculas fijas y sin
+ * tildes ("BASICO", "EXPRESS", "PRIORITARIO") — se mapean los nombres
+ * conocidos a su forma correcta en español; cualquier valor nuevo que
+ * Chilexpress agregue cae al Título genérico (sin tildes) en vez de romper. */
+const NOMBRES_SERVICIO_CHILEXPRESS: Record<string, string> = {
+  basico: 'Básico',
+  express: 'Express',
+  prioritario: 'Prioritario',
+};
+
 function formatearServicio(servicio: string): string {
   const limpio = servicio.trim().toLowerCase();
+  if (NOMBRES_SERVICIO_CHILEXPRESS[limpio]) return NOMBRES_SERVICIO_CHILEXPRESS[limpio];
   return limpio.charAt(0).toUpperCase() + limpio.slice(1);
 }
 
