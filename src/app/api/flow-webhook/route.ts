@@ -8,7 +8,7 @@ import {
   marcarPedidoPagado,
   obtenerPedidoPorNumero,
 } from '@/lib/pedidos';
-import { correoAlertaStockSinDespacho, correoConfirmacionPedido } from '@/lib/correo-pedido';
+import { correoAlertaPedidoExpiradoPagado, correoAlertaStockSinDespacho, correoConfirmacionPedido } from '@/lib/correo-pedido';
 import { enviarCorreo } from '@/lib/resend';
 
 /**
@@ -77,6 +77,19 @@ export async function POST(req: NextRequest) {
 
   if (!pedido) {
     const yaExistente = await obtenerPedidoPorNumero(numeroPedido).catch(() => null);
+
+    // Caso raro pero con dinero real de por medio: el cron de limpieza
+    // (ver /api/cron/expirar-pedidos) ya había marcado este pedido EXPIRADO
+    // por llevar 24h+ sin pago, y Flow recién ahora confirma que SÍ se
+    // pagó. No se resuelve solo — se avisa, mismo criterio que la alerta
+    // de sobreventa un poco más abajo.
+    if (yaExistente?.estado === 'EXPIRADO') {
+      const { subject, html } = correoAlertaPedidoExpiradoPagado(yaExistente);
+      await enviarCorreo({ to: obtenerCorreoAlertaStock(), subject, html }).catch((err) => {
+        console.error('[flow-webhook] No se pudo enviar la alerta de pedido expirado con pago:', err instanceof Error ? err.message : err);
+      });
+    }
+
     return NextResponse.json({
       ok: true,
       motivo: yaExistente ? 'ya_procesado' : 'pedido_no_encontrado',

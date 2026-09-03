@@ -115,6 +115,32 @@ export function correoAlertaStockSinDespacho(pedido: PedidoWeb, detalleTecnico: 
   };
 }
 
+/** Alerta interna: Flow confirmó un pago para un pedido que el cron de
+ * limpieza (expirarPedidosCreados, ver GET /api/cron/expirar-pedidos) ya
+ * había marcado EXPIRADO por llevar 24h+ sin confirmación — carrera muy
+ * rara (Flow demoró más de 24h en avisar, o el cliente completó el pago
+ * fuera de esa ventana) pero con dinero real de por medio: nunca se
+ * resuelve sola (mismo criterio que correoAlertaStockSinDespacho, arriba),
+ * queda avisada para que el dueño decida a mano. */
+export function correoAlertaPedidoExpiradoPagado(pedido: PedidoWeb): { subject: string; html: string } {
+  const filas = pedido.items.map((it) => filaItem(it.nombre, it.cantidad, it.precio_web * it.cantidad)).join('');
+  const contenido = `
+    <p style="margin:0 0 16px;font-size:14px;color:${TEXTO_SUAVE};">
+      El pedido <strong style="color:${TEXTO};">${pedido.numero_pedido}</strong> se pagó de verdad en Flow
+      (${formatoCLP.format(pedido.total)}), pero el sistema ya lo había marcado EXPIRADO por llevar más de
+      24 horas sin confirmación de pago. El dinero SÍ se cobró — nadie reembolsó ni despachó nada
+      automáticamente. Hay que revisarlo a mano: confirmar el pago en el panel de Flow y decidir si se
+      despacha el pedido (cambiando el estado en Pedidos Web) o se reembolsa.
+    </p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">${filas}</table>
+    <p style="margin:0;font-size:13px;color:${TEXTO};"><strong>Cliente:</strong> ${pedido.cliente_nombre || ''} ${pedido.cliente_apellido || ''} — ${pedido.cliente_email || 'sin correo'} — ${pedido.cliente_telefono || 'sin teléfono'}</p>
+  `;
+  return {
+    subject: `⚠️ Pago tardío en pedido expirado — ${pedido.numero_pedido}`,
+    html: envoltorio('Revisar manualmente: pago llegó tarde', contenido),
+  };
+}
+
 /** Entrega de pedido — se envía cuando el POS marca el pedido como
  * ENTREGADO (Página Web → Pedidos Web), vía POST /api/pos/notificar-entrega
  * (mismo patrón que correoCancelacionPedido: el POS no tiene la API key de

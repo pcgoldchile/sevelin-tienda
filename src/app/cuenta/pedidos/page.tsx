@@ -12,6 +12,7 @@ const ESTILO_ESTADO: Record<string, string> = {
   ENTREGADO: "bg-success text-white",
   CANCELADO: "bg-red-100 text-red-700",
   FALLIDO: "bg-red-100 text-red-700",
+  EXPIRADO: "bg-surface-sunken text-ink-soft",
 };
 
 export default async function MisPedidos() {

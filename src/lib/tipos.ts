@@ -142,6 +142,11 @@ export type EstadoPedido =
   | 'ENTREGADO'
   | 'CANCELADO'
   | 'FALLIDO'
+  // 24h+ en CREADO sin que Flow avisara pago ni fallo — el cliente empezó
+  // el checkout y nunca volvió. Ver expirarPedidosCreados() en pedidos.ts
+  // y GET /api/cron/expirar-pedidos. No toca stock ni dinero (en CREADO
+  // nunca se tocó ninguno de los dos).
+  | 'EXPIRADO'
   // El pago se confirmó en Flow pero el ajuste de stock en el POS falló
   // (STOCK_INSUFICIENTE por una carrera entre dos checkouts casi
   // simultáneos de la última unidad) — ver POST /api/flow-webhook y

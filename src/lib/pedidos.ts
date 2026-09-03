@@ -106,6 +106,32 @@ export async function crearPedido(datos: {
   return data;
 }
 
+/**
+ * Marca como EXPIRADO cualquier pedido que lleve más de `horas` en CREADO
+ * sin que Flow haya confirmado el pago (ni avisado que falló) — el cliente
+ * empezó el checkout y nunca volvió. No toca stock ni dinero: en CREADO
+ * nunca se descontó nada (eso pasa recién en marcarPedidoPagado), así que
+ * "expirar" es solo dejar de mostrarlo como pendiente en el panel del POS.
+ * La usa GET /api/cron/expirar-pedidos.
+ *
+ * Condicionado por `.eq('estado', 'CREADO')` en el UPDATE (no solo en el
+ * SELECT de candidatos) para que una confirmación de Flow que llegue justo
+ * en el medio gane la carrera — si ya pasó a PAGADO, este UPDATE no lo toca.
+ */
+export async function expirarPedidosCreados(horas: number): Promise<PedidoWeb[]> {
+  const limite = new Date(Date.now() - horas * 60 * 60 * 1000).toISOString();
+
+  const { data, error } = await supabaseWeb
+    .from('pedidos_web')
+    .update({ estado: 'EXPIRADO' })
+    .eq('estado', 'CREADO')
+    .lt('creado_en', limite)
+    .select();
+
+  if (error) lanzarErrorBD('expirarPedidosCreados', error);
+  return data || [];
+}
+
 export async function obtenerPedidoPorNumero(numeroPedido: string): Promise<PedidoWeb | null> {
   const { data, error } = await supabaseWeb
     .from('pedidos_web')

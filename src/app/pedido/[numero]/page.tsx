@@ -19,6 +19,7 @@ const MENSAJE_ESTADO: Record<string, string> = {
   ENTREGADO: "Tu pedido fue entregado.",
   CANCELADO: "Este pedido fue cancelado.",
   FALLIDO: "El pago no se pudo completar. Puedes volver a intentarlo desde tu carrito.",
+  EXPIRADO: "Este pedido quedó sin confirmar el pago y ya no está vigente. Si quieres estos productos, agrégalos de nuevo al carrito.",
 };
 
 const ESTILO_ESTADO: Record<string, string> = {
@@ -29,6 +30,7 @@ const ESTILO_ESTADO: Record<string, string> = {
   ENTREGADO: "bg-success text-white",
   CANCELADO: "bg-red-100 text-red-700",
   FALLIDO: "bg-red-100 text-red-700",
+  EXPIRADO: "bg-surface-sunken text-ink-soft",
 };
 
 export default async function EstadoPedido({ params }: PropsPagina) {
