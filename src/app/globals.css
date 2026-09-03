@@ -223,6 +223,23 @@ h4 {
    Apagar el tema: FIESTAS_PATRIAS_ACTIVO = false en ese archivo. Este bloque
    se puede borrar entero el día que se retire el componente para siempre;
    mientras el flag exista, se queda (no hace daño estar sin usar). */
+
+/* Textura de fondo de la franja — rayas diagonales tricolor MUY tenues
+   (8% opacidad): se nota como "hay algo festivo ahí" sin competir con el
+   texto ni con el resto de la paleta cian/magenta del sitio. Estática
+   (sin animación) — es fondo, no protagonista. */
+.textura-fiestas-patrias {
+  background-image: repeating-linear-gradient(
+    135deg,
+    rgba(213, 43, 30, 0.08) 0px,
+    rgba(213, 43, 30, 0.08) 10px,
+    rgba(244, 248, 255, 0.06) 10px,
+    rgba(244, 248, 255, 0.06) 20px,
+    rgba(0, 57, 166, 0.08) 20px,
+    rgba(0, 57, 166, 0.08) 30px
+  );
+}
+
 .banderin-fiestas-patrias {
   display: inline-block;
   width: 13px;

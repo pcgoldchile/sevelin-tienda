@@ -5,11 +5,12 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight, Zap } from "lucide-react";
 import { EASE_OUT } from "@/lib/motion";
+import { FIESTAS_PATRIAS_ACTIVO } from "@/lib/tema-estacional";
 
 // Sin gestión de banners desde un panel (fuera de alcance a propósito, ver
 // README-ECOMMERCE-SEVELIN.md sección 2.1): estas son las 3 franjas fijas del
 // hero, editables acá directamente cuando cambie la promo.
-const SLIDES = [
+const SLIDES_BASE = [
   {
     titulo: "Tecnología para tu hogar y oficina",
     texto: "Encuentra los mejores productos de electrónica al mejor precio en Arica.",
@@ -23,6 +24,16 @@ const SLIDES = [
     texto: "¿Dudas sobre un producto? Escríbenos y te ayudamos a elegir.",
   },
 ];
+
+// Cuarta diapositiva de temporada — se suma sola a la rotación mientras
+// FIESTAS_PATRIAS_ACTIVO esté prendido (ver src/lib/tema-estacional.ts) y
+// desaparece del carrusel sola el día que se apague, sin tocar nada acá.
+const SLIDE_FIESTAS_PATRIAS = {
+  titulo: "¡Viva Chile! Fiestas Patrias",
+  texto: "Sevelin también se pone la camiseta el 18 — seguimos despachando y atendiendo con la misma garantía de siempre.",
+};
+
+const SLIDES = FIESTAS_PATRIAS_ACTIVO ? [...SLIDES_BASE, SLIDE_FIESTAS_PATRIAS] : SLIDES_BASE;
 
 export function HeroCarrusel() {
   const [indice, setIndice] = useState(0);

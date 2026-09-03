@@ -1,4 +1,19 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { EASE_OUT } from "@/lib/motion";
 import { FIESTAS_PATRIAS_ACTIVO } from "@/lib/tema-estacional";
+
+// Mismo criterio que HeroCarrusel (rota solo, sin gestión desde un panel):
+// frases cortas, alternando el mensaje principal con chilenismos de la
+// fecha — variedad sin que compita por atención con el resto del sitio.
+const MENSAJES = [
+  "¡Viva Chile! · Fiestas Patrias en Sevelin",
+  "🥟 Que no falte el asadito",
+  "💃 Se viene la cueca",
+  "🇨🇱 ¡Arriba los que trabajan!",
+];
 
 /**
  * Franja festiva de Fiestas Patrias — NO es sticky a propósito: vive
@@ -15,17 +30,37 @@ import { FIESTAS_PATRIAS_ACTIVO } from "@/lib/tema-estacional";
  * falta ocultarla del todo.
  */
 export function BannerFiestasPatrias() {
+  // Los hooks van ANTES del apagado por flag a propósito (regla de hooks:
+  // nunca condicionarlos, aunque FIESTAS_PATRIAS_ACTIVO sea una constante
+  // que no cambia en el tiempo de vida del componente).
+  const [indice, setIndice] = useState(0);
+
+  useEffect(() => {
+    if (!FIESTAS_PATRIAS_ACTIVO) return;
+    const intervalo = setInterval(() => setIndice((i) => (i + 1) % MENSAJES.length), 3800);
+    return () => clearInterval(intervalo);
+  }, []);
+
   if (!FIESTAS_PATRIAS_ACTIVO) return null;
 
-  const banderines = Array.from({ length: 14 });
+  const banderines = Array.from({ length: 20 });
 
   return (
-    <div className="relative overflow-hidden border-b border-primary/20 bg-surface-sunken">
-      <div className="mx-auto flex max-w-6xl items-center justify-center gap-2.5 px-4 py-2 text-center sm:gap-3">
+    <div className="textura-fiestas-patrias relative overflow-hidden border-b border-primary/20 bg-surface-sunken">
+      <div className="mx-auto flex h-6 max-w-6xl items-center justify-center gap-2.5 px-4 text-center sm:gap-3">
         <span aria-hidden className="text-base leading-none">🇨🇱</span>
-        <p className="font-display text-[11px] font-bold uppercase tracking-[0.12em] text-ink sm:text-xs">
-          ¡Viva Chile! · Fiestas Patrias en Sevelin
-        </p>
+        <AnimatePresence mode="wait">
+          <motion.p
+            key={indice}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.35, ease: EASE_OUT }}
+            className="font-display text-[11px] font-bold uppercase tracking-[0.12em] text-ink sm:text-xs"
+          >
+            {MENSAJES[indice]}
+          </motion.p>
+        </AnimatePresence>
         <span aria-hidden className="hidden text-base leading-none sm:inline">🎉</span>
       </div>
 
@@ -33,7 +68,7 @@ export function BannerFiestasPatrias() {
           de un hilo, cada uno con su propio retraso de animación para que la
           fila se sienta como una ola, no como un solo bloque meciéndose
           parejo. */}
-      <div aria-hidden className="flex justify-center gap-[2px] pb-1.5" style={{ transform: "translateY(1px)" }}>
+      <div aria-hidden className="flex justify-center gap-[1px] pb-1.5" style={{ transform: "translateY(1px)" }}>
         {banderines.map((_, i) => (
           <span
             key={i}
