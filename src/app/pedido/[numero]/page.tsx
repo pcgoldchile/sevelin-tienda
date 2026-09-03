@@ -1,7 +1,9 @@
 import Link from "next/link";
+import { Star } from "lucide-react";
 import { notFound } from "next/navigation";
 import { obtenerPedidoPorNumero } from "@/lib/pedidos";
 import { formatoCLP } from "@/lib/formato";
+import { URL_RESENA_GOOGLE } from "@/lib/resena-google";
 
 interface PropsPagina {
   params: Promise<{ numero: string }>;
@@ -108,6 +110,26 @@ export default async function EstadoPedido({ params }: PropsPagina) {
             )}
           </p>
         )
+      )}
+
+      {/* Reseña de Google: se muestra apenas el pago está confirmado, en
+          cualquier estado desde ahí en adelante (PAGADO/PREPARANDO/ENVIADO/
+          ENTREGADO) — es la página que ve el cliente justo después de
+          comprar. El segundo empujón vive en el correo de entrega, ver
+          correoEntregaPedido() en src/lib/correo-pedido.ts. */}
+      {PAGO_CONFIRMADO.includes(pedido.estado) && (
+        <a
+          href={URL_RESENA_GOOGLE}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-6 flex items-center justify-between gap-3 rounded-2xl border border-primary/30 bg-primary/5 p-4 text-sm transition-colors hover:border-primary/60 hover:bg-primary/10"
+        >
+          <span className="flex items-center gap-2 text-ink">
+            <Star className="h-4 w-4 shrink-0 fill-primary text-primary" aria-hidden />
+            ¿Todo bien con tu compra? Cuéntanos con una reseña en Google
+          </span>
+          <span className="shrink-0 font-semibold text-primary">Reseñar →</span>
+        </a>
       )}
 
       <Link href="/" className="mt-6 block text-sm text-ink-soft transition-colors hover:text-accent">

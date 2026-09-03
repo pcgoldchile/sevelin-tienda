@@ -1,5 +1,6 @@
 import { DIRECCION_TIENDA } from './distancia';
 import { formatoCLP } from './formato';
+import { URL_RESENA_GOOGLE } from './resena-google';
 import type { PedidoWeb } from './tipos';
 
 const AZUL = '#2b3f66';
@@ -111,6 +112,30 @@ export function correoAlertaStockSinDespacho(pedido: PedidoWeb, detalleTecnico: 
   return {
     subject: `⚠️ Pago cobrado sin stock — pedido ${pedido.numero_pedido}`,
     html: envoltorio('Revisar manualmente: pago sin stock', contenido),
+  };
+}
+
+/** Entrega de pedido — se envía cuando el POS marca el pedido como
+ * ENTREGADO (Página Web → Pedidos Web), vía POST /api/pos/notificar-entrega
+ * (mismo patrón que correoCancelacionPedido: el POS no tiene la API key de
+ * Resend ni la plantilla). Incluye el pedido de reseña de Google — es el
+ * segundo empujón, después del que ya se muestra en la página de estado
+ * del pedido justo al comprar (ver src/app/pedido/[numero]/page.tsx). */
+export function correoEntregaPedido(pedido: PedidoWeb): { subject: string; html: string } {
+  const nombre = pedido.cliente_nombre || 'Hola';
+  const contenido = `
+    <p style="margin:0 0 20px;font-size:14px;color:${TEXTO_SUAVE};">${nombre}, tu pedido <strong style="color:${TEXTO};">${pedido.numero_pedido}</strong> fue entregado. ¡Esperamos que lo disfrutes!</p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;background:#f9fafb;border-radius:10px;">
+      <tr><td style="padding:20px;text-align:center;">
+        <p style="margin:0 0 12px;font-size:14px;color:${TEXTO};">¿Todo bien con tu compra? Nos ayuda mucho que nos cuentes en una reseña de Google.</p>
+        <a href="${URL_RESENA_GOOGLE}" style="display:inline-block;background:${AZUL};color:#ffffff;text-decoration:none;padding:11px 22px;border-radius:999px;font-size:14px;font-weight:600;">⭐ Dejar una reseña</a>
+      </td></tr>
+    </table>
+    <p style="margin:0;font-size:13px;color:${TEXTO_SUAVE};">¿Algo no llegó como esperabas? Escríbenos y lo revisamos contigo.</p>
+  `;
+  return {
+    subject: `Tu pedido ${pedido.numero_pedido} fue entregado — Sevelin`,
+    html: envoltorio('¡Tu pedido llegó!', contenido),
   };
 }
 
