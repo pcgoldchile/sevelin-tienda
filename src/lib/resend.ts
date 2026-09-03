@@ -9,6 +9,10 @@
 export async function enviarCorreo(params: { to: string; subject: string; html: string }): Promise<boolean> {
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.RESEND_FROM || 'Sevelin <onboarding@resend.dev>';
+  // El dueño no tiene correo corporativo — el remitente real (pedidos@sevelin.cl)
+  // no es un buzón que alguien lea. Si un cliente responde a la confirmación de
+  // su pedido, Resend reenvía esa respuesta acá, no al remitente.
+  const replyTo = process.env.RESEND_REPLY_TO;
 
   if (!apiKey) {
     console.warn('[resend] Falta RESEND_API_KEY — no se envió el correo a', params.to);
@@ -23,7 +27,10 @@ export async function enviarCorreo(params: { to: string; subject: string; html: 
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ from, to: params.to, subject: params.subject, html: params.html }),
+      body: JSON.stringify({
+        from, to: params.to, subject: params.subject, html: params.html,
+        ...(replyTo ? { reply_to: replyTo } : {}),
+      }),
     });
 
     if (!respuesta.ok) {
