@@ -3,15 +3,19 @@
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { crearClienteNavegador } from "@/lib/supabase-browser";
+import { TurnstileWidget } from "@/components/turnstile-widget";
 import { traducirErrorAuth } from "@/lib/errores-auth";
 
 const CAMPO =
   "rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm outline-none transition-colors focus:border-accent";
 
+const CAPTCHA_ACTIVO = Boolean(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY);
+
 export default function Recuperar() {
   const [enviando, setEnviando] = useState(false);
   const [enviado, setEnviado] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
   async function manejarSubmit(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
@@ -24,6 +28,7 @@ export default function Recuperar() {
       const supabase = crearClienteNavegador();
       const { error: errorRecuperar } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/cuenta/restablecer`,
+        captchaToken: captchaToken || undefined,
       });
       if (errorRecuperar) throw errorRecuperar;
       setEnviado(true);
@@ -47,11 +52,13 @@ export default function Recuperar() {
           <p className="text-sm text-ink-soft">Te mandamos un link para elegir una contraseña nueva.</p>
           <input name="email" type="email" required placeholder="Correo electrónico" className={CAMPO} />
 
+          <TurnstileWidget onToken={setCaptchaToken} />
+
           {error && <p className="text-sm text-red-600">{error}</p>}
 
           <button
             type="submit"
-            disabled={enviando}
+            disabled={enviando || (CAPTCHA_ACTIVO && !captchaToken)}
             className="mt-2 rounded-full bg-accent px-5 py-3 text-sm font-semibold text-white shadow-glow-accent transition-colors hover:bg-accent-deep disabled:cursor-not-allowed disabled:opacity-70"
           >
             {enviando ? "Enviando…" : "Enviar link"}

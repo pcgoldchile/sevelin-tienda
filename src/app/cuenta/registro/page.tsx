@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { crearClienteNavegador } from "@/lib/supabase-browser";
 import { CampoPassword } from "@/components/campo-password";
+import { TurnstileWidget } from "@/components/turnstile-widget";
 import { CODIGOS_PAIS, CODIGO_PAIS_POR_DEFECTO } from "@/lib/codigos-pais";
 import { traducirErrorAuth } from "@/lib/errores-auth";
 import { VERSION_POLITICA_PRIVACIDAD } from "@/lib/politica-privacidad";
@@ -12,10 +13,13 @@ import { VERSION_POLITICA_PRIVACIDAD } from "@/lib/politica-privacidad";
 const CAMPO =
   "rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm outline-none transition-colors focus:border-accent";
 
+const CAPTCHA_ACTIVO = Boolean(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY);
+
 export default function Registro() {
   const router = useRouter();
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   // Desmarcada por defecto a propósito (Ley 21.719: consentimiento libre e
   // inequívoco, nunca una casilla premarcada).
   const [aceptaPrivacidad, setAceptaPrivacidad] = useState(false);
@@ -43,7 +47,10 @@ export default function Registro() {
     setEnviando(true);
     try {
       const supabase = crearClienteNavegador();
-      const { data, error: errorRegistro } = await supabase.auth.signUp({ email, password });
+      const { data, error: errorRegistro } = await supabase.auth.signUp({
+        email, password,
+        options: captchaToken ? { captchaToken } : undefined,
+      });
       if (errorRegistro) throw errorRegistro;
 
       // El perfil se crea desde el navegador (no una API aparte): la
@@ -138,11 +145,13 @@ export default function Registro() {
           <span>Quiero recibir promociones y novedades por correo (opcional, puedes cambiarlo cuando quieras).</span>
         </label>
 
+        <TurnstileWidget onToken={setCaptchaToken} />
+
         {error && <p className="text-sm text-red-600">{error}</p>}
 
         <button
           type="submit"
-          disabled={enviando || !aceptaPrivacidad}
+          disabled={enviando || !aceptaPrivacidad || (CAPTCHA_ACTIVO && !captchaToken)}
           className="mt-2 rounded-full bg-accent px-5 py-3 text-sm font-semibold text-white shadow-glow-accent transition-colors hover:bg-accent-deep disabled:cursor-not-allowed disabled:opacity-70"
         >
           {enviando ? "Creando cuenta…" : "Crear cuenta"}
