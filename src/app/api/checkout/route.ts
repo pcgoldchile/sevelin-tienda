@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { obtenerProductoPorSku } from '@/lib/catalogo';
-import { crearPedido, guardarPagoFlow, marcarPedidoFallido } from '@/lib/pedidos';
+import { crearPedido, guardarPagoFlow, guardarPagoKhipu, marcarPedidoFallido } from '@/lib/pedidos';
 import { crearPagoFlow } from '@/lib/flow';
+import { crearPagoKhipu, khipuHabilitado } from '@/lib/khipu';
 import { confirmarEnvio } from '@/lib/envio';
 import { crearClienteServidor } from '@/lib/supabase-server';
 import { marcarCarritoConvertido } from '@/lib/carritos-web';
@@ -24,6 +25,10 @@ interface CuerpoCheckout {
   // quien compra de otra ciudad pero un familiar en Arica retira); 'LOCAL'
   // solo aplica dentro de la comuna de la tienda — ver src/lib/envio.ts.
   metodoEnvio?: string;
+  // 'FLOW' (webpay/tarjetas) por defecto si no llega nada — Khipu solo se
+  // acepta si khipuHabilitado() (ver src/lib/khipu.ts), para que un valor
+  // suelto en el body de alguien probando la API no rompa nada.
+  metodoPago?: string;
   nota?: string;
   factura?: Partial<DatosFactura>;
   // Checkbox obligatoria "Acepto los Términos y la Política de Privacidad"
@@ -211,7 +216,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: mensaje }, { status: 500 });
   }
 
+  const usarKhipu = cuerpo.metodoPago === 'KHIPU' && khipuHabilitado();
+
   try {
+    if (usarKhipu) {
+      const pago = await crearPagoKhipu({ numeroPedido, monto: total, email });
+      await guardarPagoKhipu(numeroPedido, pago.paymentId);
+      return NextResponse.json({ ok: true, numero_pedido: numeroPedido, url_pago: pago.url });
+    }
+
     const pago = await crearPagoFlow({ numeroPedido, monto: total, email });
     await guardarPagoFlow(numeroPedido, pago.token, pago.flowOrder);
     return NextResponse.json({ ok: true, numero_pedido: numeroPedido, url_pago: `${pago.url}?token=${pago.token}` });

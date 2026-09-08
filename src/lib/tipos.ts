@@ -200,8 +200,13 @@ export interface PedidoWeb {
   costo_envio: number;
   subtotal: number;
   total: number;
+  // 'FLOW' (webpay/tarjetas) o 'KHIPU' (transferencia bancaria) — ver
+  // supabase/22-khipu.sql y src/lib/khipu.ts. Default 'FLOW' para pedidos
+  // creados antes de que existiera Khipu como opción.
+  metodo_pago: 'FLOW' | 'KHIPU';
   flow_token: string | null;
   flow_order: number | null;
+  khipu_payment_id: string | null;
   url_boleta_sii: string | null;
   folio_dte: string | null;
   tracking_courier: string | null;

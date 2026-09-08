@@ -17,7 +17,7 @@ import type { OpcionEnvio } from "@/lib/envio";
 const CAMPO =
   "rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm outline-none transition-colors focus:border-accent";
 
-export function FormularioCheckout() {
+export function FormularioCheckout({ khipuHabilitado = false }: { khipuHabilitado?: boolean }) {
   // Editar cantidades/quitar ítems ya vive en /carrito (estilo MercadoLibre)
   // — acá solo se paga lo que llegó seleccionado, "Tu pedido" es de solo
   // lectura.
@@ -30,6 +30,7 @@ export function FormularioCheckout() {
   const { usuario, perfil, cargando: cargandoSesion } = useSesion();
   const [opciones, setOpciones] = useState<OpcionEnvio[] | null>(null);
   const [metodoElegido, setMetodoElegido] = useState<string | null>(null);
+  const [metodoPago, setMetodoPago] = useState<"FLOW" | "KHIPU">("FLOW");
   const [calculandoEnvio, setCalculandoEnvio] = useState(false);
   const [errorEnvio, setErrorEnvio] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
@@ -351,6 +352,7 @@ export function FormularioCheckout() {
           },
           items: itemsSeleccionados.map((item) => ({ sku: item.sku, cantidad: item.cantidad })),
           metodoEnvio: metodoElegido,
+          metodoPago,
           nota: datos.get("nota"),
           consentimientoPrivacidad: aceptaPrivacidad,
           carritoAbandonoId: carritoAbandonoIdRef.current || undefined,
@@ -849,6 +851,42 @@ export function FormularioCheckout() {
             )}
           </AnimatePresence>
         </fieldset>
+
+        {/* Selector de pasarela de pago — solo aparece si Khipu está
+            configurado en el servidor (KHIPU_API_KEY, ver
+            src/lib/khipu.ts::khipuHabilitado). Sin eso, el checkout sigue
+            funcionando exactamente igual que siempre: pago único con Flow. */}
+        {khipuHabilitado && (
+          <fieldset className="flex flex-col gap-3">
+            <legend className="mb-1 text-xs font-semibold uppercase tracking-wider text-ink-faint">Método de pago</legend>
+            {[
+              { valor: "FLOW" as const, titulo: "Tarjeta de crédito o débito", detalle: "Webpay, vía Flow" },
+              { valor: "KHIPU" as const, titulo: "Transferencia bancaria", detalle: "Vía Khipu" },
+            ].map((opcion) => {
+              const elegido = metodoPago === opcion.valor;
+              return (
+                <label
+                  key={opcion.valor}
+                  className={`flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 text-sm transition-all ${
+                    elegido ? "border-accent bg-accent-soft/40 shadow-glow-accent" : "border-border bg-surface hover:border-border-strong"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="metodo-pago"
+                    checked={elegido}
+                    onChange={() => setMetodoPago(opcion.valor)}
+                    className="accent-accent"
+                  />
+                  <span className="flex flex-col gap-0.5">
+                    <span>{opcion.titulo}</span>
+                    <span className={`text-xs leading-snug ${elegido ? "text-ink" : "text-ink-soft"}`}>{opcion.detalle}</span>
+                  </span>
+                </label>
+              );
+            })}
+          </fieldset>
+        )}
 
         <label className="flex cursor-pointer items-start gap-2 text-sm text-ink-soft">
           <input

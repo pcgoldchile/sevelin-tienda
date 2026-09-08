@@ -156,6 +156,15 @@ export async function guardarPagoFlow(
   if (error) lanzarErrorBD('guardarPagoFlow', error);
 }
 
+export async function guardarPagoKhipu(numeroPedido: string, khipuPaymentId: string): Promise<void> {
+  const { error } = await supabaseWeb
+    .from('pedidos_web')
+    .update({ metodo_pago: 'KHIPU', khipu_payment_id: khipuPaymentId })
+    .eq('numero_pedido', numeroPedido);
+
+  if (error) lanzarErrorBD('guardarPagoKhipu', error);
+}
+
 export async function marcarPedidoFallido(numeroPedido: string): Promise<void> {
   const { error } = await supabaseWeb
     .from('pedidos_web')
