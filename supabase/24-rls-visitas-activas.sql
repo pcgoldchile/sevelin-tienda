@@ -1,0 +1,39 @@
+-- RLS en visitas_activas — cierra las 2 alertas críticas del Security
+-- Advisor de Supabase (correo del 06-09-2026: rls_disabled_in_public y
+-- sensitive_columns_exposed, proyecto sevelin-web ekxwavsnocwxtzxqxbbi).
+-- ------------------------------------------------------------
+-- La tabla se creó en 20-visitas-activas.sql SIN habilitar RLS — fue la
+-- única de las 7 tablas del esquema que quedó así (productos_web,
+-- pedidos_web, perfiles_clientes, carritos_web, eventos_web y
+-- solicitudes_arco lo tienen desde su propia migración). Sin RLS,
+-- PostgREST la expone al rol `anon`, y la anon key es PÚBLICA por diseño
+-- (viaja en el bundle del navegador de la tienda): cualquiera podía leer,
+-- insertar, modificar y borrar filas.
+--
+-- El riesgo real NO era fuga de datos personales — la tabla solo guarda un
+-- UUID de sesión generado en el navegador (sessionStorage, sin relación con
+-- ninguna cuenta, correo ni pedido) y una marca de tiempo. El riesgo era
+-- que un tercero inflara/vaciara el contador de "visitantes activos" del
+-- panel Métricas del POS, o insertara filas en masa para hacer crecer la
+-- base. La segunda alerta (sensitive_columns_exposed) es el detector
+-- automático de Supabase reaccionando al NOMBRE de la columna `session_id`;
+-- no es un token de autenticación.
+--
+-- NO se crea ninguna política a propósito: la tabla se escribe solo desde
+-- el servidor de la tienda (src/lib/visitas-activas.ts, con service_role) y
+-- se lee solo desde el POS (api/index.js, también service_role). El rol
+-- service_role omite RLS por diseño, así que el latido de VisitTracker y el
+-- panel Métricas siguen funcionando exactamente igual. RLS habilitado sin
+-- políticas = nadie más entra. Si alguna vez el navegador necesitara leer
+-- esta tabla directo, ahí recién habría que agregar una policy de SELECT.
+--
+-- Idempotente: ENABLE ROW LEVEL SECURITY sobre una tabla que ya lo tiene no
+-- falla ni cambia nada.
+
+ALTER TABLE visitas_activas ENABLE ROW LEVEL SECURITY;
+
+-- Verificación (debe devolver rowsecurity = true):
+--   select relname, relrowsecurity from pg_class where relname = 'visitas_activas';
+-- Y que no quede ninguna otra tabla sin RLS en el esquema public:
+--   select relname from pg_class c join pg_namespace n on n.oid = c.relnamespace
+--   where n.nspname = 'public' and c.relkind = 'r' and not c.relrowsecurity;

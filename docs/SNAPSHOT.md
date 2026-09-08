@@ -206,6 +206,48 @@ sin foto no deja `src` vacío ni roto, el bloque de reseña está, el link es el
    recordatorio "ciego"? Y de cualquier forma, el envío por correo sigue bloqueado hasta verificar el
    dominio en Resend (**B2**).
 
+## RLS en `visitas_activas` — alerta del Security Advisor cerrada (08-09-2026, aplicada)
+
+Supabase mandó por correo **2 alertas críticas** del proyecto `sevelin-web`
+(`ekxwavsnocwxtzxqxbbi`): `rls_disabled_in_public` y `sensitive_columns_exposed`. Ambas eran la
+**misma tabla**: `visitas_activas`, la única de las 7 del esquema que se creó (en
+`20-visitas-activas.sql`) sin `ENABLE ROW LEVEL SECURITY`.
+
+**No había fuga de datos personales.** `pedidos_web`, `perfiles_clientes`, `carritos_web`,
+`eventos_web`, `solicitudes_arco` y `productos_web` ya tenían RLS desde su propia migración —
+verificado tabla por tabla contra `pg_class.relrowsecurity`, no de memoria. `visitas_activas` solo
+guarda un UUID de sesión generado en el navegador (sin relación con cuenta, correo ni pedido) y una
+marca de tiempo. La segunda alerta (`sensitive_columns_exposed`) es el detector automático de
+Supabase reaccionando al **nombre** de la columna `session_id`; no es un token de autenticación.
+
+**El riesgo real que sí existía** (la anon key es pública por diseño, viaja en el bundle del sitio):
+cualquiera podía **insertar filas en masa** y hacer crecer la base sin control — si la base llega al
+límite del plan, se caen los pedidos — o inflar/vaciar el contador de "visitantes activos" del panel
+Métricas del POS.
+
+**Corregido con `supabase/24-rls-visitas-activas.sql`** (una línea, sin políticas a propósito: la
+tabla se escribe solo desde `src/lib/visitas-activas.ts` y se lee solo desde el POS, ambos con
+`service_role`, que omite RLS). **Verificado en producción DESPUÉS de aplicar:**
+- Las 7 tablas del esquema `public` con `rls_activo = true`.
+- El latido real (`POST /api/visita-activa`) sigue respondiendo `{"ok":true}` y la fila se escribe
+  (comprobado con un UUID de prueba, después borrado).
+- Con la anon key sacada del bundle público: **escritura → 401** (`new row violates row-level
+  security policy`), **lectura → 0 filas** aunque la tabla tenga **621 filas reales**. Antes del
+  arreglo esas 621 eran legibles y la escritura era libre.
+
+**⚠️ Trampa de proceso (no repetir):** la primera pasada de este análisis reportó `pedidos_web`
+como desprotegida — era un **error del `grep`** (el patrón no toleraba los espacios múltiples de
+`ALTER TABLE pedidos_web   ENABLE...`). La diferencia entre esa versión y la real es "hay fuga de
+datos de clientes" y "no la hay". Antes de afirmar un hallazgo de seguridad, confirmarlo con un
+**segundo método** (acá: consulta a `pg_class`, no otro grep).
+
+**📌 Observación menor que quedó abierta:** `visitas_activas` **nunca borra filas viejas**. El
+upsert por `session_id` evita que crezca con cada latido (eso dice bien el comentario de la
+migración 20), pero cada pestaña nueva deja una fila permanente: hoy 621, y sube sola. Para "activos
+ahora" solo sirven los últimos 90 segundos, así que todo lo anterior a un día es basura. Fix
+sugerido, no hecho: un `delete from visitas_activas where ultima_actividad < now() - interval '1 day'`
+dentro del cron que ya existe (`/api/cron/expirar-pedidos`).
+
 ## Marca del producto (07-09-2026, en producción)
 `productos_web.marca` (`supabase/23-marca.sql`) — la llena el trigger de sincronización desde
 `productos.marca` del POS (ver `sevelin-pos-oficial/sql/38-marca-producto.sql` y su
@@ -726,6 +768,15 @@ Next.js 16 (App Router) · TypeScript · Tailwind v4 · `@supabase/supabase-js`.
   Supabase Web y configurar el webhook.
 
 ## Pendiente (real, verificado al 01-09-2026 — no repetir lo ya hecho)
+
+**Nuevo 08-09-2026 — Preguntas Frecuentes (propuesta, ver `docs/FAQ-PROPUESTA.md`):**
+-0. Draft de página FAQ armado a pedido del dueño: preguntas + respuestas ya redactadas para lo que
+    tiene dato confirmado (garantía, pago, envío, contacto). **Falta que el dueño confirme antes de
+    construir la página:** (a) qué se revisa/prueba realmente en un producto reacondicionado antes de
+    publicarlo, (b) si vienen con accesorios originales, (c) política de cambios/devoluciones por
+    "no conforme" (distinta de la garantía por falla, que sí está definida). Con eso confirmado,
+    construir `/preguntas-frecuentes` es tarea de código normal (componente + footer + JSON-LD
+    `FAQPage` opcional para SEO).
 
 **Seguridad / Starken / SEO — lo más reciente, v35-v38 (fuera de código, del dueño):**
 -1a. **Starken**: revisar si ya se envió/respondió el correo de seguimiento a Belén Carreño
