@@ -88,6 +88,29 @@ envíos a clientes reales fallan en silencio hasta verificarlo (ver "Pendiente" 
 
 ---
 
+## Khipu — segundo medio de pago (08-09-2026, DESPLEGADO PERO APAGADO)
+
+Transferencia bancaria en paralelo a Flow. `supabase/22-khipu.sql` aplicada
+(`pedidos_web.metodo_pago` con DEFAULT `'FLOW'` + `khipu_payment_id`), `src/lib/khipu.ts`
+(`POST /v3/payments`, `GET /v3/payments/{id}`, cabecera `x-api-key`), `POST /api/khipu-webhook`
+(verifica `x-khipu-signature` sobre los **bytes crudos** — lee `.text()` y nunca `.json()`, porque
+re-serializar un JSON ya parseado puede no ser byte a byte idéntico) y selector de medio de pago en
+el checkout.
+
+**ESTÁ APAGADO A PROPÓSITO Y ESO ES CORRECTO.** Sin `KHIPU_API_KEY` en Vercel, `khipuHabilitado()` es
+`false`, el selector no se muestra y el checkout se comporta exactamente como antes: pago único con
+Flow. **Verificado en producción**: `/api/khipu-webhook` responde `{"ok":true,"motivo":"sin_payment_id"}`
+y `/checkout` no muestra la opción de transferencia. Khipu se enciende solo al agregar la variable.
+
+**La `notify_url` NO se configura en el panel de Khipu.** Viaja en cada cobro
+(`notify_api_version: '3.0'`, apuntando a `${NEXT_PUBLIC_SITE_URL}/api/khipu-webhook`). La casilla
+"URL de notificación" del panel es del formato antiguo **1.3**: llenarla podría hacer que Khipu mande
+notificaciones que este webhook no entiende. **Dejarla vacía.**
+
+**Pendiente del dueño:** poner `KHIPU_API_KEY` en Vercel, confirmar que `NEXT_PUBLIC_SITE_URL` ahí sea
+`https://www.sevelin.cl` (de ahí sale la notify_url), y pedir a `soporte@khipu.com` subir el límite de
+cobro, que hoy es de **$5.000** (cuenta de cobro **527804**).
+
 ## Marca del producto (07-09-2026, en producción)
 `productos_web.marca` (`supabase/23-marca.sql`) — la llena el trigger de sincronización desde
 `productos.marca` del POS (ver `sevelin-pos-oficial/sql/38-marca-producto.sql` y su
