@@ -127,12 +127,23 @@ El algoritmo en sí (`timestamp + "." + cuerpo crudo`, HMAC-SHA256, base64) sí 
 exactamente la firma del vector oficial. **Moraleja para la próxima integración con firma: probar
 contra el vector de la documentación ANTES de encender, no después del primer pago perdido.**
 
-**Pendiente real que queda (verificado al 08-09-2026):**
-1. **El ciclo de pago completo nunca se probó de punta a punta** — solo se confirmó que el selector
-   aparece, no que un pago real se cobra, notifica y marca el pedido. Hacer una compra de prueba
-   chica (ideal: bajo el límite de $5.000 actual, así no hace falta esperar a Khipu) y **revisar los
-   logs de Vercel** en ese momento: la línea `[khipu] firma válida con …` dice qué llave calzó
-   (`KHIPU_SECRET` o `KHIPU_API_KEY`) — dejar solo esa puesta después.
+### ✅ Ciclo completo probado con una compra real (08-09-2026)
+Compra real del dueño: $500, "Rollos Térmicos 58mm", código de operación `dqkn-rhvi-mqnc` →
+`khipu_payment_id: dqknrhvimqnc`. Pedido **`WEB-000006` quedó `PAGADO`** con `metodo_pago: KHIPU`. La
+firma se verificó bien (si no, jamás habría cambiado de estado). **Revisar los logs de Vercel** de
+ese momento para saber si calzó con `KHIPU_SECRET` o con `KHIPU_API_KEY` (línea `[khipu] firma válida
+con …`) y dejar solo esa variable puesta.
+
+**Dos hallazgos de esa misma compra, ya corregidos o anotados:**
+- 🐛 **Corregido**: la pantalla de confirmación y `/privacidad`/`/terminos` decían *"comprobante de
+  pago de **Flow**"* fijo, aunque se pagó con Khipu — texto de cuando Flow era la única pasarela.
+  Ahora usa `pedido.metodo_pago`.
+- ⚠️ **Anotado, no corregido — decisión del dueño**: el stock del producto (id 183, "Rollos Termicos
+  58mm") no se descontó porque tiene `stock_ilimitado = true` en el catálogo, la misma marca que
+  usan los servicios técnicos. Es un consumible físico real; si se queda así marcado, el POS nunca va
+  a avisar cuando se agote.
+
+**Sigue pendiente:**
 2. **Confirmar `NEXT_PUBLIC_SITE_URL` en Vercel** = `https://www.sevelin.cl` (ya estaba puesta desde
    antes de Khipu; de ahí sale la `notify_url` de cada cobro — no debería ser necesario, pero conviene
    confirmarlo la primera vez que se prueba un pago real).
