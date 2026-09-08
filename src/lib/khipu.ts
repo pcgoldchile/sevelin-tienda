@@ -117,31 +117,81 @@ export async function obtenerEstadoPagoKhipu(paymentId: string): Promise<EstadoP
 }
 
 /**
- * Verifica la cabecera `x-khipu-signature` de una notificación de pago
- * (formato "t=<timestamp-ms>,s=<hmac-base64>"). La firma es un HMAC-SHA256
- * en base64 sobre el string "<timestamp>.<cuerpo-crudo-del-POST>", usando
- * la API key como secreto — ver developers.khipu.com, sección "Webhook
- * para notificaciones". IMPORTANTE: `cuerpoCrudo` debe ser el texto tal
- * cual llegó en el POST, sin re-serializar el JSON (Khipu firma los bytes
- * exactos que envió).
+ * Verifica la cabecera `x-khipu-signature` de una notificación de pago.
+ * ------------------------------------------------------------
+ * Formato: `t=<timestamp-ms>,s=<hmac-base64>`. La firma es un HMAC-SHA256
+ * en base64 sobre el string `"<timestamp>.<cuerpo-crudo-del-POST>"`.
+ * Verificado contra el vector de prueba oficial de la documentación
+ * (docs.khipu.com → Instant Payments → Webhook for Notifications): con el
+ * secreto, la cabecera y el cuerpo del ejemplo, este cálculo reproduce
+ * exactamente la firma `rq08YUGSaWa1D0RAwhMnJTRHMNmY4ToCn2Gd6G9LaDg=`.
+ *
+ * `cuerpoCrudo` DEBE ser el texto tal cual llegó en el POST, sin
+ * re-serializar el JSON: Khipu firma los bytes exactos que envió, y
+ * volver a serializar puede cambiar orden de claves o escapes.
+ *
+ * DOS ERRORES QUE ESTA FUNCIÓN TUVO Y NO PUEDE VOLVER A TENER
+ * (encontrados el 08-09-2026 probando contra el vector oficial, ANTES de
+ * encender Khipu — los dos, por separado, rechazaban el 100% de las
+ * notificaciones reales y habrían dejado pedidos pagados sin marcar):
+ *
+ * 1. `par.split('=')` para leer la cabecera **se come el `=` final del
+ *    base64**. Un HMAC-SHA256 son 32 bytes → su base64 SIEMPRE termina en
+ *    un `=` de relleno, así que la comparación fallaba siempre. Hay que
+ *    cortar en el PRIMER `=` y quedarse con todo el resto.
+ *
+ * 2. El secreto de la firma **no es la API key** (el UUID de `x-api-key`),
+ *    sino la *llave de cobrador* del panel (40 caracteres hexadecimales)
+ *    — el ejemplo de la documentación usa justamente ese formato. Como la
+ *    documentación dice "merchant secret" sin nombrar el campo del panel,
+ *    acá se aceptan las dos y se registra en el log cuál calzó: el primer
+ *    pago real deja la respuesta por escrito. Aceptar ambas no debilita
+ *    nada — las dos son secretos que solo Khipu y nosotros conocemos.
  */
 export function verificarFirmaWebhookKhipu(cabecera: string | null, cuerpoCrudo: string): boolean {
   if (!cabecera) return false;
 
-  const partes = Object.fromEntries(
-    cabecera.split(',').map((par) => {
-      const [clave, valor] = par.split('=');
-      return [clave, valor];
-    })
-  );
+  const partes: Record<string, string> = {};
+  for (const par of cabecera.split(',')) {
+    const corte = par.indexOf('=');
+    if (corte === -1) continue;
+    partes[par.slice(0, corte).trim()] = par.slice(corte + 1);
+  }
+
   const timestamp = partes.t;
   const firmaRecibida = partes.s;
   if (!timestamp || !firmaRecibida) return false;
 
-  const apiKey = apiKeyKhipu();
-  const firmaEsperada = createHmac('sha256', apiKey)
-    .update(`${timestamp}.${cuerpoCrudo}`)
-    .digest('base64');
+  const firmar = (secreto: string) =>
+    createHmac('sha256', secreto).update(`${timestamp}.${cuerpoCrudo}`).digest('base64');
 
-  return firmaEsperada === firmaRecibida;
+  const secretoCobrador = process.env.KHIPU_SECRET?.trim();
+  if (secretoCobrador && firmar(secretoCobrador) === firmaRecibida) {
+    console.info('[khipu] firma válida con KHIPU_SECRET (llave de cobrador)');
+    return true;
+  }
+
+  /* apiKeyKhipu() LANZA si falta la variable. Acá eso no puede propagarse:
+     esta función la llama el webhook antes de cualquier try/catch, así que
+     una excepción se convertiría en un 500 y Khipu reintentaría el mismo
+     pago una y otra vez. Un verificador de firma responde sí o no; si no
+     hay con qué verificar, la respuesta es no. */
+  let apiKey: string | null = null;
+  try {
+    apiKey = apiKeyKhipu();
+  } catch {
+    apiKey = null;
+  }
+  if (apiKey && firmar(apiKey) === firmaRecibida) {
+    console.info('[khipu] firma válida con KHIPU_API_KEY');
+    return true;
+  }
+
+  console.error(
+    '[khipu] firma inválida.',
+    secretoCobrador
+      ? 'No calzó ni con la llave de cobrador ni con la API key.'
+      : 'Solo se probó con la API key: falta definir KHIPU_SECRET (llave de cobrador) en las variables de entorno.'
+  );
+  return false;
 }
