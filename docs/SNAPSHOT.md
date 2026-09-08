@@ -88,6 +88,22 @@ envíos a clientes reales fallan en silencio hasta verificarlo (ver "Pendiente" 
 
 ---
 
+## Marca del producto (07-09-2026, en producción)
+`productos_web.marca` (`supabase/23-marca.sql`) — la llena el trigger de sincronización desde
+`productos.marca` del POS (ver `sevelin-pos-oficial/sql/38-marca-producto.sql` y su
+`docs/CHANGELOG-V54.md`), nunca se edita acá. Se muestra sobre el nombre en la ficha y va en el
+JSON-LD `Product` como `brand`, **solo cuando el producto la tiene**: un genérico no lleva marca
+inventada, porque declarar a Sevelin como fabricante de un cable es un dato falso y Google penaliza
+eso. Hoy hay **48 productos con marca** (HP, Kingston, Master-G, Kronos, Samsung, MSI…).
+
+**Ojo operativo:** las marcas se cargaron en el POS *antes* de que este receptor conociera el campo,
+así que esos disparos del trigger llegaron sin `marca` y hubo que re-empujar los 48 productos a mano.
+Para la próxima: **primero desplegar el receptor, después cargar los datos.**
+
+Se desplegó en un **commit separado a pedido del dueño**: este repo tiene la integración de Khipu sin
+commitear desde la sesión anterior y desplegar la marca la habría arrastrado a producción. **Khipu
+sigue sin commitear y sin desplegar**, intacto en el árbol de trabajo.
+
 ## Stack
 Next.js 16 (App Router) · TypeScript · Tailwind v4 · `@supabase/supabase-js`.
 
