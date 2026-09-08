@@ -88,7 +88,7 @@ envíos a clientes reales fallan en silencio hasta verificarlo (ver "Pendiente" 
 
 ---
 
-## Khipu — segundo medio de pago (08-09-2026, DESPLEGADO PERO APAGADO)
+## Khipu — segundo medio de pago (08-09-2026, ENCENDIDO EN PRODUCCIÓN ✅)
 
 Transferencia bancaria en paralelo a Flow. `supabase/22-khipu.sql` aplicada
 (`pedidos_web.metodo_pago` con DEFAULT `'FLOW'` + `khipu_payment_id`), `src/lib/khipu.ts`
@@ -97,10 +97,13 @@ Transferencia bancaria en paralelo a Flow. `supabase/22-khipu.sql` aplicada
 re-serializar un JSON ya parseado puede no ser byte a byte idéntico) y selector de medio de pago en
 el checkout.
 
-**ESTÁ APAGADO A PROPÓSITO Y ESO ES CORRECTO.** Sin `KHIPU_API_KEY` en Vercel, `khipuHabilitado()` es
-`false`, el selector no se muestra y el checkout se comporta exactamente como antes: pago único con
-Flow. **Verificado en producción**: `/api/khipu-webhook` responde `{"ok":true,"motivo":"sin_payment_id"}`
-y `/checkout` no muestra la opción de transferencia. Khipu se enciende solo al agregar la variable.
+**Encendido y verificado en producción el 08-09-2026.** El dueño puso `KHIPU_API_KEY` y `KHIPU_SECRET`
+en Vercel (rotadas primero, porque las originales se habían pegado en un chat) y se disparó un
+redeploy. **Verificado con el navegador real, sin enviar el formulario**: agregado un producto al
+carrito y abierto `/checkout`, aparecen las dos opciones — "Tarjeta de crédito o débito (Webpay, vía
+Flow)" y "Transferencia bancaria (Vía Khipu)". Nunca se hizo click en "Pagar": no se generó ningún
+cobro real ni de prueba. `/api/khipu-webhook` sigue respondiendo bien
+(`{"ok":true,"motivo":"sin_payment_id"}` ante un cuerpo vacío).
 
 **La `notify_url` NO se configura en el panel de Khipu, y está confirmado por la documentación.**
 Viaja en cada cobro (`notify_api_version: '3.0'`). La documentación oficial lo dice explícitamente:
@@ -124,11 +127,17 @@ El algoritmo en sí (`timestamp + "." + cuerpo crudo`, HMAC-SHA256, base64) sí 
 exactamente la firma del vector oficial. **Moraleja para la próxima integración con firma: probar
 contra el vector de la documentación ANTES de encender, no después del primer pago perdido.**
 
-**Pendiente del dueño:** poner `KHIPU_API_KEY` **y `KHIPU_SECRET`** (llave de cobrador) en Vercel,
-confirmar que `NEXT_PUBLIC_SITE_URL` ahí sea `https://www.sevelin.cl` (de ahí sale la notify_url), y
-pedir a `soporte@khipu.com` subir el límite de cobro, que hoy es de **$5.000** (cuenta **527804**).
-En el primer pago real, **mirar los logs de Vercel** para ver qué línea `[khipu] firma válida con …`
-aparece, y dejar solo esa llave.
+**Pendiente real que queda (verificado al 08-09-2026):**
+1. **El ciclo de pago completo nunca se probó de punta a punta** — solo se confirmó que el selector
+   aparece, no que un pago real se cobra, notifica y marca el pedido. Hacer una compra de prueba
+   chica (ideal: bajo el límite de $5.000 actual, así no hace falta esperar a Khipu) y **revisar los
+   logs de Vercel** en ese momento: la línea `[khipu] firma válida con …` dice qué llave calzó
+   (`KHIPU_SECRET` o `KHIPU_API_KEY`) — dejar solo esa puesta después.
+2. **Confirmar `NEXT_PUBLIC_SITE_URL` en Vercel** = `https://www.sevelin.cl` (ya estaba puesta desde
+   antes de Khipu; de ahí sale la `notify_url` de cada cobro — no debería ser necesario, pero conviene
+   confirmarlo la primera vez que se prueba un pago real).
+3. **Pedir a `soporte@khipu.com` subir el límite de cobro**, hoy en **$5.000** (cuenta **527804**) —
+   sin esto Khipu solo sirve para compras muy chicas.
 
 ## Marca del producto (07-09-2026, en producción)
 `productos_web.marca` (`supabase/23-marca.sql`) — la llena el trigger de sincronización desde
