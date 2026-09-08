@@ -16,6 +16,42 @@ function filaItem(nombre: string, cantidad: number, subtotal: number): string {
     </tr>`;
 }
 
+/** Misma fila, con una miniatura a la izquierda cuando hay foto — usada
+ * solo en el correo de confirmación (ver correoConfirmacionPedido). Si
+ * `imagenUrl` viene undefined (producto sin foto, o despublicado después
+ * de la compra), se ve idéntica a filaItem(): ninguna celda vacía ni
+ * espacio reservado que quede raro. */
+function filaItemConFoto(nombre: string, cantidad: number, subtotal: number, imagenUrl: string | undefined): string {
+  const miniatura = imagenUrl
+    ? `<img src="${imagenUrl}" alt="" width="44" height="44" style="display:block;border-radius:8px;object-fit:cover;background:#f4f5f7;" />`
+    : '';
+  return `
+    <tr>
+      <td style="padding:8px 0;border-bottom:1px solid ${BORDE};">
+        <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+          ${miniatura ? `<td style="padding-right:10px;width:44px;">${miniatura}</td>` : ''}
+          <td style="color:${TEXTO};font-size:14px;">${nombre} × ${cantidad}</td>
+        </tr></table>
+      </td>
+      <td style="padding:8px 0;border-bottom:1px solid ${BORDE};color:${TEXTO};font-size:14px;text-align:right;white-space:nowrap;vertical-align:top;">${formatoCLP.format(subtotal)}</td>
+    </tr>`;
+}
+
+/** Bloque de "pedir reseña" — compartido entre el correo de confirmación
+ * (primer contacto, apenas se paga) y el de entrega (segundo empujón,
+ * cuando el cliente ya tiene el producto en la mano). Un solo HTML para
+ * los dos: si el texto o el botón cambian, cambian en los dos correos a
+ * la vez, nunca uno sin el otro. */
+function bloqueReseña(): string {
+  return `
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0;background:#f9fafb;border-radius:10px;">
+      <tr><td style="padding:20px;text-align:center;">
+        <p style="margin:0 0 12px;font-size:14px;color:${TEXTO};">¿Todo bien con tu compra? Nos ayuda mucho que nos cuentes en una reseña de Google.</p>
+        <a href="${URL_RESENA_GOOGLE}" style="display:inline-block;background:${AZUL};color:#ffffff;text-decoration:none;padding:11px 22px;border-radius:999px;font-size:14px;font-weight:600;">⭐ Dejar una reseña</a>
+      </td></tr>
+    </table>`;
+}
+
 /** Envoltorio HTML compartido — mismo look simple para confirmación y cancelación,
  * sin depender de ningún CSS externo (el correo se renderiza aislado, cada cliente
  * de correo interpreta las reglas a su manera). */
@@ -43,12 +79,31 @@ function envoltorio(titulo: string, contenidoHtml: string): string {
 </html>`;
 }
 
-/** Confirmación de pedido — se envía cuando Flow confirma el pago (ver
- * POST /api/flow-webhook). No incluye datos de pago ni de tarjeta: eso lo
- * respalda Flow directamente. */
-export function correoConfirmacionPedido(pedido: PedidoWeb): { subject: string; html: string } {
+/** Confirmación de pedido — se envía cuando Flow o Khipu confirman el pago
+ * (ver POST /api/flow-webhook y POST /api/khipu-webhook). No incluye datos
+ * de pago ni de tarjeta/cuenta: eso lo respalda la pasarela directamente.
+ *
+ * `imagenesPorProductoId` es OPCIONAL a propósito: lo arma el webhook con
+ * `obtenerImagenesPorProductoPosId()` antes de llamar acá (requiere una
+ * consulta aparte a productos_web), pero si esa consulta falla o no se
+ * pasa nada, el correo se sigue mandando igual — sin miniaturas, nunca sin
+ * confirmación de pago. Fallar en conseguir una foto no puede ser motivo
+ * para no avisarle al cliente que su pago sí se recibió.
+ *
+ * El bloque de reseña va TAMBIÉN acá (no solo en correoEntregaPedido):
+ * pedir retiro en tienda no dispara ningún correo de "entregado" —
+ * eso lo marca el POS a mano — así que para pedidos RETIRO este es el
+ * único correo automático que el cliente recibe. Pedirla temprano nunca
+ * está de más; el popup de la página de pedido es el otro canal, y
+ * ninguno excluye al otro. */
+export function correoConfirmacionPedido(
+  pedido: PedidoWeb,
+  imagenesPorProductoId: Record<number, string | undefined> = {}
+): { subject: string; html: string } {
   const nombre = pedido.cliente_nombre || 'Hola';
-  const filas = pedido.items.map((it) => filaItem(it.nombre, it.cantidad, it.precio_web * it.cantidad)).join('');
+  const filas = pedido.items
+    .map((it) => filaItemConFoto(it.nombre, it.cantidad, it.precio_web * it.cantidad, imagenesPorProductoId[it.producto_pos_id]))
+    .join('');
   const metodo = pedido.metodo_envio === 'RETIRO'
     ? `Retiro en tienda (${DIRECCION_TIENDA})`
     : pedido.metodo_envio === 'LOCAL'
@@ -63,6 +118,7 @@ export function correoConfirmacionPedido(pedido: PedidoWeb): { subject: string; 
       <tr><td style="padding:6px 0 0;font-size:16px;font-weight:700;color:${TEXTO};">Total</td><td style="padding:6px 0 0;font-size:16px;font-weight:700;color:${TEXTO};text-align:right;">${formatoCLP.format(pedido.total)}</td></tr>
     </table>
     <p style="margin:0;font-size:14px;color:${TEXTO_SUAVE};"><strong style="color:${TEXTO};">Entrega:</strong> ${metodo}</p>
+    ${bloqueReseña()}
   `;
 
   return {
@@ -151,12 +207,7 @@ export function correoEntregaPedido(pedido: PedidoWeb): { subject: string; html:
   const nombre = pedido.cliente_nombre || 'Hola';
   const contenido = `
     <p style="margin:0 0 20px;font-size:14px;color:${TEXTO_SUAVE};">${nombre}, tu pedido <strong style="color:${TEXTO};">${pedido.numero_pedido}</strong> fue entregado. ¡Esperamos que lo disfrutes!</p>
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;background:#f9fafb;border-radius:10px;">
-      <tr><td style="padding:20px;text-align:center;">
-        <p style="margin:0 0 12px;font-size:14px;color:${TEXTO};">¿Todo bien con tu compra? Nos ayuda mucho que nos cuentes en una reseña de Google.</p>
-        <a href="${URL_RESENA_GOOGLE}" style="display:inline-block;background:${AZUL};color:#ffffff;text-decoration:none;padding:11px 22px;border-radius:999px;font-size:14px;font-weight:600;">⭐ Dejar una reseña</a>
-      </td></tr>
-    </table>
+    ${bloqueReseña()}
     <p style="margin:0;font-size:13px;color:${TEXTO_SUAVE};">¿Algo no llegó como esperabas? Escríbenos y lo revisamos contigo.</p>
   `;
   return {

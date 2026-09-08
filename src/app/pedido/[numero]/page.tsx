@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { obtenerPedidoPorNumero } from "@/lib/pedidos";
 import { formatoCLP } from "@/lib/formato";
 import { URL_RESENA_GOOGLE } from "@/lib/resena-google";
+import { AvisoResenaGoogle } from "@/components/aviso-resena-google";
 
 interface PropsPagina {
   params: Promise<{ numero: string }>;
@@ -124,7 +125,17 @@ export default async function EstadoPedido({ params }: PropsPagina) {
           cualquier estado desde ahí en adelante (PAGADO/PREPARANDO/ENVIADO/
           ENTREGADO) — es la página que ve el cliente justo después de
           comprar. El segundo empujón vive en el correo de entrega, ver
-          correoEntregaPedido() en src/lib/correo-pedido.ts. */}
+          correoEntregaPedido() en src/lib/correo-pedido.ts.
+
+          AvisoResenaGoogle intenta abrir el popup SOLO — no dibuja nada, y
+          por eso va antes del <a> visible en vez de envolverlo: si el
+          navegador bloquea el popup automático (frecuente: window.open()
+          fuera de un click directo) o el cliente lo cierra sin calificar,
+          el botón de abajo queda intacto y sigue siendo la forma real de
+          llegar a la reseña. */}
+      {PAGO_CONFIRMADO.includes(pedido.estado) && (
+        <AvisoResenaGoogle numeroPedido={pedido.numero_pedido} url={URL_RESENA_GOOGLE} />
+      )}
       {PAGO_CONFIRMADO.includes(pedido.estado) && (
         <a
           href={URL_RESENA_GOOGLE}

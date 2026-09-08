@@ -68,6 +68,33 @@ export async function obtenerProductosPorSku(skus: string[]): Promise<Record<str
 }
 
 /**
+ * Primera foto de cada producto, por `producto_pos_id` — para mostrar una
+ * miniatura en los correos de pedido (confirmación/entrega).
+ * ------------------------------------------------------------
+ * A propósito SIN los filtros de `listarCatalogo`/`obtenerProductosPorSku`
+ * (`publicado_web`, `stock_web > 0`, `es_pedido_encargo`): un correo de un
+ * pedido YA HECHO tiene que poder mostrar la foto aunque el producto se
+ * haya despublicado o agotado después — el pedido es un hecho pasado, no
+ * depende del estado actual del catálogo.
+ */
+export async function obtenerImagenesPorProductoPosId(
+  productoPosIds: number[]
+): Promise<Record<number, string | undefined>> {
+  if (!productoPosIds.length) return {};
+  const { data, error } = await supabaseWeb
+    .from('productos_web')
+    .select('producto_pos_id, imagen_urls')
+    .in('producto_pos_id', productoPosIds);
+
+  if (error) throw new Error(error.message);
+  const porId: Record<number, string | undefined> = {};
+  for (const fila of data || []) {
+    porId[fila.producto_pos_id] = fila.imagen_urls?.[0];
+  }
+  return porId;
+}
+
+/**
  * Categorías distintas del catálogo publicado, para el filtro del header
  * (ver README-ECOMMERCE-SEVELIN.md sección 7 — no hay subcategoría en el
  * schema, así que esto es un filtro plano, no un mega-menú jerárquico).

@@ -9,6 +9,7 @@ import {
   obtenerPedidoPorNumero,
 } from '@/lib/pedidos';
 import { correoAlertaPedidoExpiradoPagado, correoAlertaStockSinDespacho, correoConfirmacionPedido } from '@/lib/correo-pedido';
+import { obtenerImagenesPorProductoPosId } from '@/lib/catalogo';
 import { enviarCorreo } from '@/lib/resend';
 
 /**
@@ -143,7 +144,13 @@ export async function POST(req: NextRequest) {
   // dato incompleto) simplemente no hay a quién mandarlo.
   if (pedido.cliente_email) {
     try {
-      const { subject, html } = correoConfirmacionPedido(pedido);
+      /* Miniatura de cada producto en el correo. Sin bloquear la
+         confirmación si esta consulta falla: una foto que no llega no
+         puede ser motivo para no avisar que el pago SÍ se recibió. */
+      const imagenes = await obtenerImagenesPorProductoPosId(
+        pedido.items.map((it) => it.producto_pos_id)
+      ).catch(() => ({}));
+      const { subject, html } = correoConfirmacionPedido(pedido, imagenes);
       await enviarCorreo({ to: pedido.cliente_email, subject, html });
     } catch (err) {
       console.error(`[flow-webhook] ${numeroPedido}: no se pudo enviar el correo de confirmación:`, err instanceof Error ? err.message : err);
