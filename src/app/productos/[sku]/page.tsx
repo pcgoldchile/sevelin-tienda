@@ -99,15 +99,17 @@ export default async function FichaProducto({ params }: PropsPagina) {
 
   // Dato estructurado Product (schema.org) — lo que Google usa para
   // mostrar precio/disponibilidad debajo del link en el buscador, y lo
-  // mismo que después va a pedir Google Merchant Center si se conecta
-  // Google Shopping/Ads. Solo se declaran campos que sabemos ciertos —
-  // "brand" queda afuera a propósito: Sevelin es el vendedor, no la marca
-  // real de cada producto, y ese dato no existe en el catálogo todavía.
+  // mismo que pide Google Merchant Center al conectar Google Shopping/Ads.
+  // Solo se declaran campos que sabemos ciertos: la marca aparece únicamente
+  // cuando el producto TIENE marca cargada en el POS (sql/38). Un genérico
+  // no lleva marca inventada — declarar a Sevelin como fabricante de un
+  // cable sería un dato falso, y Google penaliza eso.
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Product',
     name: producto.nombre,
     sku: producto.sku,
+    ...(producto.marca ? { brand: { '@type': 'Brand', name: producto.marca } } : {}),
     image: producto.imagen_urls || [],
     description: producto.descripcion_web ? textoPlanoDesdeHtml(producto.descripcion_web) : producto.nombre,
     offers: {
@@ -164,6 +166,16 @@ export default async function FichaProducto({ params }: PropsPagina) {
 
         <div className="flex flex-col gap-4">
           <EtiquetaProductoBadge etiqueta={producto.etiqueta_web} />
+          {/* La marca va ARRIBA del nombre, como en cualquier ficha de
+              retail: es lo primero que busca quien ya sabe qué marca
+              quiere. Solo aparece si el producto la tiene cargada — un
+              genérico no muestra nada, en vez de mostrar "Sevelin" como
+              si fuéramos el fabricante. */}
+          {producto.marca && (
+            <span className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-faint">
+              {producto.marca}
+            </span>
+          )}
           <h1 className="text-3xl font-semibold tracking-tight text-ink">{producto.nombre}</h1>
           <span className="precio-gamer text-3xl text-ink">{formatoCLP.format(producto.precio_web)}</span>
 

@@ -108,6 +108,9 @@ export async function POST(req: NextRequest) {
     es_pedido_encargo: !!producto.es_pedido_encargo,
     meta_titulo_web: producto.meta_titulo_web || null,
     meta_descripcion_web: producto.meta_descripcion_web || null,
+    // Marca del fabricante (supabase/23-marca.sql). NULL en los genéricos:
+    // la ficha y el JSON-LD la omiten en vez de inventar una.
+    marca: producto.marca || null,
     sincronizado_en: new Date().toISOString()
   };
 

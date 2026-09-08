@@ -34,6 +34,9 @@ export interface ProductoWeb {
   // con el botón "Generar con IA" del modal de producto en el POS.
   meta_titulo_web: string | null;
   meta_descripcion_web: string | null;
+  /** Marca del fabricante (Kingston, MSI, HP…). NULL en los genéricos.
+   *  Se sincroniza desde productos.marca del POS — ver supabase/23-marca.sql. */
+  marca: string | null;
   sincronizado_en: string;
 }
 
@@ -238,4 +241,6 @@ export interface ProductoPOS {
   // SEO con IA — ver sevelin-pos-oficial/sql/33-seo-ia.sql.
   meta_titulo_web: string | null;
   meta_descripcion_web: string | null;
+  // Marca del fabricante — ver sevelin-pos-oficial/sql/38-marca-producto.sql.
+  marca: string | null;
 }

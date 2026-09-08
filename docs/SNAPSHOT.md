@@ -65,8 +65,12 @@ cuando el cliente deja el correo en el checkout sin pagar; v18: rediseño de fic
 sanitizador que no cargaba en Vercel + soporte de negrita/link en descripciones; v17: arreglos de
 móvil, menú que se cierra solo, **envío por distancia real** con Nominatim + OSRM, valles con km
 declarado, horarios de corte) ·
-**En producción:** desplegado en Vercel, dominio `sevelin.cl` **todavía apunta a Tiendanube** (la
-tienda nueva vive en la URL de Vercel por ahora — decidir cuándo migrar el DNS, ver "Pendiente").
+**En producción:** desplegado en Vercel, y `sevelin.cl` **ya apunta a esta tienda** (verificado el
+07-09-2026 con las cabeceras HTTP de `https://www.sevelin.cl`: `Server: Vercel`, `X-Powered-By:
+Next.js`). Esta línea decía "todavía apunta a Tiendanube" desde antes de la migración de DNS — ya no
+es cierto. **Ojo:** el pago sigue en **sandbox de Flow** (`FLOW_API_BASE` cae a `sandbox.flow.cl` si
+no se define en Vercel), así que el dominio real está sirviendo una tienda que todavía no cobra
+plata de verdad — ver `sevelin-pos-oficial/docs/PLAN-CRECIMIENTO-2026.md`, Fase 0.
 
 **Estado real (verificado en producción, no de memoria):** Supabase Web real
 (`ekxwavsnocwxtzxqxbbi`) con **9 migraciones** aplicadas, catálogo con **86+ productos reales**
