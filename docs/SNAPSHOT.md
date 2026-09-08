@@ -102,14 +102,33 @@ el checkout.
 Flow. **Verificado en producción**: `/api/khipu-webhook` responde `{"ok":true,"motivo":"sin_payment_id"}`
 y `/checkout` no muestra la opción de transferencia. Khipu se enciende solo al agregar la variable.
 
-**La `notify_url` NO se configura en el panel de Khipu.** Viaja en cada cobro
-(`notify_api_version: '3.0'`, apuntando a `${NEXT_PUBLIC_SITE_URL}/api/khipu-webhook`). La casilla
-"URL de notificación" del panel es del formato antiguo **1.3**: llenarla podría hacer que Khipu mande
-notificaciones que este webhook no entiende. **Dejarla vacía.**
+**La `notify_url` NO se configura en el panel de Khipu, y está confirmado por la documentación.**
+Viaja en cada cobro (`notify_api_version: '3.0'`). La documentación oficial lo dice explícitamente:
+*"For collections generated using the 3.0 API, the notification will be exclusively performed using
+the 3.0 version of the event notification API"*. La casilla del panel pertenece al modelo antiguo
+(1.3, el de `notification_token`) y no aplica a los cobros que crea esta tienda. **Dejarla vacía.**
 
-**Pendiente del dueño:** poner `KHIPU_API_KEY` en Vercel, confirmar que `NEXT_PUBLIC_SITE_URL` ahí sea
-`https://www.sevelin.cl` (de ahí sale la notify_url), y pedir a `soporte@khipu.com` subir el límite de
-cobro, que hoy es de **$5.000** (cuenta de cobro **527804**).
+### ⚠️ Bug crítico encontrado y corregido ANTES de encender (08-09-2026)
+Probando `verificarFirmaWebhookKhipu()` contra el **vector de prueba oficial** de la documentación
+aparecieron **dos errores independientes**, cada uno de los cuales rechazaba el **100%** de las
+notificaciones — el cliente pagaba y el pedido nunca quedaba marcado:
+1. `par.split('=')` al leer `x-khipu-signature` **se comía el `=` final del base64**. Un HMAC-SHA256
+   son 32 bytes, así que su base64 SIEMPRE lleva un `=` de relleno. El ejemplo de la propia
+   documentación usa `split('=', 1)` justo para evitarlo.
+2. Se usaba la **API key** como secreto del HMAC, pero la documentación habla del *merchant secret* y
+   su ejemplo usa 40 caracteres hexadecimales — el formato de la **llave de cobrador**. Ahora se
+   aceptan las dos y **se registra en el log cuál calzó**: el primer pago real deja la respuesta por
+   escrito. Nueva variable opcional `KHIPU_SECRET`.
+
+El algoritmo en sí (`timestamp + "." + cuerpo crudo`, HMAC-SHA256, base64) sí estaba bien: reproduce
+exactamente la firma del vector oficial. **Moraleja para la próxima integración con firma: probar
+contra el vector de la documentación ANTES de encender, no después del primer pago perdido.**
+
+**Pendiente del dueño:** poner `KHIPU_API_KEY` **y `KHIPU_SECRET`** (llave de cobrador) en Vercel,
+confirmar que `NEXT_PUBLIC_SITE_URL` ahí sea `https://www.sevelin.cl` (de ahí sale la notify_url), y
+pedir a `soporte@khipu.com` subir el límite de cobro, que hoy es de **$5.000** (cuenta **527804**).
+En el primer pago real, **mirar los logs de Vercel** para ver qué línea `[khipu] firma válida con …`
+aparece, y dejar solo esa llave.
 
 ## Marca del producto (07-09-2026, en producción)
 `productos_web.marca` (`supabase/23-marca.sql`) — la llena el trigger de sincronización desde
