@@ -150,6 +150,62 @@ con …`) y dejar solo esa variable puesta.
 3. **Pedir a `soporte@khipu.com` subir el límite de cobro**, hoy en **$5.000** (cuenta **527804**) —
    sin esto Khipu solo sirve para compras muy chicas.
 
+### La compra de prueba se anuló (08-09-2026) — WEB-000006 corregido a mano
+El dueño anuló el pago desde el panel de Khipu ("Anular pago recibido" → el dinero vuelve a su cuenta,
+no se puede deshacer). **Khipu no tiene documentado un evento de webhook para reembolso/anulación en
+la API v3** — solo notifica pago exitoso — así que `khipu-webhook` nunca se entera de una anulación
+por sí solo. Se corrigió el pedido A MANO: `WEB-000006` pasó de `PAGADO` a `CANCELADO`, con
+`nota_interna` explicando el motivo. **Queda como limitación conocida**: si algún cliente real pide un
+reembolso alguna vez, hay que repetir esta corrección manual — no hay forma de automatizarla sin que
+Khipu ofrezca ese webhook.
+
+### Correo de pago administrativo: el correo que aparece en "Para consultas" se puede cambiar
+El comprobante que Khipu manda por cada pago decía `Para consultas comuníquese a
+pcgoldchile@gmail.com` — cuenta personal vieja, no relacionada a Sevelin. El dueño lo corrigió desde
+el panel (Opciones de la cuenta → Notificaciones por correo electrónico): agregó
+`sevelin.contacto@gmail.com` en los 5 campos y borró `pcgoldchile@gmail.com` de los 5. Esto es
+configuración de cuenta en Khipu, no del código — no se tocó nada en el repo.
+
+## Reseña de Google: popup automático + en el correo de confirmación (08-09-2026, en producción)
+Motivado por la compra de prueba real: la página `/pedido/[numero]` ya tenía un botón "Reseñar" visible
+cuando el pago está confirmado, pero había que hacer click. Ahora:
+- **`AvisoResenaGoogle`** (`src/components/aviso-resena-google.tsx`, client component) intenta abrir
+  el popup de la reseña SOLO, una vez por pedido (guardado en `localStorage`, no en la base — es
+  "¿ya se lo mostré a ESTE navegador para ESTE pedido?", no algo que el servidor necesite saber). Si el
+  navegador bloquea el popup (frecuente: `window.open()` fuera de un click directo del usuario) o el
+  cliente lo cierra sin calificar, **no pasa nada distinto**: el botón "Reseñar" de siempre sigue ahí.
+- **El correo de confirmación de pago** (`correoConfirmacionPedido`) ahora también incluye el bloque de
+  reseña — antes solo estaba en el correo de "pedido entregado" (`correoEntregaPedido`), que **nunca
+  se dispara para pedidos RETIRO** (eso lo marca el POS a mano). Para esos pedidos, la confirmación es
+  el único correo automático que el cliente recibe, así que ahí tenía que estar también. El HTML del
+  bloque se extrajo a `bloqueReseña()`, compartido entre los dos correos — un solo lugar donde cambiar
+  el texto o el botón.
+- **El correo de confirmación ahora muestra una miniatura de cada producto.** `obtenerImagenesPorProductoPosId()`
+  (`src/lib/catalogo.ts`) trae la primera foto por `producto_pos_id`, **sin** los filtros del catálogo
+  público (`publicado_web`, `stock_web > 0`): un correo de un pedido ya hecho tiene que poder mostrar
+  la foto aunque el producto se haya despublicado o agotado después. Si la consulta falla, el correo
+  se manda igual, sin miniaturas.
+
+**Probado con `tsx` sobre la función real** (no un mock): producto con foto muestra `<img>`, producto
+sin foto no deja `src` vacío ni roto, el bloque de reseña está, el link es el real de Sevelin. `tsc` y
+`eslint` limpios en los 6 archivos tocados.
+
+### 📌 Pendiente explícito para futuras mejoras (a pedido del dueño, no se hizo ahora)
+1. **QR de la reseña** (el dueño ofreció uno, `g.page/r/CZzFra1V3A9aEAE/review`) — para imprimir en un
+   ticket del POS o incluir como imagen en el correo. No se generó porque el `img-src` del CSP
+   (`next.config.ts`) solo permite `'self' data: blob: https://*.supabase.co`: no se puede hotlinkear
+   a un generador de QR externo, habría que agregar una librería (ej. `qrcode`, sin dependencias
+   nativas) para generarlo como `data:` URI o subirlo a Supabase Storage. Decisión de diseño pendiente:
+   ¿en el correo, en un ticket impreso del POS, o en ambos?
+2. **Recordatorio si el cliente no calificó todavía.** Google no ofrece ninguna forma gratuita de saber
+   si alguien dejó la reseña — el link `g.page/r/...` es público y anónimo, no se conecta con el
+   pedido. Solo existe una vía real: la **Google Business Profile API**, que exige autorizar el perfil
+   de negocio con OAuth (cuenta y permiso nuevos, no solo código). Sin esa API, un recordatorio
+   automático saldría siempre a los N días, **sin saber si ya calificó** — con el riesgo de molestar a
+   quien ya lo hizo. Decisión pendiente del dueño: ¿investigar la API de Google, o vivir con el
+   recordatorio "ciego"? Y de cualquier forma, el envío por correo sigue bloqueado hasta verificar el
+   dominio en Resend (**B2**).
+
 ## Marca del producto (07-09-2026, en producción)
 `productos_web.marca` (`supabase/23-marca.sql`) — la llena el trigger de sincronización desde
 `productos.marca` del POS (ver `sevelin-pos-oficial/sql/38-marca-producto.sql` y su
