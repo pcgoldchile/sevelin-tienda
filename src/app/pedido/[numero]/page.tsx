@@ -96,11 +96,17 @@ export default async function EstadoPedido({ params }: PropsPagina) {
       ) : (
         PAGO_CONFIRMADO.includes(pedido.estado) && (
           // Boleta/factura electrónica automática está deshabilitada por ahora
-          // (ver src/lib/openfactura.ts) — el comprobante de pago de Flow
-          // respalda la compra; si el cliente necesita boleta o factura, se
-          // emite manual, nunca se inventa un link que no existe.
+          // (ver src/lib/openfactura.ts) — el comprobante de pago (de Flow o
+          // de Khipu, según metodo_pago) respalda la compra; si el cliente
+          // necesita boleta o factura, se emite manual, nunca se inventa un
+          // link que no existe.
+          //
+          // BUG REAL corregido (08-09-2026): este texto decía "Flow" fijo,
+          // de cuando esa era la única pasarela. Con Khipu ya en producción,
+          // un pedido pagado por transferencia mostraba "tu comprobante de
+          // pago de Flow" — encontrado en la primera compra real con Khipu.
           <p className="mt-4 text-sm text-ink-soft">
-            Tu comprobante de pago de Flow respalda esta compra.
+            Tu comprobante de pago de {pedido.metodo_pago === 'KHIPU' ? 'Khipu' : 'Flow'} respalda esta compra.
             {whatsapp && (
               <>
                 {" "}¿Necesitas boleta o factura?{" "}

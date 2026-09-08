@@ -37,8 +37,9 @@ export default function Terminos() {
         <section>
           <h2 className="mb-1.5 text-base font-semibold text-ink">Boleta y factura</h2>
           <p>
-            El comprobante de pago de Flow respalda tu compra. Si necesitas boleta o factura, puedes
-            solicitarla en el checkout o escribirnos directamente.
+            El comprobante de pago de la pasarela que uses para pagar (Flow o Khipu) respalda tu
+            compra. Si necesitas boleta o factura, puedes solicitarla en el checkout o escribirnos
+            directamente.
           </p>
         </section>
 

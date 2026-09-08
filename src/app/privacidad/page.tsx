@@ -52,9 +52,10 @@ export default function Privacidad() {
             catorce años ni datos personales sensibles.
           </p>
           <p className="mt-2">
-            No pedimos ni almacenamos datos de tarjetas de crédito o débito — eso lo procesa Flow
-            directamente. Tampoco pedimos tu RUT personal para la boleta: hoy se emite manual (a pedido) o
-            el comprobante de pago de Flow respalda la compra.
+            No pedimos ni almacenamos datos de tarjetas de crédito, débito ni de tu cuenta bancaria —
+            eso lo procesan directamente Flow (tarjetas) o Khipu (transferencia), según el medio de
+            pago que elijas. Tampoco pedimos tu RUT personal para la boleta: hoy se emite manual (a
+            pedido) o el comprobante de pago de esa pasarela respalda la compra.
           </p>
         </section>
 
