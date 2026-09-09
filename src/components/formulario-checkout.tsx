@@ -941,7 +941,11 @@ export function FormularioCheckout({ khipuHabilitado = false }: { khipuHabilitad
           <p className="text-xs leading-snug text-ink-faint">
             El pago con tarjeta en el sitio tiene un recargo de{" "}
             {Math.round(RECARGO_CHECKOUT_TARJETA * 100)}%, que cubre la comisión de la pasarela. Pagando
-            por transferencia, o con tarjeta directamente en la tienda, el precio es el normal.
+            por transferencia, o con tarjeta directamente en la tienda, el precio es el normal.{" "}
+            <a href="/preguntas-frecuentes" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-accent">
+              Ver todos los medios de pago
+            </a>
+            .
           </p>
         )}
 

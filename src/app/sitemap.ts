@@ -19,6 +19,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: SITE_URL, changeFrequency: 'daily', priority: 1 },
     { url: `${SITE_URL}/productos`, changeFrequency: 'daily', priority: 0.9 },
     { url: `${SITE_URL}/pedidos-por-encargo`, changeFrequency: 'weekly', priority: 0.6 },
+    /* Prioridad más alta que las legales: responde dudas de compra reales
+       ("¿es seguro comprar reacondicionado?") que la gente busca en Google. */
+    { url: `${SITE_URL}/preguntas-frecuentes`, changeFrequency: 'monthly', priority: 0.7 },
     { url: `${SITE_URL}/privacidad`, changeFrequency: 'yearly', priority: 0.2 },
     { url: `${SITE_URL}/terminos`, changeFrequency: 'yearly', priority: 0.2 },
   ];

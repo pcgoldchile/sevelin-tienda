@@ -1,7 +1,8 @@
 import { FECHA_POLITICA_PRIVACIDAD, VERSION_POLITICA_PRIVACIDAD } from "@/lib/politica-privacidad";
 
 export const metadata = {
-  title: "Política de Privacidad — Sevelin",
+  // El layout raíz ya agrega " — Sevelin" con su template.
+  title: "Política de Privacidad",
 };
 
 /* El correo de privacidad NO puede quedar vacío: el Art. 11 de la Ley 21.719

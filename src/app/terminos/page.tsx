@@ -1,7 +1,8 @@
 import { RECARGO_CHECKOUT_TARJETA } from "@/lib/precios-medio-pago";
 
 export const metadata = {
-  title: "Términos y Condiciones — Sevelin",
+  // El layout raíz ya agrega " — Sevelin" con su template.
+  title: "Términos y Condiciones",
 };
 
 export default function Terminos() {

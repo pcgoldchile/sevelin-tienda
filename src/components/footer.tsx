@@ -24,6 +24,9 @@ export function Footer() {
             <li>
               <Link href="/productos" className="transition-colors hover:text-accent">Todos los productos</Link>
             </li>
+            <li>
+              <Link href="/preguntas-frecuentes" className="transition-colors hover:text-accent">Preguntas Frecuentes</Link>
+            </li>
           </ul>
         </div>
 
