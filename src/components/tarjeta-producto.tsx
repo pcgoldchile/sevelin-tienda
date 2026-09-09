@@ -7,6 +7,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Check, Minus, Plus } from "lucide-react";
 import confetti from "canvas-confetti";
 import { formatoCLP } from "@/lib/formato";
+import { precioConRecargo } from "@/lib/precios-medio-pago";
 import { useCarrito } from "@/context/carrito-context";
 import { useToast } from "@/context/toast-context";
 import { EtiquetaProductoBadge } from "@/components/etiqueta-producto-badge";
@@ -99,6 +100,16 @@ export function TarjetaProducto({ producto }: { producto: ProductoWeb }) {
         </Link>
         <span className="precio-gamer mt-1 text-2xl text-ink">
           {formatoCLP.format(producto.precio_web)}
+        </span>
+        {/* Segundo precio en una línea chica: el precio destacado sigue
+            siendo el bajo (es el que va al feed de Google/Meta, decisión D3),
+            pero el de tarjeta tiene que estar visible desde el catálogo —
+            esconderlo hasta el último paso del checkout es justo lo que la
+            Ley del Consumidor no permite. Una sola línea de 16px para no
+            volver a desbordar la tarjeta de 160px en móvil (ver el episodio
+            de v17 documentado más arriba en este archivo). */}
+        <span className="text-[11px] leading-4 text-ink-faint">
+          {formatoCLP.format(precioConRecargo(producto.precio_web))} con tarjeta
         </span>
 
         {/* mt-auto empuja este bloque al fondo de la tarjeta sin importar

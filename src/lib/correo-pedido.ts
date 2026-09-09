@@ -115,6 +115,7 @@ export function correoConfirmacionPedido(
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">
       ${filas}
       <tr><td style="padding:10px 0 0;font-size:14px;color:${TEXTO_SUAVE};">Envío</td><td style="padding:10px 0 0;font-size:14px;color:${TEXTO};text-align:right;">${pedido.costo_envio === 0 ? 'Gratis' : formatoCLP.format(pedido.costo_envio)}</td></tr>
+      ${pedido.recargo_medio_pago > 0 ? `<tr><td style="padding:6px 0 0;font-size:14px;color:${TEXTO_SUAVE};">Pago con tarjeta</td><td style="padding:6px 0 0;font-size:14px;color:${TEXTO};text-align:right;">${formatoCLP.format(pedido.recargo_medio_pago)}</td></tr>` : ''}
       <tr><td style="padding:6px 0 0;font-size:16px;font-weight:700;color:${TEXTO};">Total</td><td style="padding:6px 0 0;font-size:16px;font-weight:700;color:${TEXTO};text-align:right;">${formatoCLP.format(pedido.total)}</td></tr>
     </table>
     <p style="margin:0;font-size:14px;color:${TEXTO_SUAVE};"><strong style="color:${TEXTO};">Entrega:</strong> ${metodo}</p>

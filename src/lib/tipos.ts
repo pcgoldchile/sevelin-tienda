@@ -198,6 +198,11 @@ export interface PedidoWeb {
   // POST /api/checkout) — ver supabase/18-pedidos-por-encargo.sql.
   tipo_pedido: 'NORMAL' | 'ENCARGO';
   costo_envio: number;
+  /* Recargo por pagar con tarjeta en el checkout web (Flow) — 0 con Khipu y
+     en todo pedido anterior al 08-09-2026. Ya viene incluido en `total`;
+     existe para poder explicarlo, porque si no, subtotal + envío no cuadra.
+     Ver supabase/25-recargo-medio-pago.sql. */
+  recargo_medio_pago: number;
   subtotal: number;
   total: number;
   // 'FLOW' (webpay/tarjetas) o 'KHIPU' (transferencia bancaria) — ver

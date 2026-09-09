@@ -78,6 +78,15 @@ export default async function EstadoPedido({ params }: PropsPagina) {
             <span>Envío</span>
             <span className="tabular-nums">{formatoCLP.format(pedido.costo_envio)}</span>
           </div>
+          {/* Sin esta línea, los ítems más el envío no suman el total y
+              parece un error de cálculo. Los pedidos anteriores al
+              08-09-2026 traen 0 y no muestran nada. */}
+          {pedido.recargo_medio_pago > 0 && (
+            <div className="flex justify-between text-ink-soft">
+              <span>Pago con tarjeta</span>
+              <span className="tabular-nums">{formatoCLP.format(pedido.recargo_medio_pago)}</span>
+            </div>
+          )}
           <div className="flex justify-between text-base font-semibold text-ink">
             <span>Total</span>
             <span className="tabular-nums">{formatoCLP.format(pedido.total)}</span>

@@ -48,6 +48,11 @@ export async function crearPedido(datos: {
   tipoPedido: 'NORMAL' | 'ENCARGO';
   metodoEnvio: MetodoEnvio;
   costoEnvio: number;
+  /* Recargo por pagar con tarjeta en el checkout web (Flow). 0 con Khipu.
+     Lo calcula POST /api/checkout con recargoTotal() sobre los precios ya
+     revalidados contra el catálogo — nunca llega desde el navegador. Ver
+     src/lib/precios-medio-pago.ts. */
+  recargoMedioPago: number;
   nota: string | null;
   factura: DatosFactura | null;
   // null = invitado. Se resuelve en POST /api/checkout leyendo la sesión
@@ -96,8 +101,12 @@ export async function crearPedido(datos: {
       tipo_pedido: datos.tipoPedido,
       metodo_envio: datos.metodoEnvio,
       costo_envio: datos.costoEnvio,
+      recargo_medio_pago: datos.recargoMedioPago,
       subtotal,
-      total: subtotal + datos.costoEnvio,
+      /* subtotal va a precio BASE (los items guardan precio_web sin
+         recargo), así que el desglose del pedido explica el total entero:
+         subtotal + envío + recargo. */
+      total: subtotal + datos.costoEnvio + datos.recargoMedioPago,
     })
     .select()
     .single();

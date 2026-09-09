@@ -3,6 +3,7 @@ import { obtenerProductoPorSku } from '@/lib/catalogo';
 import { crearPedido, guardarPagoFlow, guardarPagoKhipu, marcarPedidoFallido } from '@/lib/pedidos';
 import { crearPagoFlow } from '@/lib/flow';
 import { crearPagoKhipu, khipuHabilitado } from '@/lib/khipu';
+import { recargoTotal } from '@/lib/precios-medio-pago';
 import { confirmarEnvio } from '@/lib/envio';
 import { crearClienteServidor } from '@/lib/supabase-server';
 import { marcarCarritoConvertido } from '@/lib/carritos-web';
@@ -193,6 +194,19 @@ export async function POST(req: NextRequest) {
     data: { user },
   } = await supabaseSesion.auth.getUser();
 
+  /* El medio de pago se resuelve ANTES de crear el pedido porque decide el
+     precio: con tarjeta (Flow) va un 3% de recargo, con Khipu no. Ojo con el
+     caso borde: si el cliente pidió KHIPU pero Khipu no está habilitado en el
+     servidor, el pago cae a Flow — y entonces el recargo SÍ corresponde. Por
+     eso el recargo se calcula desde esta misma variable y no desde lo que
+     mandó el navegador. Ver src/lib/precios-medio-pago.ts. */
+  const usarKhipu = cuerpo.metodoPago === 'KHIPU' && khipuHabilitado();
+
+  /* Autoridad real del recargo, igual que el precio, el stock y el envío: se
+     calcula sobre `items`, que ya vienen revalidados contra productos_web,
+     nunca sobre lo que el cliente dijo que costaban. */
+  const recargoMedioPago = recargoTotal(items, usarKhipu ? 'KHIPU' : 'FLOW');
+
   let numeroPedido: string;
   let total: number;
   try {
@@ -203,6 +217,7 @@ export async function POST(req: NextRequest) {
       tipoPedido,
       metodoEnvio: cotizacion.metodo,
       costoEnvio: cotizacion.costo,
+      recargoMedioPago,
       nota: cuerpo.nota?.trim() || null,
       factura,
       clienteUserId: user?.id ?? null,
@@ -215,8 +230,6 @@ export async function POST(req: NextRequest) {
     const mensaje = err instanceof Error ? err.message : 'No se pudo crear el pedido';
     return NextResponse.json({ error: mensaje }, { status: 500 });
   }
-
-  const usarKhipu = cuerpo.metodoPago === 'KHIPU' && khipuHabilitado();
 
   try {
     if (usarKhipu) {

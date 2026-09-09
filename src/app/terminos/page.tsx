@@ -1,3 +1,5 @@
+import { RECARGO_CHECKOUT_TARJETA } from "@/lib/precios-medio-pago";
+
 export const metadata = {
   title: "Términos y Condiciones — Sevelin",
 };
@@ -22,8 +24,27 @@ export default function Terminos() {
         </section>
 
         <section>
+          <h2 className="mb-1.5 text-base font-semibold text-ink">Precio según el medio de pago</h2>
+          <p>
+            El precio publicado corresponde al pago con transferencia bancaria, efectivo, o tarjeta de
+            débito o crédito directamente en nuestra tienda. Pagar con tarjeta aquí en el sitio tiene un
+            recargo de {Math.round(RECARGO_CHECKOUT_TARJETA * 100)}%, que corresponde a la comisión que
+            nos cobra la pasarela de pagos por esa transacción y que no excede ese costo.
+          </p>
+          <p className="mt-2">
+            Ambos precios se muestran juntos en la ficha de cada producto y en el checkout, antes de
+            elegir el medio de pago. Si prefieres el precio sin recargo, puedes pagar por transferencia
+            bancaria en el mismo checkout, pasar por la tienda, o escribirnos para coordinar un link de
+            pago.
+          </p>
+        </section>
+
+        <section>
           <h2 className="mb-1.5 text-base font-semibold text-ink">Medios de pago</h2>
-          <p>El pago se procesa a través de Flow. No almacenamos los datos de tu tarjeta en ningún momento.</p>
+          <p>
+            El pago se procesa a través de Flow (tarjetas) o Khipu (transferencia bancaria). No
+            almacenamos los datos de tu tarjeta en ningún momento.
+          </p>
         </section>
 
         <section>

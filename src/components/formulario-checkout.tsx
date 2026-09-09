@@ -6,6 +6,7 @@ import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { NeonSpinner } from "@/components/neon-spinner";
 import { formatoCLP } from "@/lib/formato";
+import { RECARGO_CHECKOUT_TARJETA, recargoTotal } from "@/lib/precios-medio-pago";
 import { useCarrito } from "@/context/carrito-context";
 import { useSesion } from "@/context/sesion-context";
 import { CODIGOS_PAIS, CODIGO_PAIS_POR_DEFECTO } from "@/lib/codigos-pais";
@@ -128,7 +129,12 @@ export function FormularioCheckout({ khipuHabilitado = false }: { khipuHabilitad
   }
 
   const opcionElegida = opciones?.find((o) => o.metodo === metodoElegido) ?? null;
-  const total = subtotalSeleccionado + (opcionElegida?.costo ?? 0);
+  /* Recargo del 3% solo si se paga con tarjeta acá (Flow). El servidor lo
+     vuelve a calcular en POST /api/checkout sobre los precios reales del
+     catálogo — esto es únicamente lo que se muestra en pantalla. No incluye
+     el envío (decisión D1). Ver src/lib/precios-medio-pago.ts. */
+  const recargo = recargoTotal(itemsSeleccionados, metodoPago);
+  const total = subtotalSeleccionado + recargo + (opcionElegida?.costo ?? 0);
 
   const direccionCompleta =
     !!regionElegida && !!comunaElegida && !!calleTexto.trim() && !!numeroTexto.trim() &&
@@ -442,9 +448,37 @@ export function FormularioCheckout({ khipuHabilitado = false }: { khipuHabilitad
             </div>
             {opcionElegida?.detalle && <span className="text-xs text-ink-faint">{opcionElegida.detalle}</span>}
           </div>
+          {/* El recargo aparece como línea propia solo cuando aplica. Nunca
+              se esconde dentro del total: el cliente tiene que poder ver de
+              dónde sale cada peso, y si elige transferencia esta línea
+              desaparece sola. */}
+          {recargo > 0 && (
+            <div className="flex flex-col gap-0.5">
+              <div className="flex justify-between text-ink-soft">
+                <span>Pago con tarjeta ({Math.round(RECARGO_CHECKOUT_TARJETA * 100)}%)</span>
+                <span className="tabular-nums">{formatoCLP.format(recargo)}</span>
+              </div>
+              <span className="text-xs text-ink-faint">
+                Se descuenta si pagas por transferencia
+              </span>
+            </div>
+          )}
           <div className="flex justify-between text-base font-semibold text-ink">
             <span>Total</span>
             <span className="tabular-nums">{formatoCLP.format(total)}</span>
+          </div>
+          {/* El otro total, siempre visible: quien está mirando la tarjeta ve
+              cuánto se ahorra, y quien eligió transferencia ve que no le
+              están cobrando de más. */}
+          <div className="flex justify-between text-xs text-ink-faint">
+            <span>{recargo > 0 ? "Pagando por transferencia" : "Pagando con tarjeta en el sitio"}</span>
+            <span className="tabular-nums">
+              {formatoCLP.format(
+                subtotalSeleccionado +
+                  (opcionElegida?.costo ?? 0) +
+                  (recargo > 0 ? 0 : recargoTotal(itemsSeleccionados, "FLOW"))
+              )}
+            </span>
           </div>
         </div>
       </aside>
@@ -864,6 +898,10 @@ export function FormularioCheckout({ khipuHabilitado = false }: { khipuHabilitad
               { valor: "KHIPU" as const, titulo: "Transferencia bancaria", detalle: "Vía Khipu" },
             ].map((opcion) => {
               const elegido = metodoPago === opcion.valor;
+              /* Cada opción muestra su propio total, para que la diferencia
+                 se vea ANTES de elegir y no como una sorpresa al final. */
+              const totalDeEstaOpcion =
+                subtotalSeleccionado + recargoTotal(itemsSeleccionados, opcion.valor) + (opcionElegida?.costo ?? 0);
               return (
                 <label
                   key={opcion.valor}
@@ -878,14 +916,33 @@ export function FormularioCheckout({ khipuHabilitado = false }: { khipuHabilitad
                     onChange={() => setMetodoPago(opcion.valor)}
                     className="accent-accent"
                   />
-                  <span className="flex flex-col gap-0.5">
-                    <span>{opcion.titulo}</span>
-                    <span className={`text-xs leading-snug ${elegido ? "text-ink" : "text-ink-soft"}`}>{opcion.detalle}</span>
+                  <span className="flex flex-1 flex-col gap-0.5">
+                    <span className="flex items-baseline justify-between gap-2">
+                      <span>{opcion.titulo}</span>
+                      <span className="shrink-0 tabular-nums font-semibold">{formatoCLP.format(totalDeEstaOpcion)}</span>
+                    </span>
+                    <span className={`text-xs leading-snug ${elegido ? "text-ink" : "text-ink-soft"}`}>
+                      {opcion.detalle}
+                      {opcion.valor === "KHIPU" && " · sin recargo"}
+                    </span>
                   </span>
                 </label>
               );
             })}
           </fieldset>
+        )}
+
+        {/* La explicación del recargo va FUERA del selector a propósito: ese
+            bloque solo se renderiza si Khipu está habilitado, así que si
+            alguna vez faltara su credencial el cliente vería un cobro extra
+            sin ninguna explicación — justo lo que la Ley del Consumidor no
+            perdona. Acá aparece siempre que el recargo aplique. */}
+        {recargo > 0 && (
+          <p className="text-xs leading-snug text-ink-faint">
+            El pago con tarjeta en el sitio tiene un recargo de{" "}
+            {Math.round(RECARGO_CHECKOUT_TARJETA * 100)}%, que cubre la comisión de la pasarela. Pagando
+            por transferencia, o con tarjeta directamente en la tienda, el precio es el normal.
+          </p>
         )}
 
         <label className="flex cursor-pointer items-start gap-2 text-sm text-ink-soft">

@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { after } from "next/server";
 import { obtenerProductoPorSku, productosRelacionados } from "@/lib/catalogo";
 import { formatoCLP } from "@/lib/formato";
+import { precioConRecargo } from "@/lib/precios-medio-pago";
 import { sanitizarDescripcionHtml } from "@/lib/sanitizar-html";
 import { textoPlanoDesdeHtml, recortarEnPalabra } from "@/lib/texto-plano";
 import { registrarVistaProducto } from "@/lib/eventos-web";
@@ -177,7 +178,21 @@ export default async function FichaProducto({ params }: PropsPagina) {
             </span>
           )}
           <h1 className="text-3xl font-semibold tracking-tight text-ink">{producto.nombre}</h1>
-          <span className="precio-gamer text-3xl text-ink">{formatoCLP.format(producto.precio_web)}</span>
+          <div className="flex flex-col gap-0.5">
+            <span className="precio-gamer text-3xl text-ink">{formatoCLP.format(producto.precio_web)}</span>
+            <span className="text-xs text-ink-faint">
+              Efectivo, transferencia o tarjeta en tienda
+            </span>
+            {/* Los dos precios juntos y explícitos, nunca uno escondido: es
+                la condición que hace legítimo el precio diferenciado (el TDLC
+                exige que sea público y transparente, y la Ley del Consumidor
+                que no se cobre más que lo anunciado). Ver
+                docs/PLAN-PRECIOS-DIFERENCIADOS.md §4. */}
+            <span className="mt-1 text-sm text-ink-soft">
+              {formatoCLP.format(precioConRecargo(producto.precio_web))}{" "}
+              <span className="text-ink-faint">pagando con tarjeta en el sitio</span>
+            </span>
+          </div>
 
           {/* El "buy box" va INMEDIATAMENTE después del precio, antes de
               la descripción — no al final. Con descripciones largas (las
