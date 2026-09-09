@@ -88,6 +88,45 @@ envíos a clientes reales fallan en silencio hasta verificarlo (ver "Pendiente" 
 
 ---
 
+## Medios de pago y precios — estado al 09-09-2026 (LEER ANTES DE TOCAR EL CHECKOUT)
+
+**Hoy la tienda cobra SOLO por Khipu (transferencia).** Flow quedó apagado con
+`FLOW_HABILITADO = false` en `src/lib/flow.ts`, y el precio es uno solo:
+`RECARGO_CHECKOUT_TARJETA = 0` en `src/lib/precios-medio-pago.ts`.
+
+**Por qué:** el dueño postuló a **Transbank Webpay Plus directo** (1,75% débito / 2,35% crédito +
+IVA = 2,08% / 2,80%) para reemplazar a Flow (2,89% + IVA = 3,44%) y decidió **absorber** la comisión
+en vez de traspasarla al cliente. Con Transbank, un recargo del 3% habría **excedido** la comisión
+del débito, y el TDLC solo permite el precio diferenciado cuando el recargo no la excede.
+
+**Apagar Flow cerró un riesgo que estaba vivo:** `FLOW_API_BASE` cae a `sandbox.flow.cl` si no se
+define, así que la opción "tarjeta" del checkout llevaba a un pago de **PRUEBA** — un cliente podía
+completarlo, el pedido quedaba `PAGADO` y no entraba un peso. Y en v50 se comprobó que un pago
+sandbox **sí descuenta stock real**.
+
+**El precio diferenciado está CONSTRUIDO y PROBADO, solo apagado.** Ver
+`docs/PLAN-PRECIOS-DIFERENCIADOS.md`. En 0, `HAY_RECARGO` apaga el segundo precio en catálogo,
+ficha, carrito, checkout, `/terminos` y la FAQ. Para reactivarlo se cambia ese número —
+**nunca por encima de la comisión con IVA de la pasarela que se esté usando**, o deja de ser legal.
+`pedidos_web.recargo_medio_pago` (migración `25`, aplicada) guarda el monto por pedido; hoy siempre 0.
+
+**Comisiones reales medidas (con IVA), para cuando haya que decidir de nuevo:**
+Khipu 1,19% · link de pago TUU 1,17%–1,77% · Transbank directo 2,08% débito / 2,80% crédito ·
+Flow 3,44%. **Las "cuotas sin interés" son cuotas comercio y las paga el vendedor**: en el panel de
+Flow suman +1,99% (2-3), +3,49% (4-6) y +6,99% (7-12) sobre el 2,89% — a 12 cuotas la comisión real
+llega a **11,76%**, más de un tercio del margen de 30,9%. **Nunca activarlas.** Las *cuotas emisor*
+(las del banco del cliente) no cuestan nada al comercio y funcionan solas.
+
+**TUU no sirve como pasarela de esta tienda:** su Checkout solo integra por plugin con WooCommerce y
+Jumpseller, y la API de `developers.tuu.cl` dispara cobros en el **POS físico**, no en la web. Su
+link de pago (`tuu.cl/sevelin`) pide que **el cliente escriba el monto** y no avisa a la tienda
+cuando se paga: sirve para venta por WhatsApp, no para el checkout.
+
+**Cuando llegue Transbank:** hay que construir la integración de Webpay Plus (API REST oficial con
+SDK, distinta a la de Flow) y **verificarla con un pago real chico antes de encenderla** — el mismo
+error que casi cuesta pagos perdidos con Khipu vivía en `obtenerEstadoPagoFlow()`, que nunca se
+probó contra un pago completado.
+
 ## Khipu — segundo medio de pago (08-09-2026, ENCENDIDO EN PRODUCCIÓN ✅)
 
 Transferencia bancaria en paralelo a Flow. `supabase/22-khipu.sql` aplicada

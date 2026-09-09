@@ -1,4 +1,18 @@
-# Propuesta: sección "Preguntas Frecuentes" para la tienda
+# Preguntas Frecuentes — contenido fuente
+
+> ## ✅ CONSTRUIDA Y EN PRODUCCIÓN desde el 09-09-2026
+>
+> La página vive en `src/app/preguntas-frecuentes/page.tsx`, enlazada desde el pie del sitio y desde
+> el checkout, en el sitemap, con JSON-LD `FAQPage` generado desde el mismo arreglo que se pinta en
+> pantalla (no pueden divergir). **Este documento es el contenido fuente y el registro de lo que el
+> dueño confirmó** — para cambiar un texto, se edita el componente.
+>
+> **Falta todavía**: el plazo de gestión de una garantía (cuántos días desde que recibe un equipo
+> fallado hasta que lo resuelve) — no se publica ninguno a propósito, porque prometer un plazo que
+> no se cumple hace más daño que no publicarlo. Y una 5ª respuesta que el dueño dejó sin escribir.
+>
+> Las respuestas sobre medios de pago se adaptan solas a `HAY_RECARGO` y `FLOW_HABILITADO`: hoy
+> dicen que el precio es el mismo con cualquier medio y que el pago en línea es por transferencia.
 
 > Draft para revisión del dueño — creado 08-09-2026. Ninguna pregunta está publicada todavía; esto
 > es la propuesta de preguntas + respuestas para que él edite/apruebe antes de convertirla en página

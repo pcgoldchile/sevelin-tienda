@@ -1,9 +1,21 @@
 # Plan: precio diferenciado por medio de pago (transferencia vs. tarjeta)
 
-> Escrito el 08-09-2026 a pedido del dueño, que decidió integrar Flow igual y protegerse de la
-> comisión con precios diferenciados, siguiendo el modelo de Tecnomás ("Precio Transferencia" /
-> "Precio Normal"). **Nada de esto está construido todavía**: es el plan, con las decisiones que
-> el dueño tiene que cerrar antes de escribir código. Encaja en la **Fase 2** del
+> ## ⚠️ ESTADO AL 09-09-2026: CONSTRUIDO, PROBADO Y **APAGADO**
+>
+> Todo lo que este documento describe está implementado y verificado en el navegador, pero
+> `RECARGO_CHECKOUT_TARJETA = 0` en `src/lib/precios-medio-pago.ts`, así que **el sitio muestra un
+> solo precio**. El dueño decidió postular a **Transbank Webpay Plus directo** (2,08% débito /
+> 2,80% crédito con IVA) y **absorber** la comisión en vez de traspasarla: con esas tarifas un
+> recargo del 3% habría excedido la comisión del débito, y el TDLC solo lo permite cuando **no la
+> excede**.
+>
+> Para reactivarlo: cambiar ese número, **nunca por encima de la comisión con IVA de la pasarela en
+> uso**. `HAY_RECARGO` apaga y enciende el segundo precio en todo el sitio de una sola vez.
+> Lee igual el resto del documento antes de tocarlo: las decisiones D1-D4 y los riesgos siguen
+> vigentes.
+>
+> Escrito el 08-09-2026, cuando el dueño iba a integrar Flow y protegerse de su comisión (3,44%)
+> con precios diferenciados al estilo Tecnomás. Encaja en la **Fase 2** del
 > `PLAN-CRECIMIENTO-2026.md` (Oferta y precio con criterio).
 
 ## 1. La regla del negocio
