@@ -21,16 +21,27 @@
  */
 
 /**
- * 3%. El techo legal es la comisión real que cobra Flow — 2,89% + IVA =
- * 3,44% — porque el TDLC solo permite el precio diferenciado cuando el
- * recargo NO EXCEDE la comisión y se informa de forma pública y
- * transparente. 3% queda por debajo de ese techo y da números redondos
- * ($99.990 → $102.990).
+ * APAGADO (0) desde el 09-09-2026, por decisión del dueño.
+ * ------------------------------------------------------------
+ * Se construyó a 0,03 (3%) para cubrir la comisión de Flow (2,89% + IVA =
+ * 3,44%), pero el dueño decidió postular a **Transbank Webpay Plus directo**
+ * (1,75% débito / 2,35% crédito + IVA = 2,08% / 2,80%) y absorber esa
+ * comisión en vez de traspasarla. Con Transbank, un recargo del 3%
+ * EXCEDERÍA la comisión del débito, y el TDLC solo permite el precio
+ * diferenciado cuando el recargo **no excede** la comisión real — así que
+ * mantenerlo habría dejado de ser legítimo.
  *
- * ⚠️ Si algún día sube, revisar primero cuánto cobra Flow de verdad: pasarse
- * del 3,44% deja de ser un recargo legítimo y pasa a ser un problema legal.
+ * Todo el mecanismo sigue en pie y probado: en 0 el sitio muestra UN solo
+ * precio en todas partes (catálogo, ficha, carrito, checkout, correo).
+ * Para reactivarlo basta poner acá el valor nuevo, y **nunca por encima de
+ * la comisión con IVA de la pasarela que se esté usando**.
  */
-export const RECARGO_CHECKOUT_TARJETA = 0.03;
+export const RECARGO_CHECKOUT_TARJETA = 0;
+
+/** ¿Hay que mostrar dos precios? Un solo lugar donde se decide, para que
+ *  ninguna pantalla quede mostrando un "precio con tarjeta" idéntico al
+ *  normal cuando el recargo está apagado. */
+export const HAY_RECARGO = RECARGO_CHECKOUT_TARJETA > 0;
 
 /** Los dos medios que ofrece el checkout web (ver formulario-checkout.tsx). */
 export type MetodoPagoWeb = "FLOW" | "KHIPU";
@@ -41,6 +52,10 @@ export type MetodoPagoWeb = "FLOW" | "KHIPU";
  * ni en la boleta.
  */
 export function precioConRecargo(precioBase: number): number {
+  /* Con el recargo apagado se devuelve el precio TAL CUAL. Sin esta salida
+     temprana, el redondeo a la decena movería igual un precio como $4.999
+     a $5.000 — un precio inventado por una función que no debía hacer nada. */
+  if (!HAY_RECARGO) return precioBase;
   return Math.round((precioBase * (1 + RECARGO_CHECKOUT_TARJETA)) / 10) * 10;
 }
 

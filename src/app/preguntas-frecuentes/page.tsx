@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { RECARGO_CHECKOUT_TARJETA } from "@/lib/precios-medio-pago";
+import { HAY_RECARGO, RECARGO_CHECKOUT_TARJETA } from "@/lib/precios-medio-pago";
+import { FLOW_HABILITADO } from "@/lib/flow";
 
 /* Contenido confirmado por el dueño el 08-09-2026 — ver
    docs/FAQ-PROPUESTA.md. Nada acá se inventa: cada respuesta sale de algo
@@ -11,6 +12,21 @@ const RECARGO_PCT = Math.round(RECARGO_CHECKOUT_TARJETA * 100);
 
 const WHATSAPP = "+56935750828";
 const WHATSAPP_LEGIBLE = "+56 9 3575 0828";
+
+/** Los medios reales, armados desde las banderas del código: si mañana se
+ *  enciende el pago con tarjeta en la web, esta tabla se actualiza sola en
+ *  vez de quedar prometiendo algo que el checkout no ofrece. */
+const MEDIOS_DE_PAGO: [string, string][] = [
+  ["Efectivo", "En la tienda"],
+  ["Transferencia bancaria", "En la página (Khipu) o coordinada por WhatsApp"],
+  [
+    "Tarjeta de débito, crédito o prepago",
+    FLOW_HABILITADO ? "En la página, o en la tienda" : "En la tienda, o con un link de pago que te enviamos",
+  ],
+  ...(HAY_RECARGO
+    ? ([["Tarjeta en la página", `Precio publicado + ${Math.round(RECARGO_CHECKOUT_TARJETA * 100)}%`]] as [string, string][])
+    : []),
+];
 
 /** Las preguntas y respuestas, en un solo lugar: se pintan en la página y
  *  alimentan el JSON-LD de más abajo, así nunca se pueden contradecir. */
@@ -47,18 +63,21 @@ const PREGUNTAS: { pregunta: string; respuesta: string }[] = [
   },
   {
     pregunta: "¿Qué medios de pago aceptan?",
-    respuesta:
-      "Efectivo, transferencia bancaria, tarjetas de débito y tarjetas de crédito. En la tienda online puedes pagar con transferencia bancaria (vía Khipu) o con tarjeta de crédito o débito (Webpay, vía Flow). También podemos enviarte un link de pago si prefieres coordinar por WhatsApp.",
+    respuesta: FLOW_HABILITADO
+      ? "Efectivo, transferencia bancaria, tarjetas de débito y tarjetas de crédito. En la tienda online puedes pagar con transferencia bancaria (vía Khipu) o con tarjeta de crédito o débito (Webpay, vía Flow). También podemos enviarte un link de pago si prefieres coordinar por WhatsApp."
+      : "Efectivo, transferencia bancaria, tarjetas de débito y tarjetas de crédito. En la tienda online, por ahora el pago es por transferencia bancaria a través de Khipu, que te lleva al sitio de tu banco para autorizarla. Si prefieres pagar con tarjeta, puedes hacerlo en nuestra tienda, o escribirnos por WhatsApp para enviarte un link de pago.",
   },
   {
-    pregunta: `¿Por qué el precio con tarjeta en el sitio es un ${RECARGO_PCT}% más alto?`,
-    respuesta:
-      `Porque pagar con tarjeta en la tienda online tiene un costo que nosotros asumimos: la pasarela de pagos nos cobra una comisión por cada transacción. Ese ${RECARGO_PCT}% cubre exactamente esa comisión, no es una ganancia adicional. Por eso el precio publicado es el mismo si pagas con efectivo, transferencia, o incluso con tarjeta de débito o crédito directamente en nuestra tienda. Ambos precios se muestran siempre juntos, en la ficha del producto y en el checkout, para que nunca haya una sorpresa al final.`,
+    pregunta: "¿El precio cambia según cómo pague?",
+    respuesta: HAY_RECARGO
+      ? `Sí, con una sola excepción. Pagar con tarjeta dentro de la página tiene un recargo de ${RECARGO_PCT}%, que cubre exactamente la comisión que nos cobra la pasarela de pagos por esa transacción — no es una ganancia adicional. Con cualquier otro medio (efectivo, transferencia, o tarjeta directamente en la tienda) pagas el precio publicado. Ambos precios se muestran siempre juntos, en la ficha del producto y en el checkout, para que nunca haya una sorpresa al final.`
+      : "No. El precio publicado es el mismo pagues como pagues: efectivo, transferencia, tarjeta de débito o crédito. No cobramos ningún recargo por el medio de pago que elijas.",
   },
   {
-    pregunta: "¿Cómo pago el precio más bajo si quiero usar mi tarjeta?",
-    respuesta:
-      "Tienes dos formas. Puedes pasar por la tienda y pagar con tu tarjeta de débito o crédito ahí mismo: el precio es el normal, sin recargo. O puedes escribirnos por WhatsApp y pedirnos un link de pago, que también mantiene el precio normal. La única modalidad con recargo es pagar con tarjeta dentro del checkout de la página.",
+    pregunta: "¿Puedo pagar con tarjeta de crédito o débito?",
+    respuesta: FLOW_HABILITADO
+      ? "Sí. Puedes pagar con tarjeta directamente en el checkout de la página, o en nuestra tienda cuando retires."
+      : "Sí. Puedes pagar con tu tarjeta de crédito o débito directamente en nuestra tienda, o pedirnos un link de pago por WhatsApp y pagar desde tu casa. En la página, por ahora el pago en línea es solo por transferencia bancaria — estamos habilitando el pago con tarjeta y avisaremos cuando esté disponible.",
   },
   {
     pregunta: "¿Emiten boleta o factura?",
@@ -102,40 +121,32 @@ export default function PreguntasFrecuentes() {
           dejar explícito "para que nadie se lleve sorpresas". Antes que
           cualquier pregunta, porque es la duda que más caro sale. */}
       <section className="mt-8 rounded-2xl border border-border bg-surface p-5">
-        <h2 className="text-lg font-semibold text-ink">Precio según cómo pagues</h2>
+        <h2 className="text-lg font-semibold text-ink">Cómo puedes pagar</h2>
         <p className="mt-1.5 text-sm text-ink-soft">
-          El precio publicado en cada producto es el que pagas con casi todos los medios. Solo pagar con
-          tarjeta dentro de la página tiene un recargo de {RECARGO_PCT}%, que cubre la comisión de la
-          pasarela de pagos.
+          {HAY_RECARGO
+            ? `El precio publicado en cada producto es el que pagas con casi todos los medios. Solo pagar con tarjeta dentro de la página tiene un recargo de ${RECARGO_PCT}%, que cubre la comisión de la pasarela de pagos.`
+            : "El precio publicado es el mismo con cualquier medio de pago. No cobramos recargo por pagar con tarjeta ni por ningún otro medio."}
         </p>
         <div className="mt-4 overflow-x-auto">
           <table className="w-full min-w-[420px] border-collapse text-sm">
             <thead>
               <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-ink-faint">
                 <th className="pb-2 font-semibold">Cómo pagas</th>
-                <th className="pb-2 text-right font-semibold">Precio</th>
+                <th className="pb-2 text-right font-semibold">Dónde</th>
               </tr>
             </thead>
             <tbody className="text-ink-soft">
-              {[
-                ["Efectivo en la tienda", "Precio publicado"],
-                ["Transferencia bancaria", "Precio publicado"],
-                ["Tarjeta de débito o crédito en la tienda", "Precio publicado"],
-                ["Link de pago (a pedido, por WhatsApp)", "Precio publicado"],
-                ["Transferencia en la página (Khipu)", "Precio publicado"],
-                [`Tarjeta en la página (Webpay, vía Flow)`, `Precio publicado + ${RECARGO_PCT}%`],
-              ].map(([medio, precio], i, arr) => (
-                <tr key={medio} className={i < arr.length - 1 ? "border-b border-border/50" : ""}>
+              {MEDIOS_DE_PAGO.map(([medio, donde], i) => (
+                <tr key={medio} className={i < MEDIOS_DE_PAGO.length - 1 ? "border-b border-border/50" : ""}>
                   <td className="py-2.5 pr-4">{medio}</td>
-                  <td className="py-2.5 text-right tabular-nums">{precio}</td>
+                  <td className="py-2.5 text-right">{donde}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
         <p className="mt-3 text-xs text-ink-faint">
-          Los dos precios se muestran siempre juntos en la ficha de cada producto y en el checkout,
-          antes de que elijas cómo pagar.
+          Se emite boleta por cada compra. Si necesitas factura, la puedes pedir durante el checkout.
         </p>
       </section>
 

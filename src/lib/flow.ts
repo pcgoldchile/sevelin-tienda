@@ -23,6 +23,27 @@ import { createHmac } from 'crypto';
 
 const FLOW_API_BASE = process.env.FLOW_API_BASE || 'https://sandbox.flow.cl/api';
 
+/**
+ * APAGADO desde el 09-09-2026, por decisión del dueño.
+ * ------------------------------------------------------------
+ * Mientras se tramita **Transbank Webpay Plus directo** (1,75% débito /
+ * 2,35% crédito, contra el 2,89% de Flow), el checkout ofrece SOLO Khipu
+ * (transferencia, 1%).
+ *
+ * Apagarlo además cierra un riesgo real que existía hasta hoy: Flow seguía
+ * apuntando al **sandbox** (`FLOW_API_BASE` cae a `sandbox.flow.cl` si no se
+ * define), así que la opción "tarjeta" del checkout llevaba a un pago de
+ * PRUEBA — un cliente podía completarlo y dejar el pedido marcado como
+ * PAGADO sin que entrara un peso. Ver el hallazgo de v50: un pago sandbox SÍ
+ * descontaba stock real.
+ *
+ * Para reactivar Flow: poner esto en true, y ANTES verificar
+ * `obtenerEstadoPagoFlow()` contra un pago real completado (ver el TODO al
+ * inicio de este archivo — ese código nunca se probó de punta a punta, y es
+ * el mismo perfil del bug de firma que casi costó pagos perdidos en Khipu).
+ */
+export const FLOW_HABILITADO = false;
+
 function credencialesFlow(): { apiKey: string; secretKey: string } {
   const apiKey = process.env.FLOW_API_KEY;
   const secretKey = process.env.FLOW_SECRET_KEY;

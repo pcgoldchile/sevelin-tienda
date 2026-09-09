@@ -6,7 +6,7 @@ import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Minus, Plus, Trash2 } from "lucide-react";
 import { formatoCLP } from "@/lib/formato";
-import { recargoTotal } from "@/lib/precios-medio-pago";
+import { HAY_RECARGO, recargoTotal } from "@/lib/precios-medio-pago";
 import { useCarrito } from "@/context/carrito-context";
 
 export default function CarritoPage() {
@@ -208,8 +208,11 @@ export default function CarritoPage() {
             </div>
           </div>
           <p className="mt-1 text-xs text-ink-faint">
-            El envío se calcula en el siguiente paso. Pagando con tarjeta en el sitio, el subtotal es{" "}
-            {formatoCLP.format(subtotalSeleccionado + recargoTotal(itemsSeleccionados, "FLOW"))}.
+            El envío se calcula en el siguiente paso.
+            {HAY_RECARGO &&
+              ` Pagando con tarjeta en el sitio, el subtotal es ${formatoCLP.format(
+                subtotalSeleccionado + recargoTotal(itemsSeleccionados, "FLOW")
+              )}.`}
           </p>
           <Link
             href="/checkout"

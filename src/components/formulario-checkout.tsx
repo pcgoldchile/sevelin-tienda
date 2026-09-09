@@ -6,7 +6,7 @@ import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { NeonSpinner } from "@/components/neon-spinner";
 import { formatoCLP } from "@/lib/formato";
-import { RECARGO_CHECKOUT_TARJETA, recargoTotal } from "@/lib/precios-medio-pago";
+import { HAY_RECARGO, RECARGO_CHECKOUT_TARJETA, recargoTotal } from "@/lib/precios-medio-pago";
 import { useCarrito } from "@/context/carrito-context";
 import { useSesion } from "@/context/sesion-context";
 import { CODIGOS_PAIS, CODIGO_PAIS_POR_DEFECTO } from "@/lib/codigos-pais";
@@ -18,7 +18,13 @@ import type { OpcionEnvio } from "@/lib/envio";
 const CAMPO =
   "rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm outline-none transition-colors focus:border-accent";
 
-export function FormularioCheckout({ khipuHabilitado = false }: { khipuHabilitado?: boolean }) {
+export function FormularioCheckout({
+  khipuHabilitado = false,
+  flowHabilitado = true,
+}: {
+  khipuHabilitado?: boolean;
+  flowHabilitado?: boolean;
+}) {
   // Editar cantidades/quitar ítems ya vive en /carrito (estilo MercadoLibre)
   // — acá solo se paga lo que llegó seleccionado, "Tu pedido" es de solo
   // lectura.
@@ -31,7 +37,15 @@ export function FormularioCheckout({ khipuHabilitado = false }: { khipuHabilitad
   const { usuario, perfil, cargando: cargandoSesion } = useSesion();
   const [opciones, setOpciones] = useState<OpcionEnvio[] | null>(null);
   const [metodoElegido, setMetodoElegido] = useState<string | null>(null);
-  const [metodoPago, setMetodoPago] = useState<"FLOW" | "KHIPU">("FLOW");
+  /* Arranca en el medio que de verdad esté disponible: con Flow apagado, el
+     valor inicial "FLOW" habría mostrado un total con recargo (cuando lo
+     haya) por un medio que ni siquiera se ofrece. */
+  const [metodoPago, setMetodoPago] = useState<"FLOW" | "KHIPU">(
+    flowHabilitado ? "FLOW" : "KHIPU"
+  );
+  /* El selector solo tiene sentido si hay DOS medios entre los cuales
+     elegir. Con uno solo se muestra un aviso informativo. */
+  const eleccionDeMedio = khipuHabilitado && flowHabilitado;
   const [calculandoEnvio, setCalculandoEnvio] = useState(false);
   const [errorEnvio, setErrorEnvio] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
@@ -467,19 +481,22 @@ export function FormularioCheckout({ khipuHabilitado = false }: { khipuHabilitad
             <span>Total</span>
             <span className="tabular-nums">{formatoCLP.format(total)}</span>
           </div>
-          {/* El otro total, siempre visible: quien está mirando la tarjeta ve
-              cuánto se ahorra, y quien eligió transferencia ve que no le
-              están cobrando de más. */}
-          <div className="flex justify-between text-xs text-ink-faint">
-            <span>{recargo > 0 ? "Pagando por transferencia" : "Pagando con tarjeta en el sitio"}</span>
-            <span className="tabular-nums">
-              {formatoCLP.format(
-                subtotalSeleccionado +
-                  (opcionElegida?.costo ?? 0) +
-                  (recargo > 0 ? 0 : recargoTotal(itemsSeleccionados, "FLOW"))
-              )}
-            </span>
-          </div>
+          {/* El otro total: quien está mirando la tarjeta ve cuánto se
+              ahorra, y quien eligió transferencia ve que no le están
+              cobrando de más. Con el recargo apagado no hay "otro total"
+              que mostrar. */}
+          {HAY_RECARGO && (
+            <div className="flex justify-between text-xs text-ink-faint">
+              <span>{recargo > 0 ? "Pagando por transferencia" : "Pagando con tarjeta en el sitio"}</span>
+              <span className="tabular-nums">
+                {formatoCLP.format(
+                  subtotalSeleccionado +
+                    (opcionElegida?.costo ?? 0) +
+                    (recargo > 0 ? 0 : recargoTotal(itemsSeleccionados, "FLOW"))
+                )}
+              </span>
+            </div>
+          )}
         </div>
       </aside>
 
@@ -890,7 +907,21 @@ export function FormularioCheckout({ khipuHabilitado = false }: { khipuHabilitad
             configurado en el servidor (KHIPU_API_KEY, ver
             src/lib/khipu.ts::khipuHabilitado). Sin eso, el checkout sigue
             funcionando exactamente igual que siempre: pago único con Flow. */}
-        {khipuHabilitado && (
+        {/* Un solo medio disponible: no hay nada que elegir, pero el cliente
+            igual tiene que saber CÓMO va a pagar antes de apretar el botón —
+            que aparezca de sorpresa una pantalla de transferencia es la clase
+            de cosa que hace abandonar el carrito. */}
+        {!eleccionDeMedio && khipuHabilitado && (
+          <div className="flex flex-col gap-1 rounded-xl border border-border bg-surface px-4 py-3 text-sm">
+            <span className="text-xs font-semibold uppercase tracking-wider text-ink-faint">Método de pago</span>
+            <span className="text-ink">Transferencia bancaria</span>
+            <span className="text-xs leading-snug text-ink-soft">
+              Vía Khipu. Te vamos a llevar al sitio de tu banco para autorizar la transferencia.
+            </span>
+          </div>
+        )}
+
+        {eleccionDeMedio && (
           <fieldset className="flex flex-col gap-3">
             <legend className="mb-1 text-xs font-semibold uppercase tracking-wider text-ink-faint">Método de pago</legend>
             {[
@@ -979,7 +1010,12 @@ export function FormularioCheckout({ khipuHabilitado = false }: { khipuHabilitad
           title={!metodoElegido ? "Calcula y elige el envío primero" : !aceptaPrivacidad ? "Acepta los términos y la política de privacidad" : undefined}
           className="mt-2 rounded-full bg-accent px-5 py-3.5 text-sm font-semibold text-white shadow-glow-accent transition-colors hover:bg-accent-deep disabled:cursor-not-allowed disabled:bg-border-strong disabled:text-ink-faint disabled:shadow-none"
         >
-          {enviando ? "Redirigiendo a Flow…" : `Pagar ${formatoCLP.format(total)}`}
+          {/* El nombre de la pasarela sale del medio realmente elegido: decía
+              "Flow" fijo, y con Flow apagado habría anunciado una redirección
+              a un sitio al que ya no se va. */}
+          {enviando
+            ? `Redirigiendo a ${metodoPago === "KHIPU" ? "Khipu" : "Flow"}…`
+            : `Pagar ${formatoCLP.format(total)}`}
         </motion.button>
       </form>
     </div>

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { obtenerProductoPorSku } from '@/lib/catalogo';
 import { crearPedido, guardarPagoFlow, guardarPagoKhipu, marcarPedidoFallido } from '@/lib/pedidos';
-import { crearPagoFlow } from '@/lib/flow';
+import { crearPagoFlow, FLOW_HABILITADO } from '@/lib/flow';
 import { crearPagoKhipu, khipuHabilitado } from '@/lib/khipu';
 import { recargoTotal } from '@/lib/precios-medio-pago';
 import { confirmarEnvio } from '@/lib/envio';
@@ -195,12 +195,21 @@ export async function POST(req: NextRequest) {
   } = await supabaseSesion.auth.getUser();
 
   /* El medio de pago se resuelve ANTES de crear el pedido porque decide el
-     precio: con tarjeta (Flow) va un 3% de recargo, con Khipu no. Ojo con el
-     caso borde: si el cliente pidió KHIPU pero Khipu no está habilitado en el
-     servidor, el pago cae a Flow — y entonces el recargo SÍ corresponde. Por
-     eso el recargo se calcula desde esta misma variable y no desde lo que
-     mandó el navegador. Ver src/lib/precios-medio-pago.ts. */
-  const usarKhipu = cuerpo.metodoPago === 'KHIPU' && khipuHabilitado();
+     precio cuando el recargo está encendido (ver src/lib/precios-medio-pago.ts).
+     Hoy Flow está apagado (FLOW_HABILITADO), así que todo va por Khipu. */
+  const usarKhipu = khipuHabilitado() && (cuerpo.metodoPago === 'KHIPU' || !FLOW_HABILITADO);
+
+  /* Si no queda ningún medio de pago disponible se corta ACÁ, antes de crear
+     el pedido: un pedido sin forma de pagarse es basura en la base y un
+     cliente esperando una redirección que nunca llega. Pasa si Flow está
+     apagado y además falta la credencial de Khipu. */
+  if (!usarKhipu && !FLOW_HABILITADO) {
+    console.error('[checkout] Sin medios de pago disponibles: Flow apagado y Khipu sin credencial.');
+    return NextResponse.json(
+      { error: 'En este momento no podemos procesar pagos en línea. Escríbenos por WhatsApp y coordinamos tu compra.' },
+      { status: 503 }
+    );
+  }
 
   /* Autoridad real del recargo, igual que el precio, el stock y el envío: se
      calcula sobre `items`, que ya vienen revalidados contra productos_web,
