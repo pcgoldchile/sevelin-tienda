@@ -22,14 +22,40 @@ son efectivo y transferencia) para proteger el 5% restante. Con margen de 30,9%,
 de precio es regalar ~10% de la utilidad. Al revés funciona: el margen actual se mantiene intacto y
 la comisión se recupera solo de quien la genera.
 
-## 2. Decisiones que el dueño tiene que cerrar (bloquean la construcción)
+## 2. Decisiones — TODAS CERRADAS por el dueño el 08-09-2026
 
-| # | Decisión | Recomendación | Por qué importa |
-|---|---|---|---|
-| D1 | ¿El recargo aplica también al **costo de envío**? | **No** (solo a los productos) | Tecnomás lo hace así: su diferencia es $3.000 tanto en el subtotal como en el total, o sea el envío no lleva recargo. Es más simple de explicar y más fácil de defender. Cuesta perder la comisión sobre el envío (~$700 en un despacho de $20.000) |
-| D2 | ¿El **POS presencial** también cobra el recargo con tarjeta? | **Sí, por coherencia** — pero es cambio aparte, en el otro repo | Si la web cobra 3% más con tarjeta y el mostrador no, un cliente que compara puede reclamar con razón. Peor: TUU cobra comisión igual en el mostrador, así que hoy esa comisión se está absorbiendo entera |
-| D3 | ¿Qué precio se manda al **feed de Google/Meta**? | El de **transferencia** (el bajo), que es el que se muestra destacado en la ficha | Google exige que el precio del feed coincida con el de la página. Si el feed dice uno y la página muestra otro como principal, puede rechazar el producto entero |
-| D4 | ¿Se aplica a **todo el catálogo** o solo sobre cierto monto? | Todo el catálogo | Una regla con excepciones es una regla que el cliente no entiende y que hay que explicar dos veces |
+| # | Decisión | Respuesta |
+|---|---|---|
+| D1 | ¿El recargo aplica al **costo de envío**? | **No.** Solo a los productos, igual que Tecnomás |
+| D2 | ¿El **POS presencial** también cobra recargo con tarjeta? | **No. En el mostrador siempre rige el precio bajo**, aunque el cliente pague con débito o crédito. Y si lo pide, se le manda un **link de pago** para acceder al precio bajo. Se explica en la FAQ |
+| D3 | ¿Qué precio va al **feed de Google/Meta**? | El **más bajo** (transferencia) |
+| D4 | ¿Aplica a **todo el catálogo**? | **Sí**, sin excepciones |
+
+### ⚠️ Lo que D2 cambia (releer antes de escribir código)
+
+El recargo **NO es "por pagar con tarjeta"**. Es **por pagar a través de la pasarela del checkout
+web (Flow)**, que cuesta 2,89% + IVA. Todos los demás caminos van al precio bajo:
+
+| Cómo paga el cliente | Precio |
+|---|---|
+| Efectivo o transferencia (presencial) | **Bajo** |
+| Débito o crédito **en el mostrador** (TUU, 1,49%) | **Bajo** |
+| **Link de pago de TUU** (a pedido, por WhatsApp) | **Bajo** |
+| Transferencia en la web (Khipu, 1%) | **Bajo** |
+| **Tarjeta en el checkout web (Flow, 2,89%)** | **Alto** |
+
+Es más limpio y más defendible que "recargo por tarjeta": el precio alto refleja el costo real de
+**esa** pasarela concreta, no del plástico. Y no castiga al cliente presencial, que es el 99% de la
+venta real de Sevelin. También simplifica el trabajo: **la pantalla de venta del POS no se toca**
+(cae el cambio de precios presenciales que este plan preveía). Lo único que sigue cruzando repos es
+mostrar el recargo en el panel "Pedidos Web" del POS, para que el total de un pedido cuadre.
+
+**Tensión a vigilar (no resuelta, decisión futura):** si la FAQ dice "pide un link de pago y accedes
+al precio bajo", parte del tráfico que llegue por Ads va a preferir escribir por WhatsApp antes que
+pagar en el checkout. Eso **ahorra comisión pero mata la conversión automática** que la publicidad
+está pagando por generar, y agrega trabajo manual por venta. Recomendación: explicarlo en la **FAQ**
+(quien lo busca, lo encuentra) pero **no ofrecerlo dentro del checkout**, donde sabotearía una venta
+que ya estaba por cerrarse sola.
 
 ## 3. Diseño técnico
 
