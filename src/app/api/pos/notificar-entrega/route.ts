@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { obtenerPedidoPorNumero } from '@/lib/pedidos';
+import { obtenerImagenesPorProductoPosId } from '@/lib/catalogo';
 import { correoEntregaPedido } from '@/lib/correo-pedido';
 import { enviarCorreo } from '@/lib/resend';
 import { verificarSecretoSync } from '@/lib/verificar-secreto';
@@ -32,7 +33,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, motivo: 'sin_email' });
   }
 
-  const { subject, html } = correoEntregaPedido(pedido);
+  /* Miniaturas de lo que recibió — mismo criterio que los webhooks de
+     pago: si la consulta de fotos falla, el correo sale igual con los
+     nombres. Avisar la entrega importa más que la imagen. */
+  const imagenes = await obtenerImagenesPorProductoPosId(
+    pedido.items.map((it) => it.producto_pos_id)
+  ).catch(() => ({}));
+
+  const { subject, html } = correoEntregaPedido(pedido, imagenes);
   const enviado = await enviarCorreo({ to: pedido.cliente_email, subject, html });
 
   return NextResponse.json({ ok: true, enviado });

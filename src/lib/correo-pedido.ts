@@ -212,10 +212,23 @@ export function correoAlertaPedidoExpiradoPagado(pedido: PedidoWeb): { subject: 
  * Resend ni la plantilla). Incluye el pedido de reseña de Google — es el
  * segundo empujón, después del que ya se muestra en la página de estado
  * del pedido justo al comprar (ver src/app/pedido/[numero]/page.tsx). */
-export function correoEntregaPedido(pedido: PedidoWeb): { subject: string; html: string } {
+export function correoEntregaPedido(
+  pedido: PedidoWeb,
+  imagenesPorProductoId: Record<number, string | undefined> = {}
+): { subject: string; html: string } {
   const nombre = pedido.cliente_nombre || 'Hola';
+  /* La lista de lo que recibió va ANTES de pedir la reseña, no después:
+     el cliente ve el producto que tiene en la mano y recién ahí se le
+     pide la opinión. Mismo `imagenesPorProductoId` opcional que la
+     confirmación — si la consulta de fotos falla, el correo sale igual
+     con los nombres, porque avisar la entrega importa más que la
+     miniatura. */
+  const filas = pedido.items
+    .map((it) => filaItemConFoto(it.nombre, it.cantidad, it.precio_web * it.cantidad, imagenesPorProductoId[it.producto_pos_id]))
+    .join('');
   const contenido = `
     <p style="margin:0 0 20px;font-size:14px;color:${TEXTO_SUAVE};">${nombre}, tu pedido <strong style="color:${TEXTO};">${pedido.numero_pedido}</strong> fue entregado. ¡Esperamos que lo disfrutes!</p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;">${filas}</table>
     ${bloqueReseña()}
     <p style="margin:0;font-size:13px;color:${TEXTO_SUAVE};">¿Algo no llegó como esperabas? Escríbenos y lo revisamos contigo.</p>
   `;
