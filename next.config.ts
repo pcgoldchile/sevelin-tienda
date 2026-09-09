@@ -54,7 +54,15 @@ const nextConfig: NextConfig = {
     // sevelin-pos-oficial): cualquier proyecto *.supabase.co puede servirlas.
     remotePatterns: [
       { protocol: "https", hostname: "*.supabase.co", pathname: "/storage/v1/object/public/**" }
-    ]
+    ],
+    // Sin esto, Next.js reprocesa cada foto la primera vez que se pide en
+    // un tamaño nuevo — Vercel Hobby tiene cupo mensual para eso y, al
+    // agotarse, devuelve 402 OPTIMIZED_IMAGE_REQUEST_PAYMENT_REQUIRED en
+    // vez de la imagen (hallazgo real 09-09-2026: producto id 201 con foto
+    // válida en Supabase, 404 visual en la ficha). Las fotos ya se suben
+    // en .webp liviano, así que la re-optimización no aportaba mucho —
+    // esto las sirve tal cual salen de Supabase, sin depender del cupo.
+    unoptimized: true,
   },
   async headers() {
     return [
