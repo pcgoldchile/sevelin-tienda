@@ -133,8 +133,16 @@ export function correoConfirmacionPedido(
  * checkout pero no volvió a completar la compra dentro de 24h. Los items ya
  * vienen resueltos contra el catálogo real (nombre/precio vigentes), nunca
  * "congelados" del momento en que dejó el correo. */
-export function correoCarritoAbandonado(items: { nombre: string; cantidad: number; precio_web: number }[]): { subject: string; html: string } {
-  const filas = items.map((it) => filaItem(it.nombre, it.cantidad, it.precio_web * it.cantidad)).join('');
+export function correoCarritoAbandonado(
+  items: { nombre: string; cantidad: number; precio_web: number; imagen_url?: string }[]
+): { subject: string; html: string } {
+  /* Con foto, igual que la confirmación: este es el correo que intenta
+     traer de vuelta a alguien que ya se fue, y una lista de nombres
+     sueltos no le recuerda lo que estaba a punto de comprar. La imagen ya
+     venía resuelta en los dos llamadores (traen el producto completo del
+     catálogo), solo no se estaba pasando. Sin foto se ve idéntico al
+     formato anterior — filaItemConFoto no reserva espacio vacío. */
+  const filas = items.map((it) => filaItemConFoto(it.nombre, it.cantidad, it.precio_web * it.cantidad, it.imagen_url)).join('');
   const urlTienda = process.env.NEXT_PUBLIC_SITE_URL || 'https://sevelin.cl';
   const contenido = `
     <p style="margin:0 0 16px;font-size:14px;color:${TEXTO_SUAVE};">Dejaste estos productos en tu carrito — siguen disponibles, pero no alcanzaste a terminar la compra.</p>

@@ -45,7 +45,12 @@ export async function POST(req: NextRequest) {
   }
 
   const { subject, html } = correoCarritoAbandonado(
-    disponibles.map(({ producto, it }) => ({ nombre: producto!.nombre, cantidad: it.cantidad, precio_web: producto!.precio_web }))
+    disponibles.map(({ producto, it }) => ({
+      nombre: producto!.nombre,
+      cantidad: it.cantidad,
+      precio_web: producto!.precio_web,
+      imagen_url: producto!.imagen_urls?.[0],
+    }))
   );
   const enviado = await enviarCorreo({ to: carrito.correo, subject, html });
   if (enviado) {
