@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Share2, Check } from "lucide-react";
 import { useCarrito } from "@/context/carrito-context";
 import { useToast } from "@/context/toast-context";
 import { formatoStock } from "@/lib/formato";
+import { trackearEventoPixel } from "@/lib/meta-pixel";
 import type { ProductoWeb } from "@/lib/tipos";
 
 export function AccionesProducto({ producto }: { producto: ProductoWeb }) {
@@ -47,6 +48,19 @@ export function AccionesProducto({ producto }: { producto: ProductoWeb }) {
   // cantidad y el aviso de stock no aplican acá.
   const topeCantidad = producto.es_pedido_encargo ? 99 : producto.stock_web;
 
+  // Una vez por ficha vista, no por cada render — mismo criterio que
+  // registrarVistaProducto (analítica propia) en la página del producto.
+  useEffect(() => {
+    trackearEventoPixel("ViewContent", {
+      content_ids: [producto.sku],
+      content_name: producto.nombre,
+      content_type: "product",
+      value: producto.precio_web,
+      currency: "CLP",
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [producto.sku]);
+
   return (
     // "Buy box": envuelto en su propia tarjeta para que se lea como un
     // panel de decisión aparte, no como botones sueltos flotando entre el
@@ -85,6 +99,13 @@ export function AccionesProducto({ producto }: { producto: ProductoWeb }) {
         whileTap={{ scale: 0.97 }}
         onClick={() => {
           agregarItem(producto, cantidad);
+          trackearEventoPixel("AddToCart", {
+            content_ids: [producto.sku],
+            content_name: producto.nombre,
+            content_type: "product",
+            value: producto.precio_web * cantidad,
+            currency: "CLP",
+          });
           mostrarToast({
             imagen: producto.imagen_urls?.[0] ?? null,
             nombre: producto.nombre,
