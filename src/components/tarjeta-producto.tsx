@@ -45,6 +45,15 @@ export function TarjetaProducto({ producto }: { producto: ProductoWeb }) {
   // (se pide al proveedor recién al confirmarse el pedido) — nunca se
   // trata como "sin stock" acá, ver supabase/18-pedidos-por-encargo.sql.
   const sinStock = !producto.es_pedido_encargo && producto.stock_web <= 0;
+
+  /* Un producto por encargo NO vive en /productos: esa ruta filtra por
+     stock_web > 0 y los encargos siempre tienen stock 0, así que la ficha
+     respondía 404. Bug real reportado el 10-09-2026, con las 18 tarjetas
+     de video recién publicadas — ninguna se podía abrir. La misma
+     distinción ya existía en acciones-producto.tsx; faltaba acá. */
+  const rutaFicha = producto.es_pedido_encargo
+    ? `/pedidos-por-encargo/${producto.sku}`
+    : `/productos/${producto.sku}`;
   const topeCantidad = producto.es_pedido_encargo ? 99 : producto.stock_web;
 
   function cantidadEscrita() {
@@ -63,7 +72,7 @@ export function TarjetaProducto({ producto }: { producto: ProductoWeb }) {
     // reaccionando a :hover, sin JS ni mousemove: la tarjeta queda plana en
     // todo momento, incluido touch, y respeta prefers-reduced-motion sola.
     <div className="panel-hud group relative flex flex-col overflow-hidden rounded-2xl transition-shadow duration-200">
-      <Link href={`/productos/${producto.sku}`} className="relative aspect-square w-full overflow-hidden bg-surface-sunken">
+      <Link href={rutaFicha} className="relative aspect-square w-full overflow-hidden bg-surface-sunken">
         {producto.imagen_urls?.[0] ? (
           <Image
             src={producto.imagen_urls[0]}
@@ -93,7 +102,7 @@ export function TarjetaProducto({ producto }: { producto: ProductoWeb }) {
             límite de línea aunque el navegador agrande la tipografía por
             su cuenta (el "font boosting" de Android rompe line-clamp). */}
         <Link
-          href={`/productos/${producto.sku}`}
+          href={rutaFicha}
           className="line-clamp-2 h-10 overflow-hidden text-sm font-medium leading-5 text-ink hover:text-primary"
         >
           {producto.nombre}
