@@ -61,6 +61,29 @@ const PREGUNTAS: { pregunta: string; respuesta: string }[] = [
     respuesta:
       "No hacemos cambios ni devoluciones por arrepentimiento. Nuestra garantía cubre fallas de fábrica, que es un caso distinto: si el producto falla, respondemos dentro de los 6 meses. Si tienes cualquier duda sobre un producto antes de comprarlo, escríbenos por WhatsApp y te contamos todo lo que necesites saber — preferimos resolver las dudas antes de la compra.",
   },
+  /* Los encargos van justo después de cambios y devoluciones: son la
+     excepción a esa respuesta, y quien llega con esa duda tiene que
+     encontrar la excepción ahí mismo y no diez preguntas más abajo. */
+  {
+    pregunta: "¿Qué es un pedido por encargo?",
+    respuesta:
+      "Es un producto que no mantenemos en bodega: lo pedimos a nuestro proveedor una vez que confirmas y pagas tu compra. Por eso podemos ofrecerte más variedad y mejor precio que si tuviéramos que tenerlo en stock. Los encontrarás en la sección Pedidos por Encargo, siempre identificados como tales.",
+  },
+  {
+    pregunta: "¿Cuánto demora un pedido por encargo?",
+    respuesta:
+      "Depende de la disponibilidad del proveedor y de la logística de despacho hasta Arica, así que no comprometemos una fecha exacta — preferimos no prometer un plazo que no dependa de nosotros. Te avisamos por correo apenas el producto esté disponible, y si quieres una estimación para un producto puntual, escríbenos antes de comprar y te contamos qué esperar.",
+  },
+  {
+    pregunta: "¿Puedo cancelar o devolver un pedido por encargo?",
+    respuesta:
+      "Una vez confirmado el pago no se puede cancelar, porque en ese momento ya compramos el producto al proveedor a tu nombre. Esta condición se informa en la ficha del producto antes de comprar. Si el producto llega con una falla o no corresponde a lo pedido, se aplica la garantía igual que en cualquier compra: primero retornamos el producto al proveedor y luego te devolvemos el dinero, lo que toma días hábiles adicionales.",
+  },
+  {
+    pregunta: "¿Los pedidos por encargo tienen la misma garantía?",
+    respuesta:
+      "Sí, exactamente la misma: 6 meses por fallas de fábrica, con boleta. Que lo traigamos por encargo no cambia en nada tu garantía ni tus derechos como consumidor.",
+  },
   {
     pregunta: "¿Qué medios de pago aceptan?",
     respuesta: FLOW_HABILITADO
