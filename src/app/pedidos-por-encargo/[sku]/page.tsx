@@ -10,6 +10,7 @@ import { AccionesProducto } from "@/components/acciones-producto";
 import { EtiquetaProductoBadge } from "@/components/etiqueta-producto-badge";
 import { InfoEnvioProducto } from "@/components/info-envio-producto";
 import { CondicionesEncargo } from "@/components/condiciones-encargo";
+import { AvisoPagoTarjeta } from "@/components/aviso-pago-tarjeta";
 
 export const revalidate = 60;
 
@@ -67,6 +68,10 @@ export default async function FichaEncargo({ params }: PropsPagina) {
               encargo (plazo incierto, sin cancelación, devolución con
               retorno previo) tienen que leerse ANTES de decidir comprar. */}
           <CondicionesEncargo />
+
+          {/* Mismo lugar que en la ficha del catálogo normal: bajo el
+              botón de compra, cuando el cliente decide con qué paga. */}
+          <AvisoPagoTarjeta />
 
           {producto.descripcion_web && (
             <div className="descripcion-producto rounded-2xl border border-border bg-surface/60 p-5 sm:p-6">

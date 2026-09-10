@@ -13,6 +13,7 @@ import { TarjetaProducto } from "@/components/tarjeta-producto";
 import { AccionesProducto } from "@/components/acciones-producto";
 import { EtiquetaProductoBadge } from "@/components/etiqueta-producto-badge";
 import { InfoEnvioProducto } from "@/components/info-envio-producto";
+import { AvisoPagoTarjeta } from "@/components/aviso-pago-tarjeta";
 
 export const revalidate = 60;
 
@@ -211,6 +212,11 @@ export default async function FichaProducto({ params }: PropsPagina) {
           <div className="lg:sticky lg:top-24 lg:z-10">
             <AccionesProducto producto={producto} />
           </div>
+
+          {/* Justo bajo el botón de compra: es el momento exacto en que el
+              cliente piensa "¿con qué pago?". Enterarse de que puede pagar
+              con tarjeta después de irse de la ficha no sirve de nada. */}
+          <AvisoPagoTarjeta />
 
           {producto.descripcion_web && (
             <div className="descripcion-producto rounded-2xl border border-border bg-surface/60 p-5 sm:p-6">
