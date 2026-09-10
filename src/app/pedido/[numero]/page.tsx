@@ -13,7 +13,11 @@ interface PropsPagina {
 const PAGO_CONFIRMADO = ["PAGADO", "PREPARANDO", "ENVIADO", "ENTREGADO"];
 
 const MENSAJE_ESTADO: Record<string, string> = {
-  CREADO: "Estamos confirmando tu pago con Flow. Esto puede tardar unos segundos — vuelve a cargar esta página en un momento.",
+  // Sin nombrar la pasarela: decía "con Flow" cuando Flow ya estaba
+  // apagado y el cobro se hace por Khipu, así que el cliente veía el
+  // nombre de un servicio que no usó. Nombrar la pasarela acá obliga a
+  // acordarse de este texto cada vez que cambie el medio de pago.
+  CREADO: "Estamos confirmando tu pago. Esto puede tardar unos segundos — vuelve a cargar esta página en un momento.",
   PAGADO: "¡Pago confirmado! Estamos preparando tu pedido.",
   PREPARANDO: "Tu pedido se está preparando.",
   ENVIADO: "Tu pedido va en camino.",
