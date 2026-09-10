@@ -8,6 +8,7 @@ import { Minus, Plus, Trash2 } from "lucide-react";
 import { formatoCLP } from "@/lib/formato";
 import { HAY_RECARGO, recargoTotal } from "@/lib/precios-medio-pago";
 import { useCarrito } from "@/context/carrito-context";
+import { AvisoPagoTarjeta } from "@/components/aviso-pago-tarjeta";
 
 export default function CarritoPage() {
   const {
@@ -228,6 +229,12 @@ export default function CarritoPage() {
           {itemsSeleccionados.length === 0 && (
             <p className="mt-2 text-center text-xs text-ink-faint">Selecciona al menos un producto para continuar.</p>
           )}
+
+          {/* Justo antes del botón de compartir, que es el paso que el
+              aviso pide dar: acá el cliente ya está decidiendo cómo pagar. */}
+          <div className="mt-4">
+            <AvisoPagoTarjeta conCarrito />
+          </div>
 
           <div className="mt-4 flex flex-col gap-2 border-t border-border pt-4">
             <button

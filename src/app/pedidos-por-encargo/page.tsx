@@ -1,5 +1,6 @@
 import { listarEncargos } from "@/lib/encargos";
 import { EncargosNavegables } from "@/components/encargos-navegables";
+import { AvisoPagoTarjeta } from "@/components/aviso-pago-tarjeta";
 
 export const revalidate = 60;
 
@@ -51,6 +52,10 @@ export default async function PedidosPorEncargo() {
       <p className="mt-3 text-sm text-ink-soft">
         {productos.length} producto{productos.length === 1 ? "" : "s"} disponible{productos.length === 1 ? "" : "s"} por encargo
       </p>
+
+      <div className="mt-6">
+        <AvisoPagoTarjeta />
+      </div>
 
       {error ? (
         <p className="mt-10 text-ink-soft">Esta sección no está disponible en este momento.</p>
