@@ -1,6 +1,5 @@
 import { listarEncargos } from "@/lib/encargos";
-import { TarjetaProducto } from "@/components/tarjeta-producto";
-import { ScrollReveal } from "@/components/fx/scroll-reveal";
+import { EncargosNavegables } from "@/components/encargos-navegables";
 
 export const revalidate = 60;
 
@@ -58,13 +57,7 @@ export default async function PedidosPorEncargo() {
       ) : productos.length === 0 ? (
         <p className="mt-10 text-ink-soft">Por ahora no hay productos por encargo publicados.</p>
       ) : (
-        <div className="mt-8 grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4">
-          {productos.map((producto, i) => (
-            <ScrollReveal key={producto.id} delay={(i % 8) * 0.05} distancia={18}>
-              <TarjetaProducto producto={producto} />
-            </ScrollReveal>
-          ))}
-        </div>
+        <EncargosNavegables productos={productos} />
       )}
     </main>
   );
