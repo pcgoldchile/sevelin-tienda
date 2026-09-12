@@ -29,56 +29,64 @@ export function AvisoPagoTarjeta({ conCarrito = false }: { conCarrito?: boolean 
   );
 
   return (
-    <section className="relative overflow-hidden rounded-2xl border border-primary/35 bg-surface/70 p-5 sm:p-6">
+    /* Los breakpoints son de CONTENEDOR (@container + @md:), no de pantalla.
+       El aviso vive en dos anchos muy distintos: ancho completo en las
+       fichas de producto y dentro de la columna del resumen del carrito
+       (~300px). Con `sm:` —que mira la pantalla— el carrito en un monitor
+       grande activaba el layout horizontal igual, y el texto quedaba
+       aplastado en una tira de ~100px contra un botón que se salía del
+       bloque. */
+    <section className="@container relative overflow-hidden rounded-2xl border border-primary/35 bg-surface/70 p-5 @md:p-6">
       {/* Un solo acento de color, sin degradado sobre todo el bloque:
           tiene que leerse como un aviso útil, no como una promoción. */}
       <span aria-hidden className="absolute inset-y-0 left-0 w-1 bg-primary" />
 
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-start gap-3">
-          <svg
-            aria-hidden
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.6"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="mt-0.5 h-7 w-7 shrink-0 text-primary"
-          >
-            <rect x="2" y="5" width="20" height="14" rx="2.5" />
-            <path d="M2 10h20" />
-            <path d="M6 15h4" />
-          </svg>
+      <div className="flex flex-col gap-4 @md:flex-row @md:items-center @md:justify-between">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2.5">
+            <svg
+              aria-hidden
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-6 w-6 shrink-0 text-primary"
+            >
+              <rect x="2" y="5" width="20" height="14" rx="2.5" />
+              <path d="M2 10h20" />
+              <path d="M6 15h4" />
+            </svg>
 
-          <div>
-            <h2 className="font-display text-sm font-bold uppercase tracking-wide text-ink sm:text-base">
+            <h2 className="font-display text-sm font-bold uppercase tracking-wide text-ink @md:text-base">
               ¿Prefieres pagar con tarjeta?
             </h2>
-            <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-ink-soft">
-              En la tienda el pago en línea es por transferencia. Si quieres pagar con{" "}
-              <strong className="text-ink">débito o crédito</strong>,{" "}
-              {conCarrito ? (
-                <>
-                  usa el botón <strong className="text-ink">“Compartir carrito”</strong> y envíanos
-                  el enlace por WhatsApp: te devolvemos un link de pago para que completes la compra
-                  con tu tarjeta.
-                </>
-              ) : (
-                <>
-                  arma tu carrito y compártelo con nosotros por WhatsApp: te enviamos un link de pago
-                  para que completes la compra con tu tarjeta.
-                </>
-              )}
-            </p>
           </div>
+
+          <p className="mt-2 max-w-xl text-sm leading-relaxed text-ink-soft">
+            En la tienda el pago en línea es por transferencia. Si quieres pagar con{" "}
+            <strong className="text-ink">débito o crédito</strong>,{" "}
+            {conCarrito ? (
+              <>
+                usa el botón <strong className="text-ink">“Compartir carrito”</strong> y envíanos
+                el enlace por WhatsApp: te devolvemos un link de pago para que completes la compra
+                con tu tarjeta.
+              </>
+            ) : (
+              <>
+                arma tu carrito y compártelo con nosotros por WhatsApp: te enviamos un link de pago
+                para que completes la compra con tu tarjeta.
+              </>
+            )}
+          </p>
         </div>
 
         <a
           href={`https://wa.me/${whatsapp}?text=${mensaje}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-paper transition hover:bg-primary-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-paper transition hover:bg-primary-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary @md:w-auto"
         >
           <svg aria-hidden viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
             <path d="M3.8 20.2l1.2-4a8 8 0 113.1 3l-4.3 1zM9 9.6c.4 2.6 2.8 5 5.4 5.4l1-1.6 2.1.9-.5 2c-3.9.6-8-3.5-8.6-8l2-.5.9 2.1z" />
