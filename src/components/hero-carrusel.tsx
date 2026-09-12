@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowRight, Zap } from "lucide-react";
+import { ArrowRight, Zap, Pause, Play, ChevronLeft, ChevronRight } from "lucide-react";
 import { EASE_OUT } from "@/lib/motion";
 import { FIESTAS_PATRIAS_ACTIVO } from "@/lib/tema-estacional";
 
@@ -60,18 +60,51 @@ const SLIDES = FIESTAS_PATRIAS_ACTIVO ? [...SLIDES_BASE, SLIDE_FIESTAS_PATRIAS] 
 
 export function HeroCarrusel() {
   const [indice, setIndice] = useState(0);
+  /* Pausa manual: la decide el visitante con el botón y se respeta hasta
+     que él la levante. Separada de `enfocado` a propósito — pasar el
+     mouse por encima no debe cancelar una pausa que alguien pidió. */
+  const [pausado, setPausado] = useState(false);
+  const [enfocado, setEnfocado] = useState(false);
+
+  /* Accesibilidad: quien configuró su sistema para reducir movimiento no
+     debería recibir un carrusel que se mueve solo. Se respeta desde el
+     primer render y sin botón de por medio. */
+  const [prefiereQuieto, setPrefiereQuieto] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setPrefiereQuieto(mq.matches);
+    const alCambiar = (e: MediaQueryListEvent) => setPrefiereQuieto(e.matches);
+    mq.addEventListener("change", alCambiar);
+    return () => mq.removeEventListener("change", alCambiar);
+  }, []);
+
+  const detenido = pausado || enfocado || prefiereQuieto;
 
   useEffect(() => {
+    if (detenido) return;
     const intervalo = setInterval(() => {
       setIndice((i) => (i + 1) % SLIDES.length);
     }, 5000);
     return () => clearInterval(intervalo);
-  }, []);
+  }, [detenido]);
 
   const slide = SLIDES[indice];
+  const irA = (i: number) => setIndice((i + SLIDES.length) % SLIDES.length);
 
   return (
-    <section className="relative overflow-hidden">
+    <section
+      className="relative overflow-hidden"
+      /* Se detiene solo mientras el cursor está encima o algo del bloque
+         tiene el foco del teclado: si alguien se acercó a leer o está
+         tabulando hacia el botón, cambiar la diapositiva bajo su vista es
+         justo lo que no hay que hacer. Al salir, sigue sola. */
+      onMouseEnter={() => setEnfocado(true)}
+      onMouseLeave={() => setEnfocado(false)}
+      onFocusCapture={() => setEnfocado(true)}
+      onBlurCapture={() => setEnfocado(false)}
+      aria-roledescription="carrusel"
+      aria-label="Destacados de Sevelin"
+    >
       <div className="relative mx-auto flex min-h-[380px] max-w-6xl flex-col justify-center gap-4 px-4 py-20 sm:px-6 lg:px-8">
         <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.3em] text-primary">
           <Zap className="h-3.5 w-3.5" aria-hidden />
@@ -106,22 +139,68 @@ export function HeroCarrusel() {
         </AnimatePresence>
       </div>
 
-      <div className="relative mx-auto flex max-w-6xl justify-start gap-2 px-4 pb-6 sm:px-6 lg:px-8">
-        {SLIDES.map((s, i) => (
+      <div className="relative mx-auto flex max-w-6xl items-center gap-3 px-4 pb-6 sm:px-6 lg:px-8">
+        <div className="flex gap-2">
+          {SLIDES.map((s, i) => (
+            <button
+              key={s.titulo}
+              type="button"
+              onClick={() => setIndice(i)}
+              aria-label={`Ir a la diapositiva ${i + 1}: ${s.titulo}`}
+              aria-current={i === indice}
+              className="group py-2"
+            >
+              <span
+                className={`block h-1 rounded-full transition-all duration-300 ${
+                  i === indice ? "w-10 bg-primary shadow-glow-primary" : "w-4 bg-white/20 group-hover:bg-white/40"
+                }`}
+              />
+            </button>
+          ))}
+        </div>
+
+        {/* Controles. Aparecen siempre, no al pasar el mouse: un control
+            que hay que descubrir no existe para quien no lo descubre, y
+            en pantalla táctil no hay "pasar el mouse". */}
+        <div className="ml-1 flex items-center gap-1">
           <button
-            key={s.titulo}
             type="button"
-            onClick={() => setIndice(i)}
-            aria-label={`Ir a la diapositiva ${i + 1}`}
-            className="group py-2"
+            onClick={() => irA(indice - 1)}
+            aria-label="Diapositiva anterior"
+            className="rounded-full p-1.5 text-white/50 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
-            <span
-              className={`block h-1 rounded-full transition-all duration-300 ${
-                i === indice ? "w-10 bg-primary shadow-glow-primary" : "w-4 bg-white/20 group-hover:bg-white/40"
-              }`}
-            />
+            <ChevronLeft className="h-4 w-4" aria-hidden />
           </button>
-        ))}
+
+          <button
+            type="button"
+            onClick={() => setPausado((p) => !p)}
+            /* El nombre dice lo que el botón HACE, no el estado en que
+               está: "Pausar" cuando corre, "Reanudar" cuando está en
+               pausa. Es lo que espera quien navega con lector de
+               pantalla. */
+            aria-label={pausado ? "Reanudar el carrusel" : "Pausar el carrusel"}
+            title={pausado ? "Reanudar" : "Pausar"}
+            className="rounded-full p-1.5 text-white/50 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          >
+            {pausado ? <Play className="h-4 w-4" aria-hidden /> : <Pause className="h-4 w-4" aria-hidden />}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => irA(indice + 1)}
+            aria-label="Diapositiva siguiente"
+            className="rounded-full p-1.5 text-white/50 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          >
+            <ChevronRight className="h-4 w-4" aria-hidden />
+          </button>
+        </div>
+
+        {/* Se anuncia solo a lectores de pantalla: para quien ve, el ícono
+            del botón ya dice en qué estado está. */}
+        <span className="sr-only" aria-live="polite">
+          {detenido ? "Carrusel detenido" : "Carrusel en reproducción automática"}
+        </span>
       </div>
 
       {/* Marco HUD — esquinas tipo visor, puramente decorativo */}

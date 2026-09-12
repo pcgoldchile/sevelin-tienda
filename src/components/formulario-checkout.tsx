@@ -14,6 +14,7 @@ import { formatearRut } from "@/lib/rut";
 import { crearClienteNavegador } from "@/lib/supabase-browser";
 import { VERSION_POLITICA_PRIVACIDAD } from "@/lib/politica-privacidad";
 import { REGIONES_CHILE } from "@/lib/regiones-chile";
+import { VALLES_HABILITADOS } from "@/lib/distancia";
 import { COMUNAS_POR_REGION } from "@/lib/comunas-chile";
 import type { OpcionEnvio } from "@/lib/envio";
 
@@ -735,7 +736,7 @@ export function FormularioCheckout({
               al inicio del camino, lo que cobraría tarifa urbana mínima por
               un despacho que cruza medio valle. Preguntando el km derecho
               se calcula bien: entrada del valle + km declarado. */}
-          {comunaElegida === "Arica" && (
+          {VALLES_HABILITADOS && comunaElegida === "Arica" && (
             <select
               name="valle"
               value={valleElegido}
@@ -751,7 +752,7 @@ export function FormularioCheckout({
             </select>
           )}
 
-          {comunaElegida === "Arica" && valleElegido && (
+          {VALLES_HABILITADOS && comunaElegida === "Arica" && valleElegido && (
             <input
               name="km_valle"
               type="number"

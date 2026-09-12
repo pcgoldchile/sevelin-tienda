@@ -121,7 +121,27 @@ export const VALLES = {
 
 export type ClaveValle = keyof typeof VALLES;
 
+/**
+ * Interruptor del despacho a los valles (12-09-2026).
+ *
+ * Apagado por decisión del dueño: por ahora solo se despacha dentro de la
+ * ciudad. Se retomará junto con una revisión de las tarifas rurales, que
+ * es la parte que hay que mejorar antes de volver a ofrecerlo.
+ *
+ * Se apaga acá y no borrando el formulario porque el cálculo de distancia,
+ * las tarifas y las bases medidas por el dueño siguen siendo correctos:
+ * el día que se reactive, basta poner esto en true. Borrarlos obligaría a
+ * medir todo de nuevo.
+ *
+ * esValleValido() es el único portero: lo usan el cálculo de envío y el
+ * checkout del servidor, así que con esto apagado un valle que llegue en
+ * el cuerpo de la petición se ignora y la dirección se cotiza como urbana
+ * —nunca se cobra de menos por un despacho largo que no vamos a hacer.
+ */
+export const VALLES_HABILITADOS = false;
+
 export function esValleValido(valor: unknown): valor is ClaveValle {
+  if (!VALLES_HABILITADOS) return false;
   return typeof valor === 'string' && valor in VALLES;
 }
 
