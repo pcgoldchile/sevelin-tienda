@@ -105,6 +105,9 @@ export async function POST(req: NextRequest) {
     profundidad_cm: producto.profundidad_cm,
     stock_umbral_web: producto.stock_umbral_web ?? null,
     etiqueta_web: producto.etiqueta_web ?? null,
+    // Un producto sincronizado desde un POS que todavía no tiene la columna
+    // no debe quedar silenciado sin que nadie lo haya pedido.
+    urgencia_stock_web: producto.urgencia_stock_web ?? true,
     es_pedido_encargo: !!producto.es_pedido_encargo,
     meta_titulo_web: producto.meta_titulo_web || null,
     meta_descripcion_web: producto.meta_descripcion_web || null,

@@ -14,6 +14,7 @@ import { AccionesProducto } from "@/components/acciones-producto";
 import { EtiquetaProductoBadge } from "@/components/etiqueta-producto-badge";
 import { InfoEnvioProducto } from "@/components/info-envio-producto";
 import { AvisoPagoTarjeta } from "@/components/aviso-pago-tarjeta";
+import { AvisoUrgenciaStock } from "@/components/aviso-urgencia-stock";
 
 export const revalidate = 60;
 
@@ -211,6 +212,12 @@ export default async function FichaProducto({ params }: PropsPagina) {
               el reordenamiento solo ya lo deja visible sin scroll. */}
           <div className="lg:sticky lg:top-24 lg:z-10">
             <AccionesProducto producto={producto} />
+
+            {/* Dentro del bloque sticky y pegado al botón: el aviso de que
+                queda poco solo sirve en el instante en que se decide la
+                compra. Más abajo en la página lo leería alguien que ya
+                decidió irse. */}
+            <AvisoUrgenciaStock producto={producto} />
           </div>
 
           {/* Justo bajo el botón de compra: es el momento exacto en que el

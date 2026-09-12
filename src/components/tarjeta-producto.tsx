@@ -11,6 +11,7 @@ import { HAY_RECARGO, precioConRecargo } from "@/lib/precios-medio-pago";
 import { useCarrito } from "@/context/carrito-context";
 import { useToast } from "@/context/toast-context";
 import { EtiquetaProductoBadge } from "@/components/etiqueta-producto-badge";
+import { avisoUrgenciaStock } from "@/lib/urgencia-stock";
 import type { ProductoWeb } from "@/lib/tipos";
 
 // Confetti cian/magenta al agregar al carrito — un pequeño "loot get" gamer.
@@ -45,6 +46,12 @@ export function TarjetaProducto({ producto }: { producto: ProductoWeb }) {
   // (se pide al proveedor recién al confirmarse el pedido) — nunca se
   // trata como "sin stock" acá, ver supabase/18-pedidos-por-encargo.sql.
   const sinStock = !producto.es_pedido_encargo && producto.stock_web <= 0;
+  /* En la grilla solo se marca el caso fuerte (última unidad). Poner
+     "quedan 3" en cada tarjeta llenaría el catálogo de carteles y el
+     ojo dejaría de verlos justo cuando importa. El detalle completo
+     vive en la ficha. */
+  const urgencia = avisoUrgenciaStock(producto);
+  const ultimaUnidad = urgencia?.critico ?? false;
 
   /* Un producto por encargo NO vive en /productos: esa ruta filtra por
      stock_web > 0 y los encargos siempre tienen stock 0, así que la ficha
@@ -90,6 +97,11 @@ export function TarjetaProducto({ producto }: { producto: ProductoWeb }) {
         )}
         <div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-t from-surface-sunken/70 via-transparent to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
         <EtiquetaProductoBadge etiqueta={producto.etiqueta_web} className="absolute left-2 top-2" />
+        {ultimaUnidad && (
+          <span className="absolute right-2 top-2 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-paper shadow-elevated-md">
+            Última unidad
+          </span>
+        )}
       </Link>
       <div className="flex flex-1 flex-col gap-1 p-3.5">
         {/* Caja de nombre de EXACTAMENTE 2 líneas: h-10 (40px) con

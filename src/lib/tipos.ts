@@ -24,6 +24,10 @@ export interface ProductoWeb {
   stock_umbral_web: number | null;
   // Etiqueta destacada, marcada a mano desde el POS — ver EtiquetaProducto abajo.
   etiqueta_web: EtiquetaProducto | null;
+  /* Permite el aviso de pocas unidades. El texto y el número los calcula
+     la tienda con stock_web real — esto solo habilita o silencia. Ver
+     supabase/27-urgencia-stock-web.sql. */
+  urgencia_stock_web: boolean;
   // Pedidos por Encargo (dropshipping/retiro en tienda) — marcado desde el
   // POS. Un producto con esto en true vive solo en /pedidos-por-encargo y
   // se puede comprar sin importar stock_web (ver src/lib/encargos.ts).
@@ -252,6 +256,10 @@ export interface ProductoPOS {
   // propósito: no tiene contraparte en este Supabase, solo se usa categoria_web.
   stock_umbral_web: number | null;
   etiqueta_web: EtiquetaProducto | null;
+  /* Permite el aviso de pocas unidades. El texto y el número los calcula
+     la tienda con stock_web real — esto solo habilita o silencia. Ver
+     supabase/27-urgencia-stock-web.sql. */
+  urgencia_stock_web: boolean;
   // Pedidos por Encargo — ver sevelin-pos-oficial/sql/30-pedidos-por-encargo.sql.
   es_pedido_encargo: boolean;
   // SEO con IA — ver sevelin-pos-oficial/sql/33-seo-ia.sql.
