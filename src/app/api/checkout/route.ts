@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { obtenerProductoPorSku } from '@/lib/catalogo';
 import { crearPedido, guardarPagoFlow, guardarPagoKhipu, marcarPedidoFallido } from '@/lib/pedidos';
+import { esBloqueValido, normalizarFechaRetiro } from '@/lib/retiro-agendado';
 import { crearPagoFlow, FLOW_HABILITADO } from '@/lib/flow';
 import { crearPagoKhipu, khipuHabilitado } from '@/lib/khipu';
 import { recargoTotal } from '@/lib/precios-medio-pago';
@@ -21,6 +22,11 @@ interface CuerpoCheckout {
     rut?: string;
   };
   direccion?: Partial<DireccionEnvio>;
+  /* Agenda de retiro (supabase/30). Se validan en el handler: llegan del
+     navegador y son opcionales — uno mal escrito se guarda en null, nunca
+     frena la compra. */
+  retiroFecha?: string | null;
+  retiroBloque?: string | null;
   items?: { sku?: string; cantidad?: number }[];
   // 'RETIRO' es válido en cualquier región/comuna de envío (pensado para
   // quien compra de otra ciudad pero un familiar en Arica retira); 'LOCAL'
@@ -225,6 +231,14 @@ export async function POST(req: NextRequest) {
       direccion: direccionCompleta,
       items,
       tipoPedido,
+      /* Agenda de retiro: solo con método RETIRO, y validada acá aunque
+         el formulario ya limite las opciones — el cuerpo de la petición
+         no es de fiar. Si viene mal escrita se guarda en null y la compra
+         sigue: es un dato opcional y no puede costar una venta. */
+      retiroFecha: cotizacion.metodo === 'RETIRO' ? normalizarFechaRetiro(cuerpo.retiroFecha) : null,
+      retiroBloque: cotizacion.metodo === 'RETIRO' && esBloqueValido(cuerpo.retiroBloque)
+        ? cuerpo.retiroBloque
+        : null,
       metodoEnvio: cotizacion.metodo,
       costoEnvio: cotizacion.costo,
       recargoMedioPago,

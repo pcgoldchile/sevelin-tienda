@@ -302,3 +302,39 @@ export function correoProductoLlego(datos: {
     html: envoltorio(datos.esReserva ? '¡Llegó tu reserva!' : '¡Ya está disponible!', contenido),
   };
 }
+
+/**
+ * Recordatorio del día que el cliente dijo que pasaría a retirar.
+ *
+ * Lo manda el cron de la mañana (GET /api/cron/recordar-retiros), una sola
+ * vez por pedido.
+ *
+ * EL TONO IMPORTA MÁS QUE EL DATO. Esto no es una citación: el cliente
+ * puso una fecha estimada al comprar y perfectamente puede venir otro día.
+ * Si el correo suena a "te esperamos a las 16:00" genera una obligación
+ * que nadie pactó, y el que no puede venir se siente en falta con la
+ * tienda. Por eso se dice explícito que puede pasar cuando quiera.
+ */
+export function correoRecordatorioRetiro(datos: {
+  nombreCliente: string | null;
+  numeroPedido: string;
+  bloque: string | null;
+  whatsapp?: string;
+}): { subject: string; html: string } {
+  const hola = datos.nombreCliente ? `${datos.nombreCliente},` : 'Hola,';
+  const franja = datos.bloque
+    ? ` entre las ${datos.bloque.replace('-', ' y las ')}`
+    : '';
+
+  const contenido = `
+    <p style="margin:0 0 16px;font-size:14px;color:${TEXTO_SUAVE};">${hola} nos dijiste que hoy${franja} pasarías a buscar tu pedido <strong style="color:${TEXTO};">${datos.numeroPedido}</strong>. Te lo dejamos preparado.</p>
+    <p style="margin:0 0 16px;font-size:14px;color:${TEXTO_SUAVE};"><strong style="color:${TEXTO};">Dónde:</strong> ${DIRECCION_TIENDA}</p>
+    <p style="margin:0 0 16px;font-size:14px;color:${TEXTO_SUAVE};">Si hoy no te acomoda, no pasa nada: tu pedido te espera y puedes venir cualquier otro día.${datos.whatsapp ? ' Si quieres coordinar otro momento, escríbenos por WhatsApp.' : ''}</p>
+    ${datos.whatsapp ? `<p style="margin:0;"><a href="https://wa.me/${datos.whatsapp}" style="display:inline-block;background:${AZUL};color:#ffffff;text-decoration:none;padding:11px 22px;border-radius:999px;font-size:14px;font-weight:600;">Escribir por WhatsApp</a></p>` : ''}
+  `;
+
+  return {
+    subject: `Hoy pasas por tu pedido ${datos.numeroPedido} — te lo dejamos listo`,
+    html: envoltorio('Tu pedido te espera', contenido),
+  };
+}

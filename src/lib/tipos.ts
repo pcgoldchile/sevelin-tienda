@@ -181,6 +181,11 @@ export interface PedidoWeb {
      sigue siendo el identificador para hablar con el cliente y para el POS;
      esto es solo la llave del link. */
   token_publico: string;
+  /* Retiro agendado (supabase/30). Orientación del cliente, no una cita:
+     puede venir otro día sin avisar. */
+  retiro_fecha: string | null;
+  retiro_bloque: string | null;
+  recordatorio_retiro_enviado_en: string | null;
   estado: EstadoPedido;
   cliente_nombre: string | null;
   cliente_apellido: string | null;

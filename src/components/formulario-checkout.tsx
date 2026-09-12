@@ -15,6 +15,7 @@ import { crearClienteNavegador } from "@/lib/supabase-browser";
 import { VERSION_POLITICA_PRIVACIDAD } from "@/lib/politica-privacidad";
 import { REGIONES_CHILE } from "@/lib/regiones-chile";
 import { VALLES_HABILITADOS } from "@/lib/distancia";
+import { BLOQUES_RETIRO, DIAS_MAXIMOS_RETIRO } from "@/lib/retiro-agendado";
 import { COMUNAS_POR_REGION } from "@/lib/comunas-chile";
 import type { OpcionEnvio } from "@/lib/envio";
 
@@ -113,6 +114,8 @@ export function FormularioCheckout({
   const [aceptaPrivacidad, setAceptaPrivacidad] = useState(false);
   /* Crear cuenta desde el checkout. Es opcional y JAMÁS puede impedir que
      la compra se concrete — ver crearCuentaSiCorresponde(). */
+  const [retiroFecha, setRetiroFecha] = useState("");
+  const [retiroBloque, setRetiroBloque] = useState("");
   const [quiereCuenta, setQuiereCuenta] = useState(false);
   const [avisoCuenta, setAvisoCuenta] = useState<string | null>(null);
   // Id del carrito guardado en carritos_web (origen 'checkout') — se llena
@@ -440,6 +443,10 @@ export function FormularioCheckout({
           },
           items: itemsSeleccionados.map((item) => ({ sku: item.sku, cantidad: item.cantidad })),
           metodoEnvio: metodoElegido,
+          // Solo tienen sentido con retiro en tienda; el servidor los ignora
+          // en cualquier otro método.
+          retiroFecha: retiroFecha || null,
+          retiroBloque: retiroBloque || null,
           metodoPago,
           nota: datos.get("nota"),
           consentimientoPrivacidad: aceptaPrivacidad,
@@ -929,6 +936,56 @@ export function FormularioCheckout({
           </AnimatePresence>
 
           {errorEnvio && <p className="text-sm text-red-600">{errorEnvio}</p>}
+
+          {/* Agenda de retiro — solo si eligió retirar en tienda. Va acá,
+              pegado a esa elección, y no en "Detalles adicionales": es la
+              continuación natural de haber marcado "retiro".
+
+              Todo opcional. Un campo obligatorio más en el checkout cuesta
+              ventas, y esto es una comodidad, no un requisito. */}
+          {metodoElegido === "RETIRO" && (
+            <div className="rounded-xl border border-border bg-surface-sunken/50 p-3.5">
+              <p className="text-sm font-medium text-ink">
+                ¿Cuándo piensas pasar a buscarlo?{" "}
+                <span className="font-normal text-ink-soft">(opcional)</span>
+              </p>
+              <p className="mt-1 text-xs leading-relaxed text-ink-soft">
+                Es solo una referencia para dejarte el pedido preparado y atenderte más rápido.
+                <strong className="text-ink"> No te compromete a nada</strong>: puedes venir
+                cualquier otro día sin avisar, o coordinar por WhatsApp. Si nos dices un día, te
+                mandamos un recordatorio esa mañana.
+              </p>
+
+              <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                <input
+                  name="retiro_fecha"
+                  type="date"
+                  value={retiroFecha}
+                  min={new Date().toLocaleDateString("en-CA", { timeZone: "America/Santiago" })}
+                  max={(() => {
+                    const d = new Date();
+                    d.setDate(d.getDate() + DIAS_MAXIMOS_RETIRO);
+                    return d.toLocaleDateString("en-CA");
+                  })()}
+                  onChange={(e) => setRetiroFecha(e.target.value)}
+                  className={`${CAMPO} flex-1`}
+                />
+                <select
+                  name="retiro_bloque"
+                  value={retiroBloque}
+                  onChange={(e) => setRetiroBloque(e.target.value)}
+                  className={`${CAMPO} flex-1`}
+                >
+                  <option value="">¿A qué hora, más o menos?</option>
+                  {BLOQUES_RETIRO.map((b) => (
+                    <option key={b} value={b}>
+                      Entre las {b.replace("-", " y las ")}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
         </fieldset>
 
         <fieldset className="flex flex-col gap-3">

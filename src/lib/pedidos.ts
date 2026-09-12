@@ -55,6 +55,11 @@ export async function crearPedido(datos: {
   recargoMedioPago: number;
   nota: string | null;
   factura: DatosFactura | null;
+  /* Retiro agendado (supabase/30). Ya vienen validados por el llamador y
+     solo llegan con método RETIRO. Es una orientación, no una cita: el
+     cliente puede venir otro día sin que nada se rompa. */
+  retiroFecha?: string | null;
+  retiroBloque?: string | null;
   // null = invitado. Se resuelve en POST /api/checkout leyendo la sesión
   // desde la cookie (src/lib/supabase-server.ts) — nunca desde el body.
   clienteUserId: string | null;
@@ -100,6 +105,8 @@ export async function crearPedido(datos: {
       items: datos.items,
       tipo_pedido: datos.tipoPedido,
       metodo_envio: datos.metodoEnvio,
+      retiro_fecha: datos.retiroFecha ?? null,
+      retiro_bloque: datos.retiroBloque ?? null,
       costo_envio: datos.costoEnvio,
       recargo_medio_pago: datos.recargoMedioPago,
       subtotal,
