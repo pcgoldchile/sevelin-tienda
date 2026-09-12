@@ -11,6 +11,8 @@ import { useCarrito } from "@/context/carrito-context";
 import { useSesion } from "@/context/sesion-context";
 import { CODIGOS_PAIS, CODIGO_PAIS_POR_DEFECTO } from "@/lib/codigos-pais";
 import { formatearRut } from "@/lib/rut";
+import { crearClienteNavegador } from "@/lib/supabase-browser";
+import { VERSION_POLITICA_PRIVACIDAD } from "@/lib/politica-privacidad";
 import { REGIONES_CHILE } from "@/lib/regiones-chile";
 import { COMUNAS_POR_REGION } from "@/lib/comunas-chile";
 import type { OpcionEnvio } from "@/lib/envio";
@@ -108,6 +110,10 @@ export function FormularioCheckout({
   // inequívoco, nunca una casilla premarcada) — el submit queda bloqueado
   // mientras no se acepte a propósito.
   const [aceptaPrivacidad, setAceptaPrivacidad] = useState(false);
+  /* Crear cuenta desde el checkout. Es opcional y JAMÁS puede impedir que
+     la compra se concrete — ver crearCuentaSiCorresponde(). */
+  const [quiereCuenta, setQuiereCuenta] = useState(false);
+  const [avisoCuenta, setAvisoCuenta] = useState<string | null>(null);
   // Id del carrito guardado en carritos_web (origen 'checkout') — se llena
   // apenas el cliente completa el correo (ver guardarAbandono más abajo) y
   // viaja en el submit para que el servidor apague el recordatorio de
@@ -326,6 +332,60 @@ export function FormularioCheckout({
     }
   }
 
+  /**
+   * Crea la cuenta si el cliente marcó la casilla. Nunca lanza.
+   *
+   * REGLA QUE NO SE ROMPE: esto es un extra sobre la compra. Si falla —el
+   * correo ya tiene cuenta, la contraseña no le gusta a Supabase, se cayó
+   * la red— se avisa y **se sigue comprando como invitado**. Perder una
+   * venta porque falló algo opcional sería el peor resultado posible, y
+   * quien está en el checkout viene a comprar, no a registrarse.
+   */
+  async function crearCuentaSiCorresponde(datos: FormData) {
+    if (!quiereCuenta || usuario) return;
+
+    const email = String(datos.get("email") || "").trim();
+    const password = String(datos.get("password") || "");
+    if (!email || !password) return;
+
+    try {
+      const supabase = crearClienteNavegador();
+      const { data, error: errorRegistro } = await supabase.auth.signUp({ email, password });
+      if (errorRegistro) {
+        // "User already registered" es el caso frecuente y no es un error
+        // del cliente: ya tiene cuenta, simplemente no inició sesión.
+        setAvisoCuenta(
+          /already registered|already exists/i.test(errorRegistro.message)
+            ? "Ya existe una cuenta con este correo, así que seguimos con tu compra. Puedes iniciar sesión cuando quieras."
+            : "No pudimos crear tu cuenta, pero tu compra sigue igual. Puedes registrarte después desde el menú."
+        );
+        return;
+      }
+
+      if (data.user) {
+        const numero = String(datos.get("telefono") || "").trim();
+        await supabase.from("perfiles_clientes").insert({
+          id: data.user.id,
+          nombre: String(datos.get("nombre") || "").trim(),
+          apellido: String(datos.get("apellido") || "").trim(),
+          telefono: numero ? `${datos.get("codigoPais")} ${numero}` : "",
+          // El mismo consentimiento que ya marcó para comprar, con la
+          // versión de la política vigente — Ley 21.719 exige poder probar
+          // qué aceptó y cuándo.
+          consentimiento_privacidad: true,
+          fecha_consentimiento: new Date().toISOString(),
+          version_politica: VERSION_POLITICA_PRIVACIDAD,
+          // Marketing NO se asume por comprar: es un consentimiento
+          // separado y se pide aparte, en /cuenta/privacidad.
+          consentimiento_marketing: false,
+          fecha_consentimiento_marketing: null,
+        });
+      }
+    } catch {
+      setAvisoCuenta("No pudimos crear tu cuenta, pero tu compra sigue igual.");
+    }
+  }
+
   async function manejarSubmit(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
     if (!metodoElegido) {
@@ -343,6 +403,13 @@ export function FormularioCheckout({
 
     setEnviando(true);
     try {
+      /* La cuenta se crea ANTES de ir a la pasarela, no después: acá
+         todavía tenemos la contraseña en memoria, y guardarla en algún
+         lado para usarla al volver del pago sería exactamente lo que no
+         hay que hacer nunca. Si signUp deja sesión, POST /api/checkout la
+         lee de la cookie y el pedido queda asociado a la cuenta solo. */
+      await crearCuentaSiCorresponde(datos);
+
       const respuesta = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -531,6 +598,54 @@ export function FormularioCheckout({
             placeholder="Correo electrónico"
             className={CAMPO}
           />
+
+          {/* Crear cuenta va pegado al correo, que es el dato que la cuenta
+              usa — no al final del formulario, donde el cliente ya está con
+              la mano en "Pagar" y no quiere una decisión más. Solo se
+              ofrece a quien no tiene sesión. */}
+          {!usuario && !cargandoSesion && (
+            <div className="rounded-xl border border-border bg-surface-sunken/50 p-3.5">
+              <label className="flex cursor-pointer items-start gap-2.5 text-sm text-ink">
+                <input
+                  type="checkbox"
+                  checked={quiereCuenta}
+                  onChange={(e) => {
+                    setQuiereCuenta(e.target.checked);
+                    setAvisoCuenta(null);
+                  }}
+                  className="mt-0.5 accent-accent"
+                />
+                <span>
+                  <span className="font-medium">Crear mi cuenta con este correo</span>
+                  <span className="block text-xs text-ink-soft">
+                    Para seguir tus pedidos y comprar más rápido la próxima vez. Opcional.
+                  </span>
+                </span>
+              </label>
+
+              <AnimatePresence initial={false}>
+                {quiereCuenta && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="overflow-hidden"
+                  >
+                    <input
+                      name="password"
+                      type="password"
+                      minLength={6}
+                      autoComplete="new-password"
+                      placeholder="Crea una contraseña (mínimo 6 caracteres)"
+                      className={`${CAMPO} mt-3 w-full`}
+                    />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {avisoCuenta && <p className="mt-2 text-xs text-ink-soft">{avisoCuenta}</p>}
+            </div>
+          )}
           <div className="flex gap-3">
             <select
               name="codigoPais"
