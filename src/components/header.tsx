@@ -323,6 +323,15 @@ export function Header({
               </AnimatePresence>
             </div>
           )}
+          {/* Por llegar va ANTES de Encargos: lo que ya viene en camino
+              está más cerca de concretarse que lo que hay que encargar, y
+              se lee primero. */}
+          <Link
+            href="/por-llegar"
+            className="rounded-md px-3 py-1.5 text-sm font-medium text-ink-soft transition-colors hover:bg-surface-sunken hover:text-primary"
+          >
+            Por llegar
+          </Link>
           <Link
             href="/pedidos-por-encargo"
             className="rounded-md px-3 py-1.5 text-sm font-medium text-ink-soft transition-colors hover:bg-surface-sunken hover:text-primary"
@@ -419,6 +428,10 @@ export function Header({
                   </div>
                 );
               })}
+
+              <Link href="/por-llegar" className="block py-1.5 text-sm font-medium text-ink-soft" onClick={() => setMenuMovilAbierto(false)}>
+                Por llegar
+              </Link>
 
               <Link href="/pedidos-por-encargo" className="block py-1.5 text-sm font-medium text-ink-soft" onClick={() => setMenuMovilAbierto(false)}>
                 Encargos

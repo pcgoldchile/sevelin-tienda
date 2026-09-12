@@ -37,3 +37,30 @@ export async function obtenerEncargoPorSku(sku: string): Promise<ProductoWeb | n
   if (error) throw new Error(error.message);
   return data;
 }
+
+/**
+ * Catálogo de "Por llegar": lo que viene en camino y todavía no está en la
+ * tienda. Mismo criterio que listarEncargos() —sin filtro de stock— pero
+ * son cosas distintas y por eso no comparten página:
+ *
+ *   Encargo   → no se mantiene stock nunca; se pide al proveedor cuando
+ *               alguien lo compra. Es permanente.
+ *   Por llegar → ya viene en camino, con fecha estimada. Es transitorio:
+ *               cuando llega deja de estar acá.
+ *
+ * Se ordena por fecha de llegada, los más próximos primero, porque es el
+ * dato por el que la gente mira esta página. Los que aún no tienen fecha
+ * van al final: son los más inciertos.
+ */
+export async function listarPorLlegar(): Promise<ProductoWeb[]> {
+  const { data, error } = await supabaseWeb
+    .from('productos_web')
+    .select('*')
+    .eq('publicado_web', true)
+    .eq('por_llegar', true)
+    .order('fecha_llegada_estimada', { ascending: true, nullsFirst: false })
+    .order('nombre', { ascending: true });
+
+  if (error) throw new Error(error.message);
+  return data || [];
+}

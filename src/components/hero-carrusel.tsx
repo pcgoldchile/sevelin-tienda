@@ -10,18 +10,39 @@ import { FIESTAS_PATRIAS_ACTIVO } from "@/lib/tema-estacional";
 // Sin gestión de banners desde un panel (fuera de alcance a propósito, ver
 // README-ECOMMERCE-SEVELIN.md sección 2.1): estas son las 3 franjas fijas del
 // hero, editables acá directamente cuando cambie la promo.
+// Cada slide lleva su propio destino: antes el botón mandaba siempre a
+// /productos, así que las franjas que hablan de otra sección prometían una
+// cosa y llevaban a otra.
 const SLIDES_BASE = [
   {
     titulo: "Tecnología para tu hogar y oficina",
     texto: "Encuentra los mejores productos de electrónica al mejor precio en Arica.",
+    href: "/productos",
+    cta: "Ver catálogo",
+  },
+  {
+    titulo: "Viene en camino",
+    texto: "Resérvalo ahora y queda apartado a tu nombre. Te avisamos apenas llegue, y si no llega te devolvemos el 100%.",
+    href: "/por-llegar",
+    cta: "Ver lo que llega",
+  },
+  {
+    titulo: "Pedidos por encargo",
+    texto: "¿No lo ves en el catálogo? Lo traemos para ti, con la misma garantía de 6 meses.",
+    href: "/pedidos-por-encargo",
+    cta: "Ver encargos",
   },
   {
     titulo: "Despacho a todo Arica y Chile",
     texto: "Recibe tu compra donde estés, con garantía en todos los productos.",
+    href: "/productos",
+    cta: "Ver catálogo",
   },
   {
     titulo: "Atención directa por WhatsApp",
     texto: "¿Dudas sobre un producto? Escríbenos y te ayudamos a elegir.",
+    href: "/productos",
+    cta: "Ver catálogo",
   },
 ];
 
@@ -31,6 +52,8 @@ const SLIDES_BASE = [
 const SLIDE_FIESTAS_PATRIAS = {
   titulo: "¡Viva Chile! Fiestas Patrias",
   texto: "Sevelin también se pone la camiseta el 18 — seguimos despachando y atendiendo con la misma garantía de siempre.",
+  href: "/productos",
+  cta: "Ver catálogo",
 };
 
 const SLIDES = FIESTAS_PATRIAS_ACTIVO ? [...SLIDES_BASE, SLIDE_FIESTAS_PATRIAS] : SLIDES_BASE;
@@ -69,13 +92,13 @@ export function HeroCarrusel() {
               {slide.titulo.split(" ").slice(1).join(" ")}
             </h1>
             <p className="max-w-lg text-base text-white/70">{slide.texto}</p>
-            <Link href="/productos" className="group mt-2">
+            <Link href={slide.href} className="group mt-2">
               <motion.span
                 whileHover={{ y: -2 }}
                 whileTap={{ scale: 0.97 }}
                 className="inline-flex items-center gap-2 rounded-md border border-primary/60 bg-primary/10 px-6 py-3 text-sm font-bold uppercase tracking-wider text-primary shadow-glow-primary transition-colors group-hover:bg-primary group-hover:text-surface-sunken"
               >
-                Ver catálogo
+                {slide.cta}
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden />
               </motion.span>
             </Link>
