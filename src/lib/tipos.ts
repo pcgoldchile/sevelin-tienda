@@ -34,6 +34,9 @@ export interface ProductoWeb {
   por_llegar: boolean;
   /** Fecha ESTIMADA de llegada. Siempre se muestra como estimada. */
   fecha_llegada_estimada: string | null;
+  /** Unidades que vienen en camino. Es el tope de RESERVA cuando stock_web
+   *  es 0; con stock disponible manda el stock real. */
+  stock_por_llegar: number;
   // Pedidos por Encargo (dropshipping/retiro en tienda) — marcado desde el
   // POS. Un producto con esto en true vive solo en /pedidos-por-encargo y
   // se puede comprar sin importar stock_web (ver src/lib/encargos.ts).
@@ -272,6 +275,9 @@ export interface ProductoPOS {
   por_llegar: boolean;
   /** Fecha ESTIMADA de llegada. Siempre se muestra como estimada. */
   fecha_llegada_estimada: string | null;
+  /** Unidades que vienen en camino. Es el tope de RESERVA cuando stock_web
+   *  es 0; con stock disponible manda el stock real. */
+  stock_por_llegar: number;
   // Pedidos por Encargo — ver sevelin-pos-oficial/sql/30-pedidos-por-encargo.sql.
   es_pedido_encargo: boolean;
   // SEO con IA — ver sevelin-pos-oficial/sql/33-seo-ia.sql.

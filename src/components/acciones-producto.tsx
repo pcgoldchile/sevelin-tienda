@@ -43,16 +43,28 @@ export function AccionesProducto({ producto }: { producto: ProductoWeb }) {
       // Sin permiso de portapapeles (poco común) — no hay nada más que ofrecer acá.
     }
   }
-  /* Ni los Pedidos por Encargo ni lo que está "por llegar" tienen stock
-     propio: el encargo se pide al proveedor al confirmarse, y lo que viene
-     en camino se reserva pagando el 100%. En ambos el tope por stock no
-     aplica — ver supabase/28-por-llegar-y-avisos.sql. */
-  const sinStockPropio = producto.es_pedido_encargo || producto.por_llegar;
   /* Es una reserva solo si NO hay unidades hoy. Con stock disponible el
      cliente se lo lleva ahora, aunque vengan más en camino: llamarlo
      "reservar" lo haría dudar de algo que ya puede tener. */
   const esReserva = producto.por_llegar && producto.stock_web <= 0;
-  const topeCantidad = sinStockPropio ? 99 : producto.stock_web;
+
+  /* Un Pedido por Encargo no tiene stock propio nunca: se pide al
+     proveedor al confirmarse la compra, así que no hay tope real.
+
+     "Por llegar" SÍ tiene tope, y ahí estaba el bug: antes daba 99 aunque
+     en la tienda quedara una sola unidad, y el pago se cobraba igual para
+     después fallar al descontar el stock, dejando el pedido en
+     ERROR_STOCK_SIN_DESPACHO y al dueño con plata de mercadería que no
+     tiene. La regla es que solo se puede comprar lo que existe: si hay
+     unidades disponibles ese es el límite, y si no queda ninguna se
+     reserva hasta lo que el dueño declaró que viene, nunca más. */
+  const topeCantidad = producto.es_pedido_encargo
+    ? 99
+    : producto.stock_web > 0
+      ? producto.stock_web
+      : producto.por_llegar
+        ? Math.max(0, producto.stock_por_llegar ?? 0)
+        : 0;
 
   // Una vez por ficha vista, no por cada render — mismo criterio que
   // registrarVistaProducto (analítica propia) en la página del producto.

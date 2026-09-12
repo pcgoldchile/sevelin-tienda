@@ -6,6 +6,7 @@ import { formatoCLP } from "@/lib/formato";
 import { URL_RESENA_GOOGLE } from "@/lib/resena-google";
 import { AvisoResenaGoogle } from "@/components/aviso-resena-google";
 import { SeguimientoPago } from "@/components/seguimiento-pago";
+import { ReintentarPago } from "@/components/reintentar-pago";
 
 interface PropsPagina {
   /* El parámetro es `token_publico`, NO el número de pedido: los números
@@ -75,6 +76,11 @@ export default async function EstadoPedido({ params }: PropsPagina) {
       </div>
       <p className="mt-2 text-sm text-ink-soft">{MENSAJE_ESTADO[pedido.estado] || `Estado: ${pedido.estado}`}</p>
       <SeguimientoPago token={token} estadoActual={pedido.estado} />
+
+      {/* Rescate de una venta ya decidida: el cliente llegó al banco y algo
+          lo interrumpió. Sin esto tendría que armar el carrito de nuevo, y
+          casi nadie lo hace. Solo en CREADO — el servidor lo revalida. */}
+      {pedido.estado === "CREADO" && <ReintentarPago token={token} />}
 
       <div className="mt-6 rounded-2xl bg-surface p-5 shadow-elevated-md">
         <ul className="flex flex-col gap-2">

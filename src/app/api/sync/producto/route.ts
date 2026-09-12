@@ -113,6 +113,7 @@ export async function POST(req: NextRequest) {
     urgencia_stock_web: producto.urgencia_stock_web ?? true,
     por_llegar: !!producto.por_llegar,
     fecha_llegada_estimada: producto.fecha_llegada_estimada ?? null,
+    stock_por_llegar: Math.max(0, Number(producto.stock_por_llegar) || 0),
     es_pedido_encargo: !!producto.es_pedido_encargo,
     meta_titulo_web: producto.meta_titulo_web || null,
     meta_descripcion_web: producto.meta_descripcion_web || null,

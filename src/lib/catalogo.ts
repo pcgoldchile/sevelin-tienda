@@ -26,11 +26,17 @@ export async function listarCatalogo(): Promise<ProductoWeb[]> {
  * ficha de /productos/[sku] como el checkout y la cotización de envío
  * (src/lib/envio.ts), que necesitan poder resolver un producto de
  * Pedidos por Encargo igual que uno normal. Por eso el filtro de stock es
- * "stock_web > 0 O es de Encargo" en vez de exigir stock siempre — un
- * Encargo no tiene stock propio a propósito (ver
- * supabase/18-pedidos-por-encargo.sql). Quien solo quiere el catálogo
- * normal ya filtra es_pedido_encargo=false en sus propias consultas
- * (buscarCatalogo, listarCatalogo, etc.).
+ * "stock_web > 0 O es de Encargo O viene en camino" en vez de exigir stock
+ * siempre.
+ *
+ * Un Encargo no tiene stock propio a propósito (ver
+ * supabase/18-pedidos-por-encargo.sql), y un producto "por llegar" tiene
+ * stock 0 justamente porque se agotó y viene reposición: sin esta
+ * excepción su ficha devolvía 404 y no se podía ni reservar ni pedir el
+ * aviso — que es el caso principal para el que se construyó.
+ *
+ * Quien solo quiere el catálogo normal ya filtra es_pedido_encargo=false
+ * en sus propias consultas (buscarCatalogo, listarCatalogo, etc.).
  */
 export async function obtenerProductoPorSku(sku: string): Promise<ProductoWeb | null> {
   const { data, error } = await supabaseWeb
@@ -38,7 +44,7 @@ export async function obtenerProductoPorSku(sku: string): Promise<ProductoWeb | 
     .select('*')
     .eq('sku', sku)
     .eq('publicado_web', true)
-    .or('stock_web.gt.0,es_pedido_encargo.eq.true')
+    .or('stock_web.gt.0,es_pedido_encargo.eq.true,por_llegar.eq.true')
     .maybeSingle();
 
   if (error) throw new Error(error.message);
