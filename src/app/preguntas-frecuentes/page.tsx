@@ -144,7 +144,7 @@ const PREGUNTAS: { pregunta: string; respuesta: string }[] = [
   },
   {
     pregunta: "¿Cómo los contacto?",
-    respuesta: `Por WhatsApp al ${WHATSAPP_LEGIBLE}, por Instagram en @sevelin_cl, o por correo a sevelin.contacto@gmail.com. Respondemos por cualquiera de los tres.`,
+    respuesta: `Por WhatsApp al ${WHATSAPP_LEGIBLE}, por Instagram en @sevelin.cl, o por correo a sevelin.contacto@gmail.com. Respondemos por cualquiera de los tres.`,
   },
 ];
 
