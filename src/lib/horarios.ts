@@ -15,6 +15,26 @@
 
 export const ZONA_CHILE = 'America/Santiago';
 
+/**
+ * Horario real de atención (confirmado por el dueño el 12-09-2026):
+ * lunes a domingo, de 11:00 a 13:00 y de 14:00 a 20:00.
+ *
+ * Vive acá y en un solo lugar porque lo usan los bloques de retiro
+ * agendado, los avisos del checkout y las Preguntas Frecuentes. Tenerlo
+ * escrito en tres partes garantiza que dos queden desactualizadas.
+ */
+export const TRAMOS_ATENCION = [
+  { desde: 11, hasta: 13 },
+  { desde: 14, hasta: 20 },
+] as const;
+
+export const APERTURA_HORA = TRAMOS_ATENCION[0].desde;
+export const HORARIO_LEGIBLE = 'Lunes a domingo, de 11:00 a 13:00 y de 14:00 a 20:00';
+
+/** El domingo se atiende, pero conviene confirmar antes de venir. */
+export const AVISO_DOMINGO =
+  'Los domingos atendemos, pero conviene escribirnos o llamarnos antes para confirmar.';
+
 export const CORTE_DESPACHO_HORA = 18; // 18:00
 export const CORTE_RETIRO_HORA = 20; // 20:00
 
@@ -56,13 +76,18 @@ function ahoraEnChile(referencia: Date): { hora: number; minuto: number; diaSema
   return { hora, minuto, diaSemana };
 }
 
-/** El siguiente día hábil, en palabras, para explicar cuándo saldría. */
-function proximoDiaHabil(diaSemana: number): string {
-  // Sábado (6) y domingo (0) empujan al lunes; el resto, al día siguiente.
-  if (diaSemana === 5) return 'el lunes'; // viernes pasado el corte
-  if (diaSemana === 6) return 'el lunes';
-  if (diaSemana === 0) return 'el lunes';
-  return 'el día hábil siguiente';
+/**
+ * Cuándo sería el siguiente día de atención.
+ *
+ * CORREGIDO EL 12-09-2026: esto mandaba al lunes todo lo que caía viernes
+ * tarde, sábado o domingo, asumiendo semana hábil de oficina. Sevelin
+ * atiende LOS SIETE DÍAS, así que le decía a un cliente del sábado que su
+ * pedido saldría el lunes cuando en realidad salía el domingo — dos días
+ * de espera inventados, justo en el fin de semana que es cuando más se
+ * compra.
+ */
+function proximoDiaAtencion(diaSemana: number): string {
+  return diaSemana === 6 ? 'mañana domingo' : 'mañana';
 }
 
 export function estadoHorario(referencia: Date = new Date()): EstadoHorario {
@@ -85,10 +110,19 @@ export function estadoHorario(referencia: Date = new Date()): EstadoHorario {
     avisoDespacho: despachoHoy
       ? `Sale hoy — compras antes de las ${CORTE_DESPACHO_HORA}:00 se despachan el mismo día. ` +
         '(Despacho realizado directamente por Sevelin — escríbenos por WhatsApp o correo al finalizar tu compra para coordinar y acelerar la entrega.)'
-      : `Pasadas las ${CORTE_DESPACHO_HORA}:00 el despacho se programa para ${proximoDiaHabil(diaSemana)}. ` +
+      : `Pasadas las ${CORTE_DESPACHO_HORA}:00 el despacho se programa para ${proximoDiaAtencion(diaSemana)}. ` +
         '(Despacho realizado directamente por Sevelin — escríbenos por WhatsApp o correo al finalizar tu compra para coordinar y acelerar la entrega.)',
-    avisoRetiro: retiroHoy
-      ? `Puedes retirar hoy mismo — hasta las ${CORTE_RETIRO_HORA}:00.`
-      : `Pasadas las ${CORTE_RETIRO_HORA}:00 el retiro queda disponible ${proximoDiaHabil(diaSemana)}.`,
+    /* Antes decía "puedes retirar hoy mismo" también a las 8 de la mañana,
+       cuando la tienda abre a las 11 — el cliente salía y se encontraba
+       con la puerta cerrada. Ahora el aviso distingue los tres momentos
+       del día y nombra la pausa de colación, que es la otra forma de
+       llegar a una puerta cerrada. */
+    avisoRetiro: !retiroHoy
+      ? `Pasadas las ${CORTE_RETIRO_HORA}:00 el retiro queda disponible ${proximoDiaAtencion(diaSemana)}.`
+      : hora < APERTURA_HORA
+        ? `Puedes retirarlo hoy desde las ${APERTURA_HORA}:00. ${HORARIO_LEGIBLE}.`
+        : hora === 13
+          ? `Puedes retirarlo hoy — volvemos de colación a las 14:00 y atendemos hasta las ${CORTE_RETIRO_HORA}:00.`
+          : `Puedes retirar hoy mismo — hasta las ${CORTE_RETIRO_HORA}:00 (cerramos de 13:00 a 14:00).`,
   };
 }

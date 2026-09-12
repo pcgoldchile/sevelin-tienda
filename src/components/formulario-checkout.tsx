@@ -16,6 +16,7 @@ import { VERSION_POLITICA_PRIVACIDAD } from "@/lib/politica-privacidad";
 import { REGIONES_CHILE } from "@/lib/regiones-chile";
 import { VALLES_HABILITADOS } from "@/lib/distancia";
 import { BLOQUES_RETIRO, DIAS_MAXIMOS_RETIRO } from "@/lib/retiro-agendado";
+import { AVISO_DOMINGO, HORARIO_LEGIBLE } from "@/lib/horarios";
 import { COMUNAS_POR_REGION } from "@/lib/comunas-chile";
 import type { OpcionEnvio } from "@/lib/envio";
 
@@ -984,6 +985,17 @@ export function FormularioCheckout({
                   ))}
                 </select>
               </div>
+
+              <p className="mt-2 text-xs text-ink-soft">{HORARIO_LEGIBLE}.</p>
+
+              {/* El domingo se atiende, pero conviene confirmar. Se avisa
+                  acá, en el momento exacto en que eligió ese día, y no
+                  enterrado en las Preguntas Frecuentes. */}
+              {retiroFecha && new Date(`${retiroFecha}T12:00:00`).getDay() === 0 && (
+                <p className="mt-2 rounded-lg bg-accent/10 px-3 py-2 text-xs leading-relaxed text-ink">
+                  {AVISO_DOMINGO}
+                </p>
+              )}
             </div>
           )}
         </fieldset>

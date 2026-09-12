@@ -85,6 +85,11 @@ const PREGUNTAS: { pregunta: string; respuesta: string }[] = [
       "Sí, exactamente la misma: 6 meses por fallas de fábrica, con boleta. Que lo traigamos por encargo no cambia en nada tu garantía ni tus derechos como consumidor.",
   },
   {
+    pregunta: "¿Cuál es el horario de atención?",
+    respuesta:
+      "Atendemos de lunes a domingo, de 11:00 a 13:00 y de 14:00 a 20:00 (cerramos de 13:00 a 14:00 por colación). Los domingos atendemos, pero conviene escribirnos o llamarnos antes para confirmar.",
+  },
+  {
     pregunta: "¿Qué significa que un producto esté \"por llegar\"?",
     respuesta:
       "Que viene en camino y todavía no está en la tienda. Puedes reservarlo pagando el total, y queda apartado a tu nombre: nadie más se lo lleva. Cuando llega te avisamos por correo, y lo retiras cuando te acomode o te lo despachamos.",

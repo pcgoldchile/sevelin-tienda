@@ -9,11 +9,20 @@
  * funciona una tienda de barrio.
  */
 
-/** Bloques de dos horas. Nadie sabe a qué minuto va a llegar: pedir una
- *  hora exacta obliga a inventar una precisión que no existe. */
+/**
+ * Bloques dentro del horario REAL de atención: lunes a domingo, 11:00 a
+ * 13:00 y 14:00 a 20:00 (ver TRAMOS_ATENCION en src/lib/horarios.ts).
+ *
+ * No hay ningún bloque entre las 13:00 y las 14:00 a propósito: ese es el
+ * cierre de colación, y ofrecerlo mandaría gente a una puerta cerrada por
+ * un dato que la propia tienda le dio.
+ *
+ * Son bloques y no horas exactas porque nadie sabe a qué minuto va a
+ * llegar: pedir "15:47" obliga a inventar una precisión que no existe y
+ * después a incumplirla.
+ */
 export const BLOQUES_RETIRO = [
-  "10:00-12:00",
-  "12:00-14:00",
+  "11:00-13:00",
   "14:00-16:00",
   "16:00-18:00",
   "18:00-20:00",
