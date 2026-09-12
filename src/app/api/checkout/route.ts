@@ -115,6 +115,7 @@ export async function POST(req: NextRequest) {
   let items: ItemPedido[];
   let tipoPedido: 'NORMAL' | 'ENCARGO';
   let soloServicios = false;
+  let hayServicios = false;
   try {
     const resueltos = await Promise.all(
       itemsSolicitados.map(async (solicitado) => {
@@ -142,6 +143,7 @@ export async function POST(req: NextRequest) {
             nombre: producto.nombre,
             precio_web: producto.precio_web,
             cantidad,
+            es_servicio: esServicioTecnico(producto),
           },
           esEncargo: producto.es_pedido_encargo,
           esServicio: esServicioTecnico(producto),
@@ -162,6 +164,7 @@ export async function POST(req: NextRequest) {
 
     items = resueltos.map((r) => r.item);
     soloServicios = resueltos.every((r) => r.esServicio);
+    hayServicios = resueltos.some((r) => r.esServicio);
     tipoPedido = hayEncargo ? 'ENCARGO' : 'NORMAL';
   } catch (err) {
     const mensaje = err instanceof Error ? err.message : 'No se pudo validar el carrito';
@@ -193,9 +196,13 @@ export async function POST(req: NextRequest) {
   // pantalla previa.
   let cotizacion;
   try {
+    /* Pedido mixto (dueño, 12-09-2026: "un pedido, un pago, dos entregas"):
+       el envío se cotiza solo con los productos. Los servicios no viajan. */
+    const itemsEnvio = (soloServicios ? items : items.filter((it) => !it.es_servicio))
+      .map(({ sku, cantidad }) => ({ sku, cantidad }));
     cotizacion = await confirmarEnvio(
       direccionCompleta,
-      items.map(({ sku, cantidad }) => ({ sku, cantidad })),
+      itemsEnvio,
       cuerpo.metodoEnvio,
       { soloServicios }
     );
@@ -204,11 +211,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: mensaje }, { status: 409 });
   }
 
-  /* Carrito solo de servicios técnicos (supabase/32): el cliente trae su
-     equipo, y el día es obligatorio — es justamente lo que permite preparar
-     su llegada. A diferencia del retiro, acá sí se frena la compra. */
-  const fechaEntregaEquipo = soloServicios ? normalizarFechaRetiro(cuerpo.retiroFecha) : null;
-  if (soloServicios && !fechaEntregaEquipo) {
+  /* Con cualquier servicio en el carrito (solo o mixto, supabase/32) el
+     cliente trae su equipo, y el día es obligatorio — es justamente lo que
+     permite preparar su llegada. A diferencia del retiro, acá sí se frena la
+     compra. Si además retira sus productos, es el mismo día. */
+  const fechaEntregaEquipo = hayServicios ? normalizarFechaRetiro(cuerpo.retiroFecha) : null;
+  if (hayServicios && !fechaEntregaEquipo) {
     return NextResponse.json({ error: 'Elige qué día traes tu equipo al local (desde hoy y hasta 30 días).' }, { status: 400 });
   }
 
@@ -255,13 +263,13 @@ export async function POST(req: NextRequest) {
          el formulario ya limite las opciones — el cuerpo de la petición
          no es de fiar. Si viene mal escrita se guarda en null y la compra
          sigue: es un dato opcional y no puede costar una venta. */
-      retiroFecha: soloServicios
+      retiroFecha: hayServicios
         ? fechaEntregaEquipo
         : cotizacion.metodo === 'RETIRO' ? normalizarFechaRetiro(cuerpo.retiroFecha) : null,
-      retiroBloque: cotizacion.metodo === 'RETIRO' && esBloqueValido(cuerpo.retiroBloque)
+      retiroBloque: (hayServicios || cotizacion.metodo === 'RETIRO') && esBloqueValido(cuerpo.retiroBloque)
         ? cuerpo.retiroBloque
         : null,
-      agendaTipo: soloServicios ? 'ENTREGA_EQUIPO' : 'RETIRO',
+      agendaTipo: hayServicios ? 'ENTREGA_EQUIPO' : 'RETIRO',
       metodoEnvio: cotizacion.metodo,
       costoEnvio: cotizacion.costo,
       recargoMedioPago,

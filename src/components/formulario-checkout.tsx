@@ -117,10 +117,19 @@ export function FormularioCheckout({
      la compra se concrete — ver crearCuentaSiCorresponde(). */
   const [retiroFecha, setRetiroFecha] = useState("");
   const [retiroBloque, setRetiroBloque] = useState("");
-  /* Carrito solo de servicios técnicos: lo decide el servidor al cotizar
-     (ver POST /api/cotizar-envio). La única opción es traer el equipo, y el
-     día pasa a ser obligatorio (supabase/32). */
-  const [soloServicios, setSoloServicios] = useState(false);
+  /* Servicios técnicos en el carrito (supabase/32). Solo servicios: la única
+     opción es traer el equipo. Mixto ("un pedido, un pago, dos entregas",
+     12-09-2026): los productos eligen su envío y los servicios siempre se
+     traen al local. Con cualquier servicio, el día es obligatorio. Se parte
+     de lo que sabe el carrito y se confirma con el servidor al cotizar. */
+  // null = todavía no cotiza: manda la marca del carrito. El carrito se lee
+  // de localStorage después del primer render, así que no se congela acá.
+  const [skusServicios, setSkusServicios] = useState<string[] | null>(null);
+  const esItemServicio = (item: { sku: string; es_servicio?: boolean }) =>
+    skusServicios ? skusServicios.includes(item.sku) : !!item.es_servicio;
+  const hayServicios = itemsSeleccionados.some(esItemServicio);
+  const hayProductos = itemsSeleccionados.some((item) => !esItemServicio(item));
+  const esMixto = hayServicios && hayProductos;
   const [quiereCuenta, setQuiereCuenta] = useState(false);
   const [avisoCuenta, setAvisoCuenta] = useState<string | null>(null);
   // Id del carrito guardado en carritos_web (origen 'checkout') — se llena
@@ -220,7 +229,7 @@ export function FormularioCheckout({
 
       const nuevasOpciones: OpcionEnvio[] = data.opciones;
       setOpciones(nuevasOpciones);
-      setSoloServicios(!!data.soloServicios);
+      if (Array.isArray(data.skusServicios)) setSkusServicios(data.skusServicios);
       /* Aviso general del servidor: hoy se usa cuando la dirección no se
          pudo ubicar en el mapa y por eso no hay despacho a domicilio en la
          lista. Va como error visible (no silencioso) para que el cliente
@@ -402,7 +411,7 @@ export function FormularioCheckout({
       setErrorEnvio("Elige una forma de envío antes de pagar.");
       return;
     }
-    if (soloServicios && !retiroFecha) {
+    if (hayServicios && !retiroFecha) {
       setErrorEnvio("Elige qué día traes tu equipo al local.");
       return;
     }
@@ -511,8 +520,20 @@ export function FormularioCheckout({
             Editar
           </Link>
         </div>
+        {/* Pedido mixto: dos bloques, en el mismo orden que las entregas. */}
+        {(esMixto
+          ? [
+              { titulo: "📦 Productos", lista: itemsSeleccionados.filter((i) => !esItemServicio(i)) },
+              { titulo: "🔧 Servicios técnicos", lista: itemsSeleccionados.filter(esItemServicio) },
+            ]
+          : [{ titulo: null, lista: itemsSeleccionados }]
+        ).map((grupo) => (
+        <div key={grupo.titulo ?? "todo"}>
+        {grupo.titulo && (
+          <p className="mt-3 text-xs font-semibold uppercase tracking-wider text-ink-faint">{grupo.titulo}</p>
+        )}
         <ul className="mt-3 flex flex-col gap-3">
-          {itemsSeleccionados.map((item) => (
+          {grupo.lista.map((item) => (
             <li key={item.sku} className="flex gap-3 text-sm text-ink-soft">
               <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-surface-sunken">
                 {item.imagen ? (
@@ -529,6 +550,8 @@ export function FormularioCheckout({
             </li>
           ))}
         </ul>
+        </div>
+        ))}
         <div className="mt-3 flex flex-col gap-1.5 border-t border-border pt-3 text-sm">
           <div className="flex justify-between text-ink-soft">
             <span>Subtotal</span>
@@ -858,7 +881,15 @@ export function FormularioCheckout({
               ninguna pista de que ahí iba a aparecer algo (pedido explícito
               del dueño: que se note que existe un paso de método de envío,
               no solo dentro del checkout). */}
-          <p className="mt-1 text-xs font-semibold uppercase tracking-wider text-ink-faint">Método de envío</p>
+          <p className="mt-1 text-xs font-semibold uppercase tracking-wider text-ink-faint">
+            {esMixto ? "📦 Tus productos: ¿cómo los recibes?" : "Método de envío"}
+          </p>
+          {esMixto && (
+            <p className="text-xs leading-relaxed text-ink-soft">
+              Tu pedido tiene productos y servicios técnicos: un solo pago, dos entregas. Los productos
+              se retiran o se despachan; los servicios se hacen en el local, con tu equipo.
+            </p>
+          )}
 
           {!direccionCompleta && (
             <p className="text-xs text-ink-faint">
@@ -953,18 +984,31 @@ export function FormularioCheckout({
 
               Todo opcional. Un campo obligatorio más en el checkout cuesta
               ventas, y esto es una comodidad, no un requisito. */}
-          {metodoElegido === "RETIRO" && (
+          {metodoElegido && (metodoElegido === "RETIRO" || hayServicios) && (
             <div className="rounded-xl border border-border bg-surface-sunken/50 p-3.5">
               {/* Servicio técnico: mismo selector, otra pregunta. Acá el día
                   SÍ es obligatorio — pagar el servicio es reservarlo, y sin
                   saber cuándo llega el equipo no hay cómo preparar su
-                  llegada (pedido del dueño, 12-09-2026). */}
-              {soloServicios ? (
+                  llegada (pedido del dueño, 12-09-2026). En un pedido mixto
+                  con retiro es UNA sola visita: trae el equipo y se lleva
+                  los productos. Con despacho, la fecha es solo del equipo. */}
+              {hayServicios ? (
                 <>
+                  {esMixto && (
+                    <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-ink-faint">
+                      🔧 Tus servicios técnicos
+                    </p>
+                  )}
                   <p className="text-sm font-medium text-ink">
-                    ¿Qué día traes tu equipo? <span className="text-accent">*</span>
+                    {esMixto && metodoElegido === "RETIRO" ? "¿Qué día vienes al local?" : "¿Qué día traes tu equipo?"}{" "}
+                    <span className="text-accent">*</span>
                   </p>
                   <p className="mt-1 text-xs leading-relaxed text-ink-soft">
+                    {esMixto && metodoElegido === "RETIRO"
+                      ? "Ese día traes tu equipo para el servicio y te llevas tus productos, todo en una visita. "
+                      : esMixto
+                        ? "Tus productos van por el envío que elegiste; esta fecha es solo para traer tu equipo. "
+                        : ""}
                     Tu pago deja el servicio reservado y así preparamos la llegada de tu equipo. Te
                     mandamos un recordatorio el día anterior. Si después necesitas cambiar el día,
                     escríbenos por WhatsApp.
@@ -997,8 +1041,8 @@ export function FormularioCheckout({
                     return d.toLocaleDateString("en-CA");
                   })()}
                   onChange={(e) => setRetiroFecha(e.target.value)}
-                  required={soloServicios}
-                  aria-label={soloServicios ? "Día en que traes tu equipo" : "Día en que pasas a retirar"}
+                  required={hayServicios}
+                  aria-label={hayServicios ? "Día en que traes tu equipo" : "Día en que pasas a retirar"}
                   className={`${CAMPO} flex-1`}
                 />
                 <select

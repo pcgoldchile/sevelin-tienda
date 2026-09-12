@@ -105,15 +105,30 @@ export function correoConfirmacionPedido(
   const filas = pedido.items
     .map((it) => filaItemConFoto(it.nombre, it.cantidad, it.precio_web * it.cantidad, imagenesPorProductoId[it.producto_pos_id]))
     .join('');
-  // Servicio técnico (supabase/32): no hay nada que retirar todavía, el
-  // cliente es quien trae su equipo.
-  const metodo = pedido.agenda_tipo === 'ENTREGA_EQUIPO'
-    ? `Traes tu equipo al local (${DIRECCION_TIENDA})${pedido.retiro_fecha ? ` el ${fechaRetiroLegible(pedido.retiro_fecha)}${pedido.retiro_bloque ? `, entre las ${pedido.retiro_bloque.replace('-', ' y las ')}` : ''}` : ''}`
-    : pedido.metodo_envio === 'RETIRO'
+  const cuandoTrae = pedido.retiro_fecha
+    ? ` el ${fechaRetiroLegible(pedido.retiro_fecha)}${pedido.retiro_bloque ? `, entre las ${pedido.retiro_bloque.replace('-', ' y las ')}` : ''}`
+    : '';
+  const entregaProductos = pedido.metodo_envio === 'RETIRO'
     ? `Retiro en tienda (${DIRECCION_TIENDA})`
     : pedido.metodo_envio === 'LOCAL'
       ? `Despacho a domicilio en Arica — ${pedido.direccion_envio.calle} ${pedido.direccion_envio.numero}, ${pedido.direccion_envio.comuna}`
       : `Envío por Chilexpress — ${pedido.direccion_envio.calle} ${pedido.direccion_envio.numero}, ${pedido.direccion_envio.comuna}`;
+
+  /* Servicio técnico (supabase/32): el cliente trae su equipo. En un pedido
+     mixto van DOS líneas de entrega — "un pedido, un pago, dos entregas" —
+     y si los productos se retiran, es la misma visita. */
+  const hayServicios = pedido.agenda_tipo === 'ENTREGA_EQUIPO';
+  const hayProductos = pedido.items.some((it) => !it.es_servicio);
+  const lineaEntrega = (etiqueta: string, texto: string) =>
+    `<p style="margin:0 0 6px;font-size:14px;color:${TEXTO_SUAVE};"><strong style="color:${TEXTO};">${etiqueta}</strong> ${texto}</p>`;
+  const bloqueEntrega = !hayServicios
+    ? lineaEntrega('Entrega:', entregaProductos)
+    : !hayProductos
+      ? lineaEntrega('Entrega:', `Traes tu equipo al local (${DIRECCION_TIENDA})${cuandoTrae}`)
+      : lineaEntrega('🔧 Servicios:', `traes tu equipo al local (${DIRECCION_TIENDA})${cuandoTrae}`) +
+        lineaEntrega('📦 Productos:', pedido.metodo_envio === 'RETIRO'
+          ? `te los llevas ese mismo día, cuando traigas tu equipo`
+          : entregaProductos);
 
   const contenido = `
     <p style="margin:0 0 16px;font-size:14px;color:${TEXTO_SUAVE};">${nombre}, recibimos tu pago. Este es el resumen de tu pedido <strong style="color:${TEXTO};">${pedido.numero_pedido}</strong>.</p>
@@ -123,7 +138,7 @@ export function correoConfirmacionPedido(
       ${pedido.recargo_medio_pago > 0 ? `<tr><td style="padding:6px 0 0;font-size:14px;color:${TEXTO_SUAVE};">Pago con tarjeta</td><td style="padding:6px 0 0;font-size:14px;color:${TEXTO};text-align:right;">${formatoCLP.format(pedido.recargo_medio_pago)}</td></tr>` : ''}
       <tr><td style="padding:6px 0 0;font-size:16px;font-weight:700;color:${TEXTO};">Total</td><td style="padding:6px 0 0;font-size:16px;font-weight:700;color:${TEXTO};text-align:right;">${formatoCLP.format(pedido.total)}</td></tr>
     </table>
-    <p style="margin:0;font-size:14px;color:${TEXTO_SUAVE};"><strong style="color:${TEXTO};">Entrega:</strong> ${metodo}</p>
+    ${bloqueEntrega}
     ${bloqueReseña()}
   `;
 
@@ -360,17 +375,24 @@ export function correoRecordatorioEntregaEquipo(datos: {
   fecha: string;
   bloque: string | null;
   servicios: string[];
+  /** Pedido mixto con retiro: productos que se lleva en la misma visita. */
+  productosParaRetirar?: string[];
   whatsapp?: string;
 }): { subject: string; html: string } {
   const hola = datos.nombreCliente ? `${datos.nombreCliente},` : 'Hola,';
   const franja = datos.bloque ? `, entre las ${datos.bloque.replace('-', ' y las ')}` : '';
-  const lista = datos.servicios
+  const aLista = (nombres: string[]) => nombres
     .map((s) => `<li style="margin:0 0 4px;">${s.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</li>`)
     .join('');
+  const lista = aLista(datos.servicios);
+  const productos = datos.productosParaRetirar?.length
+    ? `<p style="margin:0 0 6px;font-size:14px;color:${TEXTO_SUAVE};">Ese mismo día te llevas tus productos, ya pagados:</p><ul style="margin:0 0 16px;padding-left:18px;font-size:14px;color:${TEXTO};">${aLista(datos.productosParaRetirar)}</ul>`
+    : '';
 
   const contenido = `
     <p style="margin:0 0 16px;font-size:14px;color:${TEXTO_SUAVE};">${hola} te recordamos que mañana, ${fechaRetiroLegible(datos.fecha)}${franja}, nos dijiste que traerías tu equipo para el servicio del pedido <strong style="color:${TEXTO};">${datos.numeroPedido}</strong>:</p>
     <ul style="margin:0 0 16px;padding-left:18px;font-size:14px;color:${TEXTO};">${lista}</ul>
+    ${productos}
     <p style="margin:0 0 16px;font-size:14px;color:${TEXTO_SUAVE};"><strong style="color:${TEXTO};">Dónde:</strong> ${DIRECCION_TIENDA}</p>
     <p style="margin:0 0 16px;font-size:14px;color:${TEXTO_SUAVE};">Antes de venir, respalda tus archivos importantes y trae el cargador de tu equipo si lo tiene.</p>
     <p style="margin:0 0 16px;font-size:14px;color:${TEXTO_SUAVE};">Si mañana no te acomoda, no pasa nada: tu servicio ya está pagado y reservado.${datos.whatsapp ? ' Escríbenos por WhatsApp y coordinamos otro día.' : ''}</p>

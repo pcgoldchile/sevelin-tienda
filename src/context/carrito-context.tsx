@@ -13,6 +13,7 @@ import {
 import type { ProductoWeb } from "@/lib/tipos";
 import { useSesion } from "@/context/sesion-context";
 import { crearClienteNavegador } from "@/lib/supabase-browser";
+import { esServicioTecnico } from "@/lib/servicios";
 
 const CLAVE_LOCALSTORAGE = "sevelin-carrito";
 
@@ -28,6 +29,10 @@ export interface ItemCarrito {
   // se quiere comprar), el cliente lo destilda si quiere guardarlo para
   // después sin llevarlo al pago.
   seleccionado: boolean;
+  /** Servicio técnico: el checkout lo separa de los productos (pedido mixto).
+   *  Opcional: los carritos guardados antes no lo traen, y el servidor lo
+   *  confirma igual al cotizar. */
+  es_servicio?: boolean;
 }
 
 interface CarritoContextValor {
@@ -172,6 +177,7 @@ export function CarritoProvider({ children }: { children: ReactNode }) {
           stock_web: producto.stock_web,
           cantidad: Math.min(cantidad, tope),
           seleccionado: true,
+          es_servicio: esServicioTecnico(producto),
         },
       ];
     });

@@ -53,6 +53,11 @@ export interface CotizacionEnvio {
   /** true si el carrito es solo de servicios técnicos: la única opción es
    *  traer el equipo al local, y el checkout pide cuándo (supabase/32). */
   soloServicios?: boolean;
+  /** Hay al menos un servicio (carrito mixto o solo servicios): el día en
+   *  que trae el equipo es obligatorio. */
+  hayServicios?: boolean;
+  /** SKUs del carrito que son servicios, para separar los bloques en pantalla. */
+  skusServicios?: string[];
 }
 
 function normalizar(texto: string): string {

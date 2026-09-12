@@ -51,10 +51,15 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    // ¿Carrito solo de servicios técnicos? Se resuelve contra el catálogo,
-    // nunca con algo que diga el navegador (ver src/lib/servicios.ts).
+    /* Servicios vs. productos, resuelto contra el catálogo y nunca con algo
+       que diga el navegador (ver src/lib/servicios.ts). En un carrito mixto
+       solo los PRODUCTOS se cotizan para envío: un servicio no pesa ni viaja,
+       el cliente trae su equipo. */
     const productos = await Promise.all(items.map((item) => obtenerProductoPorSku(item.sku)));
-    const soloServicios = productos.every((p) => !!p && esServicioTecnico(p));
+    const esServicio = items.map((_, i) => !!productos[i] && esServicioTecnico(productos[i]!));
+    const skusServicios = items.filter((_, i) => esServicio[i]).map((item) => item.sku);
+    const itemsProductos = items.filter((_, i) => !esServicio[i]);
+    const soloServicios = itemsProductos.length === 0;
 
     const cotizacion = await cotizarOpcionesEnvio(
       {
@@ -74,10 +79,10 @@ export async function POST(req: NextRequest) {
         // cliente, solo en este id, que el servidor resuelve él mismo.
         placeId: direccion.placeId || null,
       },
-      items,
+      soloServicios ? items : itemsProductos,
       { soloServicios }
     );
-    return NextResponse.json(cotizacion);
+    return NextResponse.json({ ...cotizacion, hayServicios: skusServicios.length > 0, skusServicios });
   } catch (err) {
     const mensaje = err instanceof Error ? err.message : 'No se pudo cotizar el envío';
     return NextResponse.json({ error: mensaje }, { status: 409 });

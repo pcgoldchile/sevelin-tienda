@@ -75,7 +75,13 @@ export async function GET(req: NextRequest) {
           numeroPedido: pedido.numero_pedido,
           fecha: pedido.retiro_fecha as string,
           bloque: pedido.retiro_bloque,
-          servicios: pedido.items.map((it) => it.nombre),
+          // Pedidos anteriores al carrito mixto no marcan es_servicio: ahí
+          // todos los ítems eran servicios.
+          servicios: (pedido.items.some((it) => it.es_servicio) ? pedido.items.filter((it) => it.es_servicio) : pedido.items)
+            .map((it) => it.nombre),
+          productosParaRetirar: pedido.metodo_envio === 'RETIRO' && pedido.items.some((it) => it.es_servicio)
+            ? pedido.items.filter((it) => !it.es_servicio).map((it) => it.nombre)
+            : [],
           whatsapp,
         })
       : correoRecordatorioRetiro({

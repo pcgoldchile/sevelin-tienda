@@ -152,6 +152,10 @@ export interface ItemPedido {
   nombre: string;
   precio_web: number;
   cantidad: number;
+  /* Servicio técnico (el cliente trae su equipo) o producto (se retira o se
+     despacha). Separa los dos bloques del pedido mixto en el correo y en el
+     POS. Ausente en pedidos anteriores al 12-09-2026 = producto. */
+  es_servicio?: boolean;
 }
 
 export type EstadoPedido =
