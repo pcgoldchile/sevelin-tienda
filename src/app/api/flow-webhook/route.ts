@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { FLOW_ESTADO_PAGADO, obtenerEstadoPagoFlow } from '@/lib/flow';
 import { emitirBoleta, openFacturaHabilitada } from '@/lib/openfactura';
-import { ajustarStockPos } from '@/lib/pos-interno';
+import { ajustarStockPos, registrarVentaWebEnPos } from '@/lib/pos-interno';
 import {
   guardarDatosBoleta,
   marcarErrorStockSinDespacho,
@@ -117,6 +117,14 @@ export async function POST(req: NextRequest) {
   // en el panel "Pedidos Web" del POS, inconfundible con un pedido
   // normal) y se manda una alerta por correo — la decisión de reembolsar,
   // conseguir el producto u ofrecer un cambio queda en manos del dueño.
+  /* Registro contable de la venta en el POS. Va FUERA del try/catch del
+     stock y no lanza nunca: el pago ya está capturado y el pedido ya
+     quedó PAGADO, así que hacer fallar el webhook por esto provocaría
+     que la pasarela reintente todo el flujo —incluido otro descuento de
+     stock— por algo que es registro, no cobro. Ver
+     registrarVentaWebEnPos(). */
+  await registrarVentaWebEnPos(pedido);
+
   try {
     await ajustarStockPos(pedido.items);
   } catch (err) {
