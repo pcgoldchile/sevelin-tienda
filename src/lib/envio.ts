@@ -50,6 +50,9 @@ export interface CotizacionEnvio {
   opciones: OpcionEnvio[];
   /** Aviso general cuando no se pudo ubicar la dirección en el mapa. */
   aviso?: string;
+  /** true si el carrito es solo de servicios técnicos: la única opción es
+   *  traer el equipo al local, y el checkout pide cuándo (supabase/32). */
+  soloServicios?: boolean;
 }
 
 function normalizar(texto: string): string {
@@ -300,10 +303,32 @@ function opcionRetiro(): OpcionEnvio {
  * porque es la salida cuando el domicilio no se puede ubicar en el mapa o
  * el cliente prefiere Starken/Blue Express.
  */
+/**
+ * Servicio técnico: no hay nada que despachar, el cliente trae su equipo.
+ * Mismo método RETIRO (gratis, en tienda) para no abrir un método nuevo en
+ * pedidos_web ni en el POS; lo que cambia es el texto y la agenda.
+ */
+function opcionTraerEquipo(): OpcionEnvio {
+  return {
+    metodo: 'RETIRO',
+    costo: 0,
+    detalle: `Traes tu equipo al local (${DIRECCION_TIENDA})`,
+    aviso: 'Los servicios técnicos se realizan en el local: elige abajo cuándo traes tu equipo.',
+  };
+}
+
 export async function cotizarOpcionesEnvio(
   direccion: DireccionEnvio,
-  items: { sku: string; cantidad: number }[]
+  items: { sku: string; cantidad: number }[],
+  contexto?: { soloServicios?: boolean }
 ): Promise<CotizacionEnvio> {
+  /* Carrito solo de servicios (dueño, 12-09-2026): enviar un servicio no
+     tiene sentido. Se corta ANTES de cotizar couriers — además de ser la
+     regla, ahorra llamadas pagadas a Google y a los couriers. */
+  if (contexto?.soloServicios) {
+    return { opciones: [opcionTraerEquipo()], soloServicios: true };
+  }
+
   // Retiro en tienda va SIEMPRE, sin importar la región/comuna que haya
   // puesto el cliente (pedido explícito del dueño): pensado para quien
   // compra desde otra ciudad pero quiere que un familiar que vive en Arica
@@ -362,8 +387,18 @@ export async function cotizarOpcionesEnvio(
 export async function confirmarEnvio(
   direccion: DireccionEnvio,
   items: { sku: string; cantidad: number }[],
-  metodoElegido?: string
+  metodoElegido?: string,
+  contexto?: { soloServicios?: boolean }
 ): Promise<OpcionEnvio> {
+  // Autoridad real de la regla de servicios: aunque el navegador mande
+  // CHILEXPRESS, un carrito solo de servicios no se despacha.
+  if (contexto?.soloServicios) {
+    if (metodoElegido !== 'RETIRO') {
+      throw new Error('Los servicios técnicos se realizan en el local: elige traer tu equipo.');
+    }
+    return opcionTraerEquipo();
+  }
+
   // Igual que en la vista previa: retiro en tienda es válido sin importar
   // la región/comuna de envío que haya puesto el cliente.
   if (metodoElegido === 'RETIRO') return opcionRetiro();

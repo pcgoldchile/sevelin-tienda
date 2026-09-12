@@ -117,6 +117,10 @@ export function FormularioCheckout({
      la compra se concrete — ver crearCuentaSiCorresponde(). */
   const [retiroFecha, setRetiroFecha] = useState("");
   const [retiroBloque, setRetiroBloque] = useState("");
+  /* Carrito solo de servicios técnicos: lo decide el servidor al cotizar
+     (ver POST /api/cotizar-envio). La única opción es traer el equipo, y el
+     día pasa a ser obligatorio (supabase/32). */
+  const [soloServicios, setSoloServicios] = useState(false);
   const [quiereCuenta, setQuiereCuenta] = useState(false);
   const [avisoCuenta, setAvisoCuenta] = useState<string | null>(null);
   // Id del carrito guardado en carritos_web (origen 'checkout') — se llena
@@ -216,6 +220,7 @@ export function FormularioCheckout({
 
       const nuevasOpciones: OpcionEnvio[] = data.opciones;
       setOpciones(nuevasOpciones);
+      setSoloServicios(!!data.soloServicios);
       /* Aviso general del servidor: hoy se usa cuando la dirección no se
          pudo ubicar en el mapa y por eso no hay despacho a domicilio en la
          lista. Va como error visible (no silencioso) para que el cliente
@@ -395,6 +400,10 @@ export function FormularioCheckout({
     evento.preventDefault();
     if (!metodoElegido) {
       setErrorEnvio("Elige una forma de envío antes de pagar.");
+      return;
+    }
+    if (soloServicios && !retiroFecha) {
+      setErrorEnvio("Elige qué día traes tu equipo al local.");
       return;
     }
     if (!aceptaPrivacidad) {
@@ -946,16 +955,35 @@ export function FormularioCheckout({
               ventas, y esto es una comodidad, no un requisito. */}
           {metodoElegido === "RETIRO" && (
             <div className="rounded-xl border border-border bg-surface-sunken/50 p-3.5">
-              <p className="text-sm font-medium text-ink">
-                ¿Cuándo piensas pasar a buscarlo?{" "}
-                <span className="font-normal text-ink-soft">(opcional)</span>
-              </p>
-              <p className="mt-1 text-xs leading-relaxed text-ink-soft">
-                Es solo una referencia para dejarte el pedido preparado y atenderte más rápido.
-                <strong className="text-ink"> No te compromete a nada</strong>: puedes venir
-                cualquier otro día sin avisar, o coordinar por WhatsApp. Si nos dices un día, te
-                mandamos un recordatorio esa mañana.
-              </p>
+              {/* Servicio técnico: mismo selector, otra pregunta. Acá el día
+                  SÍ es obligatorio — pagar el servicio es reservarlo, y sin
+                  saber cuándo llega el equipo no hay cómo preparar su
+                  llegada (pedido del dueño, 12-09-2026). */}
+              {soloServicios ? (
+                <>
+                  <p className="text-sm font-medium text-ink">
+                    ¿Qué día traes tu equipo? <span className="text-accent">*</span>
+                  </p>
+                  <p className="mt-1 text-xs leading-relaxed text-ink-soft">
+                    Tu pago deja el servicio reservado y así preparamos la llegada de tu equipo. Te
+                    mandamos un recordatorio el día anterior. Si después necesitas cambiar el día,
+                    escríbenos por WhatsApp.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm font-medium text-ink">
+                    ¿Cuándo piensas pasar a buscarlo?{" "}
+                    <span className="font-normal text-ink-soft">(opcional)</span>
+                  </p>
+                  <p className="mt-1 text-xs leading-relaxed text-ink-soft">
+                    Es solo una referencia para dejarte el pedido preparado y atenderte más rápido.
+                    <strong className="text-ink"> No te compromete a nada</strong>: puedes venir
+                    cualquier otro día sin avisar, o coordinar por WhatsApp. Si nos dices un día, te
+                    mandamos un recordatorio esa mañana.
+                  </p>
+                </>
+              )}
 
               <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                 <input
@@ -969,6 +997,8 @@ export function FormularioCheckout({
                     return d.toLocaleDateString("en-CA");
                   })()}
                   onChange={(e) => setRetiroFecha(e.target.value)}
+                  required={soloServicios}
+                  aria-label={soloServicios ? "Día en que traes tu equipo" : "Día en que pasas a retirar"}
                   className={`${CAMPO} flex-1`}
                 />
                 <select

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cotizarOpcionesEnvio } from '@/lib/envio';
+import { obtenerProductoPorSku } from '@/lib/catalogo';
+import { esServicioTecnico } from '@/lib/servicios';
 import type { DireccionEnvio } from '@/lib/tipos';
 import { chequearLimite, ipReal, respuestaLimiteExcedido } from '@/lib/rate-limit';
 
@@ -49,6 +51,11 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    // ¿Carrito solo de servicios técnicos? Se resuelve contra el catálogo,
+    // nunca con algo que diga el navegador (ver src/lib/servicios.ts).
+    const productos = await Promise.all(items.map((item) => obtenerProductoPorSku(item.sku)));
+    const soloServicios = productos.every((p) => !!p && esServicioTecnico(p));
+
     const cotizacion = await cotizarOpcionesEnvio(
       {
         calle: direccion.calle,
@@ -67,7 +74,8 @@ export async function POST(req: NextRequest) {
         // cliente, solo en este id, que el servidor resuelve él mismo.
         placeId: direccion.placeId || null,
       },
-      items
+      items,
+      { soloServicios }
     );
     return NextResponse.json(cotizacion);
   } catch (err) {

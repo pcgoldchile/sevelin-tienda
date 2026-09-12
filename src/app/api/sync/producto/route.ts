@@ -115,6 +115,8 @@ export async function POST(req: NextRequest) {
     fecha_llegada_estimada: producto.fecha_llegada_estimada ?? null,
     stock_por_llegar: Math.max(0, Number(producto.stock_por_llegar) || 0),
     es_pedido_encargo: !!producto.es_pedido_encargo,
+    // Supabase/31: no se vende en línea, se cotiza por WhatsApp.
+    precio_a_consultar: !!producto.precio_a_consultar,
     meta_titulo_web: producto.meta_titulo_web || null,
     meta_descripcion_web: producto.meta_descripcion_web || null,
     // Marca del fabricante (supabase/23-marca.sql). NULL en los genéricos:

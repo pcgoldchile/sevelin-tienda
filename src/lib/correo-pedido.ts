@@ -1,5 +1,6 @@
 import { DIRECCION_TIENDA } from './distancia';
 import { formatoCLP } from './formato';
+import { fechaRetiroLegible } from './retiro-agendado';
 import { URL_RESENA_GOOGLE } from './resena-google';
 import type { PedidoWeb } from './tipos';
 
@@ -104,7 +105,11 @@ export function correoConfirmacionPedido(
   const filas = pedido.items
     .map((it) => filaItemConFoto(it.nombre, it.cantidad, it.precio_web * it.cantidad, imagenesPorProductoId[it.producto_pos_id]))
     .join('');
-  const metodo = pedido.metodo_envio === 'RETIRO'
+  // Servicio técnico (supabase/32): no hay nada que retirar todavía, el
+  // cliente es quien trae su equipo.
+  const metodo = pedido.agenda_tipo === 'ENTREGA_EQUIPO'
+    ? `Traes tu equipo al local (${DIRECCION_TIENDA})${pedido.retiro_fecha ? ` el ${fechaRetiroLegible(pedido.retiro_fecha)}${pedido.retiro_bloque ? `, entre las ${pedido.retiro_bloque.replace('-', ' y las ')}` : ''}` : ''}`
+    : pedido.metodo_envio === 'RETIRO'
     ? `Retiro en tienda (${DIRECCION_TIENDA})`
     : pedido.metodo_envio === 'LOCAL'
       ? `Despacho a domicilio en Arica — ${pedido.direccion_envio.calle} ${pedido.direccion_envio.numero}, ${pedido.direccion_envio.comuna}`
@@ -336,5 +341,44 @@ export function correoRecordatorioRetiro(datos: {
   return {
     subject: `Hoy pasas por tu pedido ${datos.numeroPedido} — te lo dejamos listo`,
     html: envoltorio('Tu pedido te espera', contenido),
+  };
+}
+
+/**
+ * Recordatorio de servicio técnico: MAÑANA trae su equipo (supabase/32).
+ *
+ * Sale el día ANTES, no la misma mañana como el del retiro: el cliente
+ * tiene que acordarse de respaldar lo suyo, buscar el cargador y hacerse
+ * el tiempo de venir, y eso no se resuelve en una mañana.
+ *
+ * Mismo tono que el del retiro: el servicio ya está pagado y reservado,
+ * y si no puede venir ese día no pierde nada.
+ */
+export function correoRecordatorioEntregaEquipo(datos: {
+  nombreCliente: string | null;
+  numeroPedido: string;
+  fecha: string;
+  bloque: string | null;
+  servicios: string[];
+  whatsapp?: string;
+}): { subject: string; html: string } {
+  const hola = datos.nombreCliente ? `${datos.nombreCliente},` : 'Hola,';
+  const franja = datos.bloque ? `, entre las ${datos.bloque.replace('-', ' y las ')}` : '';
+  const lista = datos.servicios
+    .map((s) => `<li style="margin:0 0 4px;">${s.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</li>`)
+    .join('');
+
+  const contenido = `
+    <p style="margin:0 0 16px;font-size:14px;color:${TEXTO_SUAVE};">${hola} te recordamos que mañana, ${fechaRetiroLegible(datos.fecha)}${franja}, nos dijiste que traerías tu equipo para el servicio del pedido <strong style="color:${TEXTO};">${datos.numeroPedido}</strong>:</p>
+    <ul style="margin:0 0 16px;padding-left:18px;font-size:14px;color:${TEXTO};">${lista}</ul>
+    <p style="margin:0 0 16px;font-size:14px;color:${TEXTO_SUAVE};"><strong style="color:${TEXTO};">Dónde:</strong> ${DIRECCION_TIENDA}</p>
+    <p style="margin:0 0 16px;font-size:14px;color:${TEXTO_SUAVE};">Antes de venir, respalda tus archivos importantes y trae el cargador de tu equipo si lo tiene.</p>
+    <p style="margin:0 0 16px;font-size:14px;color:${TEXTO_SUAVE};">Si mañana no te acomoda, no pasa nada: tu servicio ya está pagado y reservado.${datos.whatsapp ? ' Escríbenos por WhatsApp y coordinamos otro día.' : ''}</p>
+    ${datos.whatsapp ? `<p style="margin:0;"><a href="https://wa.me/${datos.whatsapp}" style="display:inline-block;background:${AZUL};color:#ffffff;text-decoration:none;padding:11px 22px;border-radius:999px;font-size:14px;font-weight:600;">Escribir por WhatsApp</a></p>` : ''}
+  `;
+
+  return {
+    subject: `Mañana traes tu equipo — pedido ${datos.numeroPedido}`,
+    html: envoltorio('Te esperamos mañana', contenido),
   };
 }

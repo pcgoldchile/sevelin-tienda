@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { obtenerProductoPorSku } from '@/lib/catalogo';
 import { crearPedido, guardarPagoFlow, guardarPagoKhipu, marcarPedidoFallido } from '@/lib/pedidos';
 import { esBloqueValido, normalizarFechaRetiro } from '@/lib/retiro-agendado';
+import { esServicioTecnico } from '@/lib/servicios';
 import { crearPagoFlow, FLOW_HABILITADO } from '@/lib/flow';
 import { crearPagoKhipu, khipuHabilitado } from '@/lib/khipu';
 import { recargoTotal } from '@/lib/precios-medio-pago';
@@ -113,6 +114,7 @@ export async function POST(req: NextRequest) {
 
   let items: ItemPedido[];
   let tipoPedido: 'NORMAL' | 'ENCARGO';
+  let soloServicios = false;
   try {
     const resueltos = await Promise.all(
       itemsSolicitados.map(async (solicitado) => {
@@ -120,6 +122,13 @@ export async function POST(req: NextRequest) {
         const cantidad = Math.max(1, Math.round(Number(solicitado.cantidad) || 0));
         const producto = await obtenerProductoPorSku(sku);
         if (!producto) throw new Error(`El producto ${sku || '(sin SKU)'} ya no está disponible`);
+        /* Precio a consultar (supabase/31): el valor publicado es solo una
+           base y depende del equipo. La ficha no ofrece agregarlo al
+           carrito, pero puede llegar por un carrito compartido o recuperado:
+           acá es donde de verdad no se cobra. */
+        if (producto.precio_a_consultar) {
+          throw new Error(`"${producto.nombre}" se cotiza según tu equipo y no se puede pagar en línea. Quítalo del carrito y escríbenos por WhatsApp.`);
+        }
         // Un producto de Pedidos por Encargo no tiene stock propio — se pide
         // al proveedor recién al confirmarse el pedido, así que stock_web=0
         // es normal y NO bloquea la compra (ver src/lib/encargos.ts).
@@ -135,6 +144,7 @@ export async function POST(req: NextRequest) {
             cantidad,
           },
           esEncargo: producto.es_pedido_encargo,
+          esServicio: esServicioTecnico(producto),
         };
       })
     );
@@ -151,6 +161,7 @@ export async function POST(req: NextRequest) {
     }
 
     items = resueltos.map((r) => r.item);
+    soloServicios = resueltos.every((r) => r.esServicio);
     tipoPedido = hayEncargo ? 'ENCARGO' : 'NORMAL';
   } catch (err) {
     const mensaje = err instanceof Error ? err.message : 'No se pudo validar el carrito';
@@ -185,11 +196,20 @@ export async function POST(req: NextRequest) {
     cotizacion = await confirmarEnvio(
       direccionCompleta,
       items.map(({ sku, cantidad }) => ({ sku, cantidad })),
-      cuerpo.metodoEnvio
+      cuerpo.metodoEnvio,
+      { soloServicios }
     );
   } catch (err) {
     const mensaje = err instanceof Error ? err.message : 'No se pudo cotizar el envío';
     return NextResponse.json({ error: mensaje }, { status: 409 });
+  }
+
+  /* Carrito solo de servicios técnicos (supabase/32): el cliente trae su
+     equipo, y el día es obligatorio — es justamente lo que permite preparar
+     su llegada. A diferencia del retiro, acá sí se frena la compra. */
+  const fechaEntregaEquipo = soloServicios ? normalizarFechaRetiro(cuerpo.retiroFecha) : null;
+  if (soloServicios && !fechaEntregaEquipo) {
+    return NextResponse.json({ error: 'Elige qué día traes tu equipo al local (desde hoy y hasta 30 días).' }, { status: 400 });
   }
 
   // Sesión leída de la cookie, nunca de algo que mande el cliente en el
@@ -235,10 +255,13 @@ export async function POST(req: NextRequest) {
          el formulario ya limite las opciones — el cuerpo de la petición
          no es de fiar. Si viene mal escrita se guarda en null y la compra
          sigue: es un dato opcional y no puede costar una venta. */
-      retiroFecha: cotizacion.metodo === 'RETIRO' ? normalizarFechaRetiro(cuerpo.retiroFecha) : null,
+      retiroFecha: soloServicios
+        ? fechaEntregaEquipo
+        : cotizacion.metodo === 'RETIRO' ? normalizarFechaRetiro(cuerpo.retiroFecha) : null,
       retiroBloque: cotizacion.metodo === 'RETIRO' && esBloqueValido(cuerpo.retiroBloque)
         ? cuerpo.retiroBloque
         : null,
+      agendaTipo: soloServicios ? 'ENTREGA_EQUIPO' : 'RETIRO',
       metodoEnvio: cotizacion.metodo,
       costoEnvio: cotizacion.costo,
       recargoMedioPago,

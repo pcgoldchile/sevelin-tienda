@@ -37,22 +37,36 @@ function IconoBadge({ Icono }: { Icono: typeof Truck }) {
   );
 }
 
-export function InfoEnvioProducto() {
+/* `esServicio`: un servicio técnico no se despacha ni tiene la garantía de
+   6 meses por fallas de fábrica de los productos. La garantía de la mano de
+   obra depende del servicio y del estado del equipo, y la pacta el técnico
+   (dueño, 12-09-2026) — anunciar "6 meses" ahí sería prometer algo que no
+   existe. */
+export function InfoEnvioProducto({ esServicio = false }: { esServicio?: boolean } = {}) {
   return (
     <div className="rounded-2xl border border-border bg-surface/60 p-5 sm:p-6">
       <h2 className="mb-4 flex items-center gap-2 font-display text-sm font-bold uppercase tracking-wide text-ink">
-        <span className="texto-glow-primary text-primary">/</span> Envíos y garantía
+        <span className="texto-glow-primary text-primary">/</span> {esServicio ? "Atención y garantía" : "Envíos y garantía"}
       </h2>
 
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="flex items-start gap-3 sm:col-span-2">
           <IconoBadge Icono={Truck} />
           <div className="text-sm text-ink-soft">
-            <p className="font-semibold text-ink">Envíos a todo Chile</p>
-            <p>
-              ¿Retiras en Arica o lo quieres hoy mismo? Coordina tu compra por WhatsApp o Instagram y te
-              confirmamos disponibilidad y entrega.
-            </p>
+            {esServicio ? (
+              <>
+                <p className="font-semibold text-ink">Servicio en nuestro local de Arica</p>
+                <p>Traes tu equipo al local. ¿Dudas antes de agendar? Escríbenos por WhatsApp o Instagram.</p>
+              </>
+            ) : (
+              <>
+                <p className="font-semibold text-ink">Envíos a todo Chile</p>
+                <p>
+                  ¿Retiras en Arica o lo quieres hoy mismo? Coordina tu compra por WhatsApp o Instagram y te
+                  confirmamos disponibilidad y entrega.
+                </p>
+              </>
+            )}
           </div>
         </div>
 
@@ -83,10 +97,17 @@ export function InfoEnvioProducto() {
             explícito: que se note aparte, no mezclada con envío/pago. */}
         <div className="flex items-center gap-3 rounded-xl border border-primary/25 bg-primary/5 px-3.5 py-3 sm:col-span-2">
           <IconoBadge Icono={ShieldCheck} />
-          <span className="text-sm text-ink">
-            <strong className="font-semibold">Garantía:</strong> 6 meses en todos nuestros productos por
-            fallas de fábrica.
-          </span>
+          {esServicio ? (
+            <span className="text-sm text-ink">
+              <strong className="font-semibold">Garantía:</strong> la garantía de mano de obra depende del
+              servicio y del estado de tu equipo. Consúltala siempre con nuestro técnico.
+            </span>
+          ) : (
+            <span className="text-sm text-ink">
+              <strong className="font-semibold">Garantía:</strong> 6 meses en todos nuestros productos por
+              fallas de fábrica.
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-2.5 text-xs text-ink-faint sm:col-span-2">

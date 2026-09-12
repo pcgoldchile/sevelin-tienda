@@ -17,6 +17,8 @@ import { AvisoPagoTarjeta } from "@/components/aviso-pago-tarjeta";
 import { AvisoUrgenciaStock } from "@/components/aviso-urgencia-stock";
 import { AvisoPorLlegar } from "@/components/aviso-por-llegar";
 import { AvisameProducto } from "@/components/avisame-producto";
+import { CotizarWhatsapp } from "@/components/cotizar-whatsapp";
+import { esServicioTecnico } from "@/lib/servicios";
 
 export const revalidate = 60;
 
@@ -183,7 +185,13 @@ export default async function FichaProducto({ params }: PropsPagina) {
           )}
           <h1 className="text-3xl font-semibold tracking-tight text-ink">{producto.nombre}</h1>
           <div className="flex flex-col gap-0.5">
-            <span className="precio-gamer text-3xl text-ink">{formatoCLP.format(producto.precio_web)}</span>
+            <span className="precio-gamer text-3xl text-ink">
+              {/* Precio a consultar (supabase/31): el número es una base, y
+                  decirlo sin el "Desde" sería anunciar un precio que después
+                  no se respeta. */}
+              {producto.precio_a_consultar && <span className="mr-2 text-lg text-ink-soft">Desde</span>}
+              {formatoCLP.format(producto.precio_web)}
+            </span>
             {/* Con el recargo apagado el precio es uno solo y no hace falta
                 explicar nada. Si se reactivara, los dos precios van juntos y
                 explícitos, nunca uno escondido hasta el último paso: es la
@@ -213,7 +221,11 @@ export default async function FichaProducto({ params }: PropsPagina) {
               quedando siempre por debajo. En móvil no hace falta sticky:
               el reordenamiento solo ya lo deja visible sin scroll. */}
           <div className="lg:sticky lg:top-24 lg:z-10">
-            <AccionesProducto producto={producto} />
+            {producto.precio_a_consultar ? (
+              <CotizarWhatsapp producto={producto} />
+            ) : (
+              <AccionesProducto producto={producto} />
+            )}
 
             {/* Dentro del bloque sticky y pegado al botón: el aviso de que
                 queda poco solo sirve en el instante en que se decide la
@@ -242,7 +254,8 @@ export default async function FichaProducto({ params }: PropsPagina) {
           {/* Justo bajo el botón de compra: es el momento exacto en que el
               cliente piensa "¿con qué pago?". Enterarse de que puede pagar
               con tarjeta después de irse de la ficha no sirve de nada. */}
-          <AvisoPagoTarjeta />
+          {/* Sin compra en línea no hay pago con tarjeta que anunciar. */}
+          {!producto.precio_a_consultar && <AvisoPagoTarjeta />}
 
           {producto.descripcion_web && (
             <div className="descripcion-producto rounded-2xl border border-border bg-surface/60 p-5 sm:p-6">
@@ -281,7 +294,7 @@ export default async function FichaProducto({ params }: PropsPagina) {
             </div>
           )}
 
-          <InfoEnvioProducto />
+          <InfoEnvioProducto esServicio={esServicioTecnico(producto)} />
         </div>
       </div>
 

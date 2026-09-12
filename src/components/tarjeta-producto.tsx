@@ -120,6 +120,8 @@ export function TarjetaProducto({ producto }: { producto: ProductoWeb }) {
           {producto.nombre}
         </Link>
         <span className="precio-gamer mt-1 text-2xl text-ink">
+          {/* Precio a consultar (supabase/31): es una base, no el valor final. */}
+          {producto.precio_a_consultar && <span className="mr-1 text-sm text-ink-soft">Desde</span>}
           {formatoCLP.format(producto.precio_web)}
         </span>
         {/* Segundo precio en una línea chica: el precio destacado sigue
@@ -148,6 +150,17 @@ export function TarjetaProducto({ producto }: { producto: ProductoWeb }) {
               Apilar también hace el botón full-width, que en pantalla
               táctil es un blanco mucho más cómodo. Desde `lg` (4
               columnas, tarjetas anchas) vuelven a caber lado a lado. */}
+          {/* Precio a consultar: sin cantidad ni "Agregar" — no se vende en
+              línea. Lleva a la ficha, donde está el "Cotizar por WhatsApp"
+              con el nombre del servicio ya escrito. */}
+          {producto.precio_a_consultar ? (
+            <Link
+              href={rutaFicha}
+              className="flex w-full items-center justify-center rounded-md border border-primary/40 px-3 py-2 text-sm font-semibold uppercase tracking-wide text-primary transition-colors hover:bg-primary/10 lg:py-1.5"
+            >
+              Cotizar
+            </Link>
+          ) : (
           <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
             <div className="flex items-center justify-between rounded-md border border-border lg:justify-start">
               <button
@@ -228,6 +241,7 @@ export function TarjetaProducto({ producto }: { producto: ProductoWeb }) {
               )}
             </motion.button>
           </div>
+          )}
 
           <AnimatePresence>
             {avisoStock && (

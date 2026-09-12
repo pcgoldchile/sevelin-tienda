@@ -149,6 +149,10 @@ export function CarritoProvider({ children }: { children: ReactNode }) {
   }, [items, usuario, cargado, supabase]);
 
   const agregarItem = useCallback((producto: ProductoWeb, cantidad = 1) => {
+    // Precio a consultar (supabase/31): no se vende en línea. La ficha y la
+    // tarjeta ya no muestran "Agregar"; esto cubre cualquier otro llamador.
+    // La barrera real está en POST /api/checkout.
+    if (producto.precio_a_consultar) return;
     setItems((prev) => {
       const existente = prev.find((item) => item.sku === producto.sku);
       const tope = producto.stock_web;

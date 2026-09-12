@@ -41,6 +41,10 @@ export interface ProductoWeb {
   // POS. Un producto con esto en true vive solo en /pedidos-por-encargo y
   // se puede comprar sin importar stock_web (ver src/lib/encargos.ts).
   es_pedido_encargo: boolean;
+  /** Precio base que depende del equipo: se muestra con "Desde" y no se
+   *  puede comprar en línea, solo cotizar por WhatsApp. Ver
+   *  supabase/31-precio-a-consultar.sql. */
+  precio_a_consultar: boolean;
   // SEO — título/meta-descripción propios para Google, distintos del
   // nombre/descripcion_web que ve el cliente. NULL = generateMetadata()
   // arma uno automático (ver productos/[sku]/page.tsx). Se llenan a mano o
@@ -186,6 +190,9 @@ export interface PedidoWeb {
   retiro_fecha: string | null;
   retiro_bloque: string | null;
   recordatorio_retiro_enviado_en: string | null;
+  /* Qué significa retiro_fecha (supabase/32): RETIRO = pasa a buscar su
+     pedido; ENTREGA_EQUIPO = trae su equipo para un servicio técnico. */
+  agenda_tipo: 'RETIRO' | 'ENTREGA_EQUIPO';
   estado: EstadoPedido;
   cliente_nombre: string | null;
   cliente_apellido: string | null;
@@ -285,6 +292,8 @@ export interface ProductoPOS {
   stock_por_llegar: number;
   // Pedidos por Encargo — ver sevelin-pos-oficial/sql/30-pedidos-por-encargo.sql.
   es_pedido_encargo: boolean;
+  // Ver sevelin-pos-oficial/sql/45-precio-a-consultar.sql.
+  precio_a_consultar?: boolean;
   // SEO con IA — ver sevelin-pos-oficial/sql/33-seo-ia.sql.
   meta_titulo_web: string | null;
   meta_descripcion_web: string | null;

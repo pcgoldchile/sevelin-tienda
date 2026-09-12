@@ -60,6 +60,9 @@ export async function crearPedido(datos: {
      cliente puede venir otro día sin que nada se rompa. */
   retiroFecha?: string | null;
   retiroBloque?: string | null;
+  /* Qué significa esa fecha (supabase/32): pasa a retirar, o trae su equipo
+     para un servicio técnico. */
+  agendaTipo?: 'RETIRO' | 'ENTREGA_EQUIPO';
   // null = invitado. Se resuelve en POST /api/checkout leyendo la sesión
   // desde la cookie (src/lib/supabase-server.ts) — nunca desde el body.
   clienteUserId: string | null;
@@ -107,6 +110,7 @@ export async function crearPedido(datos: {
       metodo_envio: datos.metodoEnvio,
       retiro_fecha: datos.retiroFecha ?? null,
       retiro_bloque: datos.retiroBloque ?? null,
+      agenda_tipo: datos.agendaTipo ?? 'RETIRO',
       costo_envio: datos.costoEnvio,
       recargo_medio_pago: datos.recargoMedioPago,
       subtotal,
