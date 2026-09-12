@@ -56,8 +56,19 @@ export default function Terminos() {
         <section>
           <h2 className="mb-1.5 text-base font-semibold text-ink">Envío y retiro</h2>
           <p>
-            Dentro de Arica puedes elegir retiro en tienda (gratis) o despacho a domicilio. Fuera de Arica,
-            el envío se cotiza automáticamente según tu comuna.
+            Dentro de la ciudad de Arica puedes elegir retiro en tienda (gratis) o despacho a domicilio.
+            Fuera de Arica, el envío se cotiza automáticamente según tu comuna. Por ahora nuestro despacho
+            propio no cubre los valles de Azapa y Lluta; si vives allá, escríbenos y lo coordinamos.
+          </p>
+          <p className="mt-2">
+            <strong className="text-ink">Retiro en tienda:</strong> de lunes a domingo, de 11:00 a 13:00 y
+            de 14:00 a 20:00. Los domingos atendemos, pero conviene confirmar antes por WhatsApp.
+          </p>
+          <p className="mt-2">
+            Al comprar puedes indicarnos qué día y en qué horario piensas pasar a retirar. Ese dato es
+            <strong className="text-ink"> opcional y referencial</strong>: nos sirve para dejar tu pedido
+            preparado y te enviamos un recordatorio ese día, pero no es una hora reservada ni te
+            compromete. Puedes retirar cualquier otro día dentro del horario de atención.
           </p>
         </section>
 
@@ -120,11 +131,70 @@ export default function Terminos() {
           </p>
         </section>
 
+        {/* Junto a "Pedidos por encargo" porque son los dos casos en que se
+            paga algo que todavía no está en la tienda — y separados porque
+            sus condiciones son distintas justo en lo que más importa: acá
+            sí se puede cancelar. */}
+        <section>
+          <h2 className="mb-1.5 text-base font-semibold text-ink">Productos por llegar y reservas</h2>
+          <p>
+            Los productos de la sección{" "}
+            <a href="/por-llegar" className="text-accent hover:underline">Por llegar</a>{" "}
+            son artículos que ya vienen en camino a nuestra tienda y todavía no están disponibles.
+            Puedes reservarlos pagando el total por adelantado; el producto queda apartado a tu nombre y
+            te avisamos por correo apenas llegue.
+          </p>
+          <ul className="mt-2 list-disc space-y-1.5 pl-5">
+            <li>
+              <strong className="text-ink">La fecha de llegada es estimada.</strong> Depende de nuestro
+              proveedor y del transporte hasta Arica, por lo que puede adelantarse o atrasarse algunos
+              días. No comprometemos una fecha exacta y así se indica en cada producto.
+            </li>
+            <li>
+              <strong className="text-ink">Si el producto finalmente no llega, te devolvemos el 100% de
+              lo pagado.</strong> Sin condiciones ni descuentos. Si lo prefieres, puedes optar por
+              cambiarlo por otro producto o dejarlo como saldo a favor, pero la devolución completa
+              siempre está disponible y la decides tú.
+            </li>
+            <li>
+              <strong className="text-ink">Puedes cancelar mientras no haya llegado</strong> y te
+              devolvemos el total. A diferencia de los Pedidos por Encargo, acá el producto no se compra
+              a tu nombre: ya venía en camino, así que cancelar no nos genera un costo que debamos
+              trasladarte.
+            </li>
+            <li>
+              <strong className="text-ink">Solo reservas lo que existirá.</strong> La cantidad que puedes
+              reservar está limitada a las unidades que vienen en camino. Si el producto todavía tiene
+              stock en tienda, solo puedes comprar las unidades disponibles hoy.
+            </li>
+            <li>
+              <strong className="text-ink">Garantía:</strong> la misma que el resto del catálogo — 6 meses
+              por fallas de fábrica, con boleta.
+            </li>
+          </ul>
+          <p className="mt-2">
+            Nada de lo anterior limita los derechos que la Ley 19.496 sobre Protección de los Derechos de
+            los Consumidores te otorga.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="mb-1.5 text-base font-semibold text-ink">Avisos de disponibilidad</h2>
+          <p>
+            En los productos agotados o por llegar puedes dejarnos tu correo para que te avisemos cuando
+            estén disponibles. Ese correo se usa <strong className="text-ink">únicamente para ese
+            aviso</strong>: no te suscribe a promociones ni a ningún otro envío, y dejarlo no te obliga a
+            comprar. Puedes pedirnos que lo eliminemos cuando quieras, según se explica en nuestra{" "}
+            <a href="/privacidad" className="text-accent hover:underline">Política de Privacidad</a>.
+          </p>
+        </section>
+
         <section>
           <h2 className="mb-1.5 text-base font-semibold text-ink">Cuentas de cliente</h2>
           <p>
-            Crear una cuenta es opcional — siempre puedes comprar como invitado. Eres responsable de
-            mantener tu contraseña en privado.
+            Crear una cuenta es opcional — siempre puedes comprar como invitado. Puedes crearla al
+            finalizar tu compra marcando la casilla correspondiente, o desde el menú del sitio. Eres
+            responsable de mantener tu contraseña en privado.
           </p>
         </section>
 

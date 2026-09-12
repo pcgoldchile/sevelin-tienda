@@ -135,16 +135,16 @@ const PREGUNTAS: { pregunta: string; respuesta: string }[] = [
   {
     pregunta: "¿Hacen envíos a todo Chile?",
     respuesta:
-      "Sí, despachamos a todo Chile por courier. Dentro de Arica además tenemos despacho propio, que puede ser el mismo día si coordinas dentro del horario, y siempre está disponible el retiro en tienda.",
+      "Sí, despachamos a todo Chile por courier. Dentro de la ciudad de Arica además tenemos despacho propio, que puede salir el mismo día si compras antes de las 18:00, y siempre está disponible el retiro en tienda. Por ahora el despacho propio no cubre los valles de Azapa y Lluta; si estás por allá, escríbenos y lo coordinamos.",
   },
   {
     pregunta: "¿Puedo retirar mi pedido en la tienda?",
     respuesta:
-      "Sí, el retiro en tienda está disponible siempre, incluso si compras desde otra ciudad para que un familiar o conocido lo retire por ti en Arica. Coordinamos el horario por WhatsApp.",
+      "Sí, y es gratis. Puedes retirar de lunes a domingo, de 11:00 a 13:00 y de 14:00 a 20:00, incluso si compras desde otra ciudad para que un familiar o conocido lo retire por ti en Arica. Al comprar puedes decirnos qué día piensas pasar —es opcional y no te compromete— y te mandamos un recordatorio esa mañana con el pedido preparado.",
   },
   {
     pregunta: "¿Cómo los contacto?",
-    respuesta: `Por WhatsApp al ${WHATSAPP_LEGIBLE}, por Instagram en @sevelin.cl, o por correo a sevelin.contacto@gmail.com. Respondemos por cualquiera de los tres.`,
+    respuesta: `Por WhatsApp al ${WHATSAPP_LEGIBLE}, por Instagram en @sevelin_cl, o por correo a sevelin.contacto@gmail.com. Respondemos por cualquiera de los tres.`,
   },
 ];
 
