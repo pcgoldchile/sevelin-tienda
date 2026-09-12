@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseWeb } from '@/lib/supabase-web';
 import { verificarSecretoSync } from '@/lib/verificar-secreto';
 import type { ProductoPOS } from '@/lib/tipos';
+import { avisosPendientesDe, marcarAvisosNotificados } from '@/lib/avisos-producto';
+import { correoProductoLlego } from '@/lib/correo-pedido';
+import { enviarCorreo } from '@/lib/resend';
 
 /**
  * Receptor del Database Webhook de Supabase POS sobre `productos`
@@ -108,6 +111,8 @@ export async function POST(req: NextRequest) {
     // Un producto sincronizado desde un POS que todavía no tiene la columna
     // no debe quedar silenciado sin que nadie lo haya pedido.
     urgencia_stock_web: producto.urgencia_stock_web ?? true,
+    por_llegar: !!producto.por_llegar,
+    fecha_llegada_estimada: producto.fecha_llegada_estimada ?? null,
     es_pedido_encargo: !!producto.es_pedido_encargo,
     meta_titulo_web: producto.meta_titulo_web || null,
     meta_descripcion_web: producto.meta_descripcion_web || null,
@@ -124,5 +129,56 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  /* "Ya llegó": el dueño desmarcó "Por llegar" en el POS. Ese gesto —y no
+     un cron adivinando por el stock— es lo único que significa que la caja
+     se abrió y el producto está en el mostrador.
+
+     Se espera a que termine en vez de mandarlo a after(): así el resultado
+     es determinista y verificable. Un reintento de Supabase no duplica
+     nada porque el candado es el propio estado de cada aviso — los que ya
+     salieron quedaron NOTIFICADO y la segunda pasada no los encuentra. */
+  const acabaDeLlegar = payload.old_record?.por_llegar === true && producto.por_llegar !== true;
+  if (acabaDeLlegar) {
+    await avisarQueLlego(producto.id, producto.nombre);
+  }
+
   return NextResponse.json({ ok: true, accion: 'sincronizado', producto: data });
+}
+
+/** Avisa a toda la lista de espera de un producto. Nunca lanza: esto corre
+ *  después de responder, y un fallo acá no puede romper la sincronización
+ *  del catálogo, que es lo que el webhook vino a hacer. */
+async function avisarQueLlego(productoPosId: number, nombreProducto: string): Promise<void> {
+  try {
+    const pendientes = await avisosPendientesDe(productoPosId);
+    if (pendientes.length === 0) return;
+
+    const enviados: number[] = [];
+    for (const aviso of pendientes) {
+      const { subject, html } = correoProductoLlego({
+        nombreCliente: aviso.nombre,
+        nombreProducto: aviso.nombre_producto || nombreProducto,
+        sku: aviso.sku,
+        esReserva: aviso.tipo === 'RESERVA',
+        numeroPedido: aviso.numero_pedido,
+      });
+      /* enviarCorreo() NO lanza: devuelve false. Hay que mirar el valor,
+         porque envolverlo en try/catch y dar por enviado lo que no salió
+         marcaría NOTIFICADO un aviso que el cliente nunca recibió — y ese
+         aviso es justo lo que estaba esperando. Encontrado probando: sin
+         RESEND_API_KEY el envío devuelve false en silencio. */
+      const enviado = await enviarCorreo({ to: aviso.email, subject, html });
+      if (enviado) {
+        enviados.push(aviso.id);
+      } else {
+        // Queda PENDIENTE para el próximo intento; los demás siguen.
+        console.error(`[avisos] no se pudo avisar a ${aviso.email}`);
+      }
+    }
+    await marcarAvisosNotificados(enviados);
+    console.log(`[avisos] producto ${productoPosId}: ${enviados.length}/${pendientes.length} avisados`);
+  } catch (err) {
+    console.error('[avisos] fallo al avisar que llegó:', err instanceof Error ? err.message : err);
+  }
 }

@@ -33,9 +33,14 @@ export function avisoUrgenciaStock(producto: {
   stock_web: number;
   urgencia_stock_web?: boolean;
   es_pedido_encargo?: boolean;
+  por_llegar?: boolean;
 }): AvisoUrgencia | null {
   if (producto.es_pedido_encargo) return null;
   if (producto.urgencia_stock_web === false) return null;
+  /* Si viene más en camino, "última unidad" es una escasez que no es
+     real: presiona con algo que se va a reponer en días. Manda el aviso
+     de "por llegar", que además es el que dice la verdad completa. */
+  if (producto.por_llegar) return null;
 
   const stock = producto.stock_web;
   if (stock <= 0 || stock > UMBRAL_URGENCIA) return null;

@@ -28,6 +28,12 @@ export interface ProductoWeb {
      la tienda con stock_web real — esto solo habilita o silencia. Ver
      supabase/27-urgencia-stock-web.sql. */
   urgencia_stock_web: boolean;
+  /* "Por llegar": viene en camino y aún no está en tienda. Se puede
+     reservar pagando el 100% aunque stock_web sea 0. Apagarlo en el POS
+     es lo que dispara los avisos. Ver supabase/28-por-llegar-y-avisos.sql. */
+  por_llegar: boolean;
+  /** Fecha ESTIMADA de llegada. Siempre se muestra como estimada. */
+  fecha_llegada_estimada: string | null;
   // Pedidos por Encargo (dropshipping/retiro en tienda) — marcado desde el
   // POS. Un producto con esto en true vive solo en /pedidos-por-encargo y
   // se puede comprar sin importar stock_web (ver src/lib/encargos.ts).
@@ -260,6 +266,12 @@ export interface ProductoPOS {
      la tienda con stock_web real — esto solo habilita o silencia. Ver
      supabase/27-urgencia-stock-web.sql. */
   urgencia_stock_web: boolean;
+  /* "Por llegar": viene en camino y aún no está en tienda. Se puede
+     reservar pagando el 100% aunque stock_web sea 0. Apagarlo en el POS
+     es lo que dispara los avisos. Ver supabase/28-por-llegar-y-avisos.sql. */
+  por_llegar: boolean;
+  /** Fecha ESTIMADA de llegada. Siempre se muestra como estimada. */
+  fecha_llegada_estimada: string | null;
   // Pedidos por Encargo — ver sevelin-pos-oficial/sql/30-pedidos-por-encargo.sql.
   es_pedido_encargo: boolean;
   // SEO con IA — ver sevelin-pos-oficial/sql/33-seo-ia.sql.

@@ -253,3 +253,52 @@ export function correoCancelacionPedido(pedido: PedidoWeb): { subject: string; h
     html: envoltorio('Pedido cancelado', contenido),
   };
 }
+
+/**
+ * "Ya llegó lo que estabas esperando".
+ *
+ * Lo dispara el dueño desde el POS al desmarcar "Por llegar" — nunca un
+ * cron adivinando: solo él sabe si la caja se abrió y el producto está de
+ * verdad en el mostrador.
+ *
+ * Cambia según cómo esperaba:
+ *   RESERVA → ya pagó. No se le vende nada: se le dice que pase a buscarlo
+ *             o que coordine la entrega. Pedirle que compre otra vez sería
+ *             cobrarle dos veces.
+ *   AVISO   → todavía no tiene nada. Va el link al producto, y con urgencia
+ *             honesta: se avisó a todos los que esperaban, y el primero que
+ *             llega se lo lleva.
+ */
+export function correoProductoLlego(datos: {
+  nombreCliente: string | null;
+  nombreProducto: string;
+  sku: string;
+  esReserva: boolean;
+  numeroPedido?: string | null;
+}): { subject: string; html: string } {
+  const urlTienda = process.env.NEXT_PUBLIC_SITE_URL || 'https://sevelin.cl';
+  const hola = datos.nombreCliente ? `${datos.nombreCliente},` : 'Hola,';
+
+  const contenido = datos.esReserva
+    ? `
+    <p style="margin:0 0 16px;font-size:14px;color:${TEXTO_SUAVE};">${hola} llegó a la tienda el producto que reservaste:</p>
+    <p style="margin:0 0 16px;font-size:16px;font-weight:700;color:${TEXTO};">${datos.nombreProducto}</p>
+    <p style="margin:0 0 16px;font-size:14px;color:${TEXTO_SUAVE};">Ya está pagado y apartado a tu nombre${datos.numeroPedido ? ` (pedido <strong style="color:${TEXTO};">${datos.numeroPedido}</strong>)` : ''}. Solo queda que lo retires cuando te acomode, o que coordinemos el despacho.</p>
+    <p style="margin:0;font-size:14px;color:${TEXTO_SUAVE};">Escríbenos por WhatsApp y lo dejamos listo.</p>
+  `
+    : `
+    <p style="margin:0 0 16px;font-size:14px;color:${TEXTO_SUAVE};">${hola} nos pediste que te avisáramos, y ya está disponible:</p>
+    <p style="margin:0 0 16px;font-size:16px;font-weight:700;color:${TEXTO};">${datos.nombreProducto}</p>
+    <p style="margin:0 0 20px;font-size:14px;color:${TEXTO_SUAVE};">Avisamos a todos los que estaban esperándolo, así que puede durar poco. Si lo quieres asegurar, mejor hoy.</p>
+    <p style="margin:0;">
+      <a href="${urlTienda}/productos/${encodeURIComponent(datos.sku)}" style="display:inline-block;background:${AZUL};color:#ffffff;text-decoration:none;padding:11px 22px;border-radius:999px;font-size:14px;font-weight:600;">Ver el producto</a>
+    </p>
+  `;
+
+  return {
+    subject: datos.esReserva
+      ? `Llegó tu ${datos.nombreProducto} — pasa a buscarlo`
+      : `Ya llegó: ${datos.nombreProducto}`,
+    html: envoltorio(datos.esReserva ? '¡Llegó tu reserva!' : '¡Ya está disponible!', contenido),
+  };
+}

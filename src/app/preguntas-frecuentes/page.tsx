@@ -85,6 +85,26 @@ const PREGUNTAS: { pregunta: string; respuesta: string }[] = [
       "Sí, exactamente la misma: 6 meses por fallas de fábrica, con boleta. Que lo traigamos por encargo no cambia en nada tu garantía ni tus derechos como consumidor.",
   },
   {
+    pregunta: "¿Qué significa que un producto esté \"por llegar\"?",
+    respuesta:
+      "Que viene en camino y todavía no está en la tienda. Puedes reservarlo pagando el total, y queda apartado a tu nombre: nadie más se lo lleva. Cuando llega te avisamos por correo, y lo retiras cuando te acomode o te lo despachamos.",
+  },
+  {
+    pregunta: "La fecha de llegada, ¿es exacta?",
+    respuesta:
+      "No, es una fecha estimada y así la mostramos siempre. Depende del proveedor y del transporte, así que puede adelantarse o correrse unos días. Preferimos decírtelo de frente y no prometer un día exacto que no depende de nosotros. Apenas el producto está en la tienda te escribimos.",
+  },
+  {
+    pregunta: "¿Y si el producto que reservé no llega?",
+    respuesta:
+      "Te devolvemos el 100% de lo que pagaste, sin trámites ni preguntas. Si prefieres, también puedes cambiarlo por otro producto o dejarlo como saldo a favor, pero la devolución completa siempre está disponible y la decides tú.",
+  },
+  {
+    pregunta: "¿Pueden avisarme cuando vuelva a haber stock de algo?",
+    respuesta:
+      "Sí. En la ficha de cualquier producto agotado o por llegar puedes dejar tu correo y te escribimos apenas esté disponible. No te compromete a comprar nada, y usamos ese correo solo para ese aviso. Si prefieres, también puedes escribirnos por WhatsApp y te anotamos igual.",
+  },
+  {
     pregunta: "¿Qué medios de pago aceptan?",
     respuesta: FLOW_HABILITADO
       ? "Efectivo, transferencia bancaria, tarjetas de débito y tarjetas de crédito. En la tienda online puedes pagar con transferencia bancaria (vía Khipu) o con tarjeta de crédito o débito (Webpay, vía Flow). También podemos enviarte un link de pago si prefieres coordinar por WhatsApp."

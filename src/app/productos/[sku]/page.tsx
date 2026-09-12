@@ -15,6 +15,8 @@ import { EtiquetaProductoBadge } from "@/components/etiqueta-producto-badge";
 import { InfoEnvioProducto } from "@/components/info-envio-producto";
 import { AvisoPagoTarjeta } from "@/components/aviso-pago-tarjeta";
 import { AvisoUrgenciaStock } from "@/components/aviso-urgencia-stock";
+import { AvisoPorLlegar } from "@/components/aviso-por-llegar";
+import { AvisameProducto } from "@/components/avisame-producto";
 
 export const revalidate = 60;
 
@@ -218,6 +220,23 @@ export default async function FichaProducto({ params }: PropsPagina) {
                 compra. Más abajo en la página lo leería alguien que ya
                 decidió irse. */}
             <AvisoUrgenciaStock producto={producto} />
+
+            {/* Viene en camino: fecha estimada, reserva con pago del 100% y
+                la garantía de devolución total, que es lo que hace razonable
+                pagar por algo que todavía no está. */}
+            <AvisoPorLlegar producto={producto} />
+
+            {/* La lista de espera solo tiene sentido cuando el cliente NO
+                puede llevárselo hoy: agotado, o por llegar y prefiere no
+                pagar por adelantado (ese es el caso de quien quiere pagar
+                presencial). Con stock disponible estorbaría la compra. */}
+            {(producto.por_llegar || producto.stock_web <= 0) && !producto.es_pedido_encargo && (
+              <AvisameProducto
+                sku={producto.sku}
+                nombre={producto.nombre}
+                whatsapp={process.env.NEXT_PUBLIC_WHATSAPP_NUMBER}
+              />
+            )}
           </div>
 
           {/* Justo bajo el botón de compra: es el momento exacto en que el
