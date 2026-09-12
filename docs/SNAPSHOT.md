@@ -88,6 +88,25 @@ envíos a clientes reales fallan en silencio hasta verificarlo (ver "Pendiente" 
 
 ---
 
+
+> ### 🔒 12-09-2026 — la URL del pedido deja de ser adivinable
+>
+> `/pedido/WEB-000009` usaba el **número correlativo**: restando uno se llegaba al pedido de otra
+> persona (qué compró, cuánto pagó, en qué estado va). El 10-09 se había tapado lo peor —el endpoint
+> dejó de devolver nombre, correo, RUT, teléfono y dirección— pero eso blindaba los datos uno por uno
+> dejando la puerta abierta: cualquier campo nuevo volvía a quedar expuesto, y el link a la boleta del
+> SII (que sí lleva nombre y RUT) ya estaba contemplado en la página.
+>
+> Ahora se entra por `token_publico`: 32 hexadecimales aleatorios por pedido
+> (`supabase/26-token-publico-pedido.sql`). El número de pedido sigue siendo el identificador para
+> hablar con el cliente y para el POS, pero **nunca más viaja en una URL pública**. Verificado:
+> `/pedido/WEB-000009` y `/api/pedido/WEB-000009` devuelven 404.
+>
+> En el mismo cambio, la página **se actualiza sola** mientras el pedido está en CREADO (antes decía
+> "vuelve a cargar esta página" y casi nadie lo hacía, así que el cliente se iba sin ver la
+> confirmación), y la invitación a reseñar Google pasó de un `window.open()` —que los navegadores
+> bloqueaban por no venir de un click— a un modal que aparece solo. El botón permanente sigue ahí.
+
 ## Medios de pago y precios — estado al 09-09-2026 (LEER ANTES DE TOCAR EL CHECKOUT)
 
 **Hoy la tienda cobra SOLO por Khipu (transferencia).** Flow quedó apagado con
@@ -750,7 +769,8 @@ Next.js 16 (App Router) · TypeScript · Tailwind v4 · `@supabase/supabase-js`.
 ## Estado: qué está HECHO (Fase 3)
 - Checkout de invitado + pago con Flow + boleta electrónica con OpenFactura (ver
   `docs/CHANGELOG-V03.md` para el detalle completo):
-  - `src/lib/pedidos.ts`: `crearPedido()`, `obtenerPedidoPorNumero()`, `guardarPagoFlow()`,
+  - `src/lib/pedidos.ts`: `crearPedido()`, `obtenerPedidoPorToken()` (la de la URL pública),
+    `obtenerPedidoPorNumero()` (solo interno: webhooks y POS), `guardarPagoFlow()`,
     `marcarPedidoFallido()`, `guardarDatosBoleta()`, `marcarPedidoPagado()` (mutex
     `CREADO→PAGADO` contra reintentos del webhook de Flow).
   - `src/lib/flow.ts` / `src/lib/openfactura.ts`: clientes de Flow y OpenFactura. **Sin verificar
@@ -760,9 +780,9 @@ Next.js 16 (App Router) · TypeScript · Tailwind v4 · `@supabase/supabase-js`.
     agregó a `sevelin-pos-oficial/api/index.js` (no existía, quedó pendiente desde la Fase 0 del
     POS — ver `sevelin-pos-oficial/docs/CHANGELOG-V25.md`).
   - `supabase/02-numeracion-pedidos.sql`: numeración atómica de pedidos (`generar_numero_pedido()`).
-  - `POST /api/checkout`, `POST /api/flow-webhook`, `GET /api/pedido/:numero`: Route Handlers
+  - `POST /api/checkout`, `POST /api/flow-webhook`, `GET /api/pedido/:token`: Route Handlers
     nuevos, mismas convenciones que los existentes.
-  - `src/app/checkout/page.tsx` + `src/components/formulario-checkout.tsx`, `src/app/pedido/[numero]/page.tsx`:
+  - `src/app/checkout/page.tsx` + `src/components/formulario-checkout.tsx`, `src/app/pedido/[token]/page.tsx`:
     frontend del checkout y de estado del pedido. Botón "Ir a pagar" del carrito ya no está
     deshabilitado.
 

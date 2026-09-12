@@ -1,30 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { obtenerPedidoPorNumero } from '@/lib/pedidos';
+import { obtenerPedidoPorToken } from '@/lib/pedidos';
 
-/* GET /api/pedido/:numero — estado del pedido para el comprador.
-   ------------------------------------------------------------
+/* GET /api/pedido/:token — estado del pedido para el comprador.
+   -------------------------------------------------------------
    Es una consulta PÚBLICA a propósito: el checkout admite invitados sin
    cuenta, así que lo único que identifica al dueño del pedido es conocer
-   su número. Eso obliga a una regla estricta sobre QUÉ se devuelve.
+   su link. De ahí las DOS defensas que tiene esta ruta.
 
-   HALLAZGO DEL 10-09-2026 (corregido acá)
+   1) LA URL NO SE PUEDE ADIVINAR (11-09-2026)
+   Antes la ruta era /api/pedido/WEB-000009 y los números son
+   correlativos: restando uno se llegaba al pedido de otra persona. Ahora
+   se entra por `token_publico`, 32 hexadecimales aleatorios por pedido
+   (ver supabase/26-token-publico-pedido.sql). Conocer un token no da
+   ninguna pista sobre los demás.
+
+   2) SE DEVUELVE LO JUSTO (10-09-2026)
    Este endpoint devolvía la fila completa de `pedidos_web`: nombre,
    apellido, RUT, correo, teléfono, dirección de envío, datos de
-   facturación y hasta la nota interna del negocio. Como los números son
-   correlativos y predecibles (WEB-000001, WEB-000002, …), cualquiera
-   podía recorrerlos y sacar los datos personales de todos los clientes.
-   Lo reportó el dueño al notar que bajando el número en la URL veía
-   otros pedidos.
+   facturación y hasta la nota interna del negocio. Acá se listan UNO POR
+   UNO los campos que el comprador necesita para seguir su pedido, y nada
+   más. Nunca `...pedido`.
 
-   LA REGLA: acá se listan UNO POR UNO los campos que el comprador
-   necesita para seguir su pedido, y nada más. Nunca `...pedido`. Si
-   mañana la página necesita otro dato, se agrega a esta lista a
-   conciencia — que es exactamente el momento de preguntarse si ese dato
-   puede quedar expuesto a quien adivine un número. */
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ numero: string }> }) {
-  const { numero } = await params;
+   Las dos defensas se mantienen juntas a propósito: la primera evita que
+   un extraño llegue, la segunda limita el daño si alguna vez un link se
+   filtra (se reenvía un correo, queda en un historial compartido). */
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
+  const { token } = await params;
   try {
-    const pedido = await obtenerPedidoPorNumero(numero);
+    const pedido = await obtenerPedidoPorToken(token);
     if (!pedido) return NextResponse.json({ error: 'Pedido no encontrado' }, { status: 404 });
 
     return NextResponse.json({

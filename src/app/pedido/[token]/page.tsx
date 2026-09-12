@@ -1,13 +1,18 @@
 import Link from "next/link";
 import { Star } from "lucide-react";
 import { notFound } from "next/navigation";
-import { obtenerPedidoPorNumero } from "@/lib/pedidos";
+import { obtenerPedidoPorToken } from "@/lib/pedidos";
 import { formatoCLP } from "@/lib/formato";
 import { URL_RESENA_GOOGLE } from "@/lib/resena-google";
 import { AvisoResenaGoogle } from "@/components/aviso-resena-google";
+import { SeguimientoPago } from "@/components/seguimiento-pago";
 
 interface PropsPagina {
-  params: Promise<{ numero: string }>;
+  /* El parámetro es `token_publico`, NO el número de pedido: los números
+     son correlativos y ponerlos en la URL dejaba que cualquiera restara
+     uno y viera el pedido de otra persona. Ver
+     supabase/26-token-publico-pedido.sql. */
+  params: Promise<{ token: string }>;
 }
 
 const PAGO_CONFIRMADO = ["PAGADO", "PREPARANDO", "ENVIADO", "ENTREGADO"];
@@ -17,7 +22,9 @@ const MENSAJE_ESTADO: Record<string, string> = {
   // apagado y el cobro se hace por Khipu, así que el cliente veía el
   // nombre de un servicio que no usó. Nombrar la pasarela acá obliga a
   // acordarse de este texto cada vez que cambie el medio de pago.
-  CREADO: "Estamos confirmando tu pago. Esto puede tardar unos segundos — vuelve a cargar esta página en un momento.",
+  // Ya no dice "vuelve a cargar esta página": SeguimientoPago la actualiza
+  // sola en cuanto el webhook confirma el pago.
+  CREADO: "Estamos confirmando tu pago con tu banco. Esto suele tardar unos segundos.",
   PAGADO: "¡Pago confirmado! Estamos preparando tu pedido.",
   PREPARANDO: "Tu pedido se está preparando.",
   ENVIADO: "Tu pedido va en camino.",
@@ -39,13 +46,13 @@ const ESTILO_ESTADO: Record<string, string> = {
 };
 
 export default async function EstadoPedido({ params }: PropsPagina) {
-  const { numero } = await params;
+  const { token } = await params;
 
   // Mismo criterio que el resto de la tienda: si Supabase Web no responde,
   // se muestra un estado de error en vez de tumbar la página con un 500.
-  let pedido: Awaited<ReturnType<typeof obtenerPedidoPorNumero>>;
+  let pedido: Awaited<ReturnType<typeof obtenerPedidoPorToken>>;
   try {
-    pedido = await obtenerPedidoPorNumero(numero);
+    pedido = await obtenerPedidoPorToken(token);
   } catch (err) {
     console.error("[EstadoPedido] No se pudo cargar el pedido:", err instanceof Error ? err.message : err);
     return (
@@ -67,6 +74,7 @@ export default async function EstadoPedido({ params }: PropsPagina) {
         </span>
       </div>
       <p className="mt-2 text-sm text-ink-soft">{MENSAJE_ESTADO[pedido.estado] || `Estado: ${pedido.estado}`}</p>
+      <SeguimientoPago token={token} estadoActual={pedido.estado} />
 
       <div className="mt-6 rounded-2xl bg-surface p-5 shadow-elevated-md">
         <ul className="flex flex-col gap-2">
@@ -140,12 +148,12 @@ export default async function EstadoPedido({ params }: PropsPagina) {
           comprar. El segundo empujón vive en el correo de entrega, ver
           correoEntregaPedido() en src/lib/correo-pedido.ts.
 
-          AvisoResenaGoogle intenta abrir el popup SOLO — no dibuja nada, y
-          por eso va antes del <a> visible en vez de envolverlo: si el
-          navegador bloquea el popup automático (frecuente: window.open()
-          fuera de un click directo) o el cliente lo cierra sin calificar,
-          el botón de abajo queda intacto y sigue siendo la forma real de
-          llegar a la reseña. */}
+          AvisoResenaGoogle abre SOLO un modal a los pocos segundos de
+          confirmarse el pago (antes intentaba un window.open que los
+          navegadores bloqueaban casi siempre). Va antes del <a> visible en
+          vez de envolverlo porque son dos cosas distintas: el modal es el
+          empujón automático de una sola vez, y el botón de abajo queda
+          intacto para quien lo cerró y después se arrepiente. */}
       {PAGO_CONFIRMADO.includes(pedido.estado) && (
         <AvisoResenaGoogle numeroPedido={pedido.numero_pedido} url={URL_RESENA_GOOGLE} />
       )}

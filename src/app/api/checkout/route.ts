@@ -217,6 +217,7 @@ export async function POST(req: NextRequest) {
   const recargoMedioPago = recargoTotal(items, usarKhipu ? 'KHIPU' : 'FLOW');
 
   let numeroPedido: string;
+  let tokenPublico: string;
   let total: number;
   try {
     const pedido = await crearPedido({
@@ -233,6 +234,7 @@ export async function POST(req: NextRequest) {
       consentimiento: true,
     });
     numeroPedido = pedido.numero_pedido;
+    tokenPublico = pedido.token_publico;
     total = pedido.total;
     await marcarCarritoConvertido(cuerpo.carritoAbandonoId, numeroPedido).catch(() => {});
   } catch (err) {
@@ -242,14 +244,14 @@ export async function POST(req: NextRequest) {
 
   try {
     if (usarKhipu) {
-      const pago = await crearPagoKhipu({ numeroPedido, monto: total, email });
+      const pago = await crearPagoKhipu({ numeroPedido, tokenPublico, monto: total, email });
       await guardarPagoKhipu(numeroPedido, pago.paymentId);
-      return NextResponse.json({ ok: true, numero_pedido: numeroPedido, url_pago: pago.url });
+      return NextResponse.json({ ok: true, numero_pedido: numeroPedido, token_publico: tokenPublico, url_pago: pago.url });
     }
 
-    const pago = await crearPagoFlow({ numeroPedido, monto: total, email });
+    const pago = await crearPagoFlow({ numeroPedido, tokenPublico, monto: total, email });
     await guardarPagoFlow(numeroPedido, pago.token, pago.flowOrder);
-    return NextResponse.json({ ok: true, numero_pedido: numeroPedido, url_pago: `${pago.url}?token=${pago.token}` });
+    return NextResponse.json({ ok: true, numero_pedido: numeroPedido, token_publico: tokenPublico, url_pago: `${pago.url}?token=${pago.token}` });
   } catch (err) {
     // El pedido ya existe (CREADO) pero Flow no respondió: se marca FALLIDO
     // en vez de dejarlo colgado en CREADO para siempre.

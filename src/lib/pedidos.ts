@@ -152,6 +152,33 @@ export async function obtenerPedidoPorNumero(numeroPedido: string): Promise<Pedi
   return data;
 }
 
+/**
+ * La búsqueda que usa la página pública del pedido — la ÚNICA que debe
+ * usarse para resolver algo que venga de la URL.
+ *
+ * obtenerPedidoPorNumero() queda para el uso interno (webhooks, que
+ * reciben el número desde la pasarela, y panel del POS). Buscar por número
+ * algo que llegó del navegador es justo lo que permitía que alguien
+ * restara uno al correlativo y viera el pedido de otro cliente.
+ *
+ * El formato se valida antes de consultar: 32 hexadecimales. Así un token
+ * inventado se descarta sin tocar la base, y no hay diferencia de tiempo
+ * de respuesta entre "no existe" y "está mal escrito" que sirva para
+ * sondear.
+ */
+export async function obtenerPedidoPorToken(token: string): Promise<PedidoWeb | null> {
+  if (!/^[0-9a-f]{32}$/.test(token)) return null;
+
+  const { data, error } = await supabaseWeb
+    .from('pedidos_web')
+    .select('*')
+    .eq('token_publico', token)
+    .maybeSingle();
+
+  if (error) lanzarErrorBD('obtenerPedidoPorToken', error);
+  return data;
+}
+
 export async function guardarPagoFlow(
   numeroPedido: string,
   flowToken: string,

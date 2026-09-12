@@ -211,7 +211,7 @@ export function correoAlertaPedidoExpiradoPagado(pedido: PedidoWeb): { subject: 
  * (mismo patrón que correoCancelacionPedido: el POS no tiene la API key de
  * Resend ni la plantilla). Incluye el pedido de reseña de Google — es el
  * segundo empujón, después del que ya se muestra en la página de estado
- * del pedido justo al comprar (ver src/app/pedido/[numero]/page.tsx). */
+ * del pedido justo al comprar (ver src/app/pedido/[token]/page.tsx). */
 export function correoEntregaPedido(
   pedido: PedidoWeb,
   imagenesPorProductoId: Record<number, string | undefined> = {}

@@ -162,6 +162,12 @@ export type EstadoPedido =
 export interface PedidoWeb {
   id: number;
   numero_pedido: string;
+  /* Llave de la página pública /pedido/<token>. El numero_pedido es
+     correlativo, así que ponerlo en una URL dejaba enumerar los pedidos de
+     otros clientes — ver supabase/26-token-publico-pedido.sql. El número
+     sigue siendo el identificador para hablar con el cliente y para el POS;
+     esto es solo la llave del link. */
+  token_publico: string;
   estado: EstadoPedido;
   cliente_nombre: string | null;
   cliente_apellido: string | null;

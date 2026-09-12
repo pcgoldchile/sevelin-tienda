@@ -52,7 +52,7 @@ export default async function MisPedidos() {
           {lista.map((pedido) => (
             <li key={pedido.numero_pedido}>
               <Link
-                href={`/pedido/${pedido.numero_pedido}`}
+                href={`/pedido/${pedido.token_publico}`}
                 className="flex items-center justify-between gap-3 rounded-xl bg-surface p-4 shadow-elevated-md transition-colors hover:bg-surface-sunken"
               >
                 <div>

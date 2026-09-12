@@ -72,6 +72,12 @@ export interface PagoKhipuCreado {
  */
 export async function crearPagoKhipu(datos: {
   numeroPedido: string;
+  /* Llave de la página pública. El número sigue viajando como
+     transaction_id —es lo que el webhook usa para encontrar el pedido— pero
+     la URL a la que vuelve el cliente va por token: es una dirección que
+     queda en su historial y que puede compartir sin querer. Ver
+     supabase/26-token-publico-pedido.sql. */
+  tokenPublico: string;
   monto: number;
   email: string;
 }): Promise<PagoKhipuCreado> {
@@ -84,8 +90,8 @@ export async function crearPagoKhipu(datos: {
     subject: `Pedido ${datos.numeroPedido} — Sevelin`,
     transaction_id: datos.numeroPedido,
     payer_email: datos.email,
-    return_url: `${siteUrl}/pedido/${datos.numeroPedido}`,
-    cancel_url: `${siteUrl}/pedido/${datos.numeroPedido}`,
+    return_url: `${siteUrl}/pedido/${datos.tokenPublico}`,
+    cancel_url: `${siteUrl}/pedido/${datos.tokenPublico}`,
     notify_url: `${siteUrl}/api/khipu-webhook`,
     notify_api_version: '3.0',
   });

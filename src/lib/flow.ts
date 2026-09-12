@@ -106,6 +106,10 @@ export interface PagoFlowCreado {
  */
 export async function crearPagoFlow(datos: {
   numeroPedido: string;
+  /* Ver el mismo campo en crearPagoKhipu: el número identifica el pedido
+     ante la pasarela, el token es la llave de la URL a la que vuelve el
+     cliente. */
+  tokenPublico: string;
   monto: number;
   email: string;
 }): Promise<PagoFlowCreado> {
@@ -121,7 +125,7 @@ export async function crearPagoFlow(datos: {
       amount: String(Math.round(datos.monto)),
       email: datos.email,
       urlConfirmation: `${siteUrl}/api/flow-webhook`,
-      urlReturn: `${siteUrl}/pedido/${datos.numeroPedido}`,
+      urlReturn: `${siteUrl}/pedido/${datos.tokenPublico}`,
     },
     'POST'
   );
