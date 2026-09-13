@@ -169,7 +169,33 @@ export default async function FichaProducto({ params }: PropsPagina) {
       </nav>
 
       <div className="grid gap-10 md:grid-cols-2">
-        <GaleriaProducto imagenes={producto.imagen_urls || []} nombre={producto.nombre} categoria={producto.categoria} />
+        {/* Foto + botón de compra van juntos y fijos: es el par que el
+            cliente necesita a la vista todo el tiempo (qué está comprando
+            y el botón para hacerlo), mientras el resto de la ficha
+            (precio, aviso de stock, descripción) se desplaza normal.
+            `md:top-24` deja el hueco del header (sticky top-0 z-40) y
+            `md:self-start` evita que el grid (align-items: stretch por
+            defecto) estire este bloque a la altura de la columna derecha.
+            En celular no hace falta: el orden de lectura ya lo deja
+            visible sin scroll. */}
+        <div className="flex flex-col gap-4 md:sticky md:top-24 md:z-10 md:self-start">
+          <GaleriaProducto imagenes={producto.imagen_urls || []} nombre={producto.nombre} categoria={producto.categoria} />
+
+          {/* Este botón solo se ve en escritorio (md:block, oculto en
+              celular con hidden): en celular el mismo botón aparece más
+              abajo, junto al precio — ver el bloque `md:hidden` en la
+              columna derecha. Están duplicados a propósito: es la única
+              forma de que el botón vaya PEGADO a la foto en escritorio
+              (para que ambos quedn fijos juntos) y a la vez DESPUÉS del
+              precio en celular (orden de lectura normal), sin JS. */}
+          <div className="hidden md:block">
+            {producto.precio_a_consultar ? (
+              <CotizarWhatsapp producto={producto} />
+            ) : (
+              <AccionesProducto producto={producto} />
+            )}
+          </div>
+        </div>
 
         <div className="flex flex-col gap-4">
           <EtiquetaProductoBadge etiqueta={producto.etiqueta_web} />
@@ -211,30 +237,21 @@ export default async function FichaProducto({ params }: PropsPagina) {
             )}
           </div>
 
-          {/* El "buy box" va INMEDIATAMENTE después del precio, antes de la
-              descripción, para que se vea sin scrollear al entrar a la
-              ficha. NO es sticky: baja con el resto del contenido, igual
-              que la foto — solo el aviso de stock (más abajo) se mantiene
-              fijo mientras se lee la descripción. */}
-          {producto.precio_a_consultar ? (
-            <CotizarWhatsapp producto={producto} />
-          ) : (
-            <AccionesProducto producto={producto} />
-          )}
-
-          {/* El aviso de que queda poco es lo único fijo de la ficha: es
-              el dato que empuja la decisión mientras se sigue leyendo más
-              abajo. `md:sticky` (mismo punto de corte que el grid de
-              arriba — antes era `lg`, 1024px, y quedaba desactivado en
-              ventanas de escritorio más angostas, típicas de un notebook
-              sin maximizar) no compite con el header (que es sticky
-              top-0 z-40): top-24 deja el hueco y z-10 lo mantiene por
-              encima del contenido que sigue pasando debajo. En celular
-              no hace falta sticky: el reordenamiento solo ya lo deja
-              visible sin scroll. */}
-          <div className="md:sticky md:top-24 md:z-10">
-            <AvisoUrgenciaStock producto={producto} />
+          {/* Versión celular del mismo botón — ver la nota en la columna
+              de la foto. Aquí sí importa el orden: va después del precio,
+              como cualquier ficha de producto. */}
+          <div className="md:hidden">
+            {producto.precio_a_consultar ? (
+              <CotizarWhatsapp producto={producto} />
+            ) : (
+              <AccionesProducto producto={producto} />
+            )}
           </div>
+
+          {/* El aviso de que queda poco NO es fijo: baja con el resto de
+              la ficha (precio, descripción) — solo la foto y el botón de
+              compra (columna izquierda) se mantienen a la vista. */}
+          <AvisoUrgenciaStock producto={producto} />
 
           {/* Viene en camino: fecha estimada, reserva con pago del 100% y
               la garantía de devolución total, que es lo que hace razonable
