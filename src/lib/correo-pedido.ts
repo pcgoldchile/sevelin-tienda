@@ -404,3 +404,38 @@ export function correoRecordatorioEntregaEquipo(datos: {
     html: envoltorio('Te esperamos mañana', contenido),
   };
 }
+
+/**
+ * QR de retiro de una Orden de Trabajo (sevelin-pos-oficial/sql/47).
+ *
+ * Lo pide el POS al crear la orden. El dueño del equipo decide a quién
+ * reenviarlo: por eso el correo lo dice explícito, y advierte que quien
+ * tenga el código puede retirar. La imagen va por URL (Gmail bloquea las
+ * incrustadas) y el link va aparte por si el cliente no carga imágenes.
+ */
+export function correoQrRetiro(datos: {
+  nombreCliente: string | null;
+  numeroOt: string;
+  dispositivo: string | null;
+  url: string;
+  whatsapp?: string;
+}): { subject: string; html: string } {
+  const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const hola = datos.nombreCliente ? `${esc(datos.nombreCliente)},` : 'Hola,';
+  const equipo = datos.dispositivo ? ` (${esc(datos.dispositivo)})` : '';
+  const urlQr = datos.url.replace('/retiro/', '/api/retiro/') + '/qr';
+
+  const contenido = `
+    <p style="margin:0 0 16px;font-size:14px;color:${TEXTO_SUAVE};">${hola} recibimos tu equipo${equipo} con la orden <strong style="color:${TEXTO};">${esc(datos.numeroOt)}</strong>. Este es tu código para retirarlo:</p>
+    <p style="margin:0 0 16px;text-align:center;"><img src="${urlQr}" width="220" height="220" alt="QR de retiro ${esc(datos.numeroOt)}" style="display:inline-block;border:0;"></p>
+    <p style="margin:0 0 16px;text-align:center;"><a href="${datos.url}" style="display:inline-block;background:${AZUL};color:#ffffff;text-decoration:none;padding:11px 22px;border-radius:999px;font-size:14px;font-weight:600;">Ver mi comprobante de retiro</a></p>
+    <p style="margin:0 0 12px;font-size:14px;color:${TEXTO_SUAVE};"><strong style="color:${TEXTO};">Por tu seguridad</strong>, el equipo solo se entrega a quien muestre este código, o a ti presentando tu carnet.</p>
+    <p style="margin:0 0 12px;font-size:14px;color:${TEXTO_SUAVE};">Si otra persona va a retirar, reenvíale este correo o el link. Quien retire deberá dar su nombre y RUT, y el código se usa una sola vez. <strong style="color:${TEXTO};">No lo compartas con nadie más.</strong></p>
+    <p style="margin:0;font-size:14px;color:${TEXTO_SUAVE};">¿Perdiste el código o crees que alguien más lo tiene? ${datos.whatsapp ? `<a href="https://wa.me/${datos.whatsapp}" style="color:${AZUL};">Escríbenos por WhatsApp</a>` : 'Avísanos'} y generamos uno nuevo: el anterior deja de servir.</p>
+  `;
+
+  return {
+    subject: `Tu código para retirar el equipo — orden ${datos.numeroOt}`,
+    html: envoltorio('Tu equipo está en Sevelin', contenido),
+  };
+}
