@@ -168,7 +168,7 @@ export default async function FichaProducto({ params }: PropsPagina) {
         )}
       </nav>
 
-      <div className="grid gap-10 lg:grid-cols-2">
+      <div className="grid gap-10 md:grid-cols-2">
         <GaleriaProducto imagenes={producto.imagen_urls || []} nombre={producto.nombre} categoria={producto.categoria} />
 
         <div className="flex flex-col gap-4">
@@ -224,12 +224,15 @@ export default async function FichaProducto({ params }: PropsPagina) {
 
           {/* El aviso de que queda poco es lo único fijo de la ficha: es
               el dato que empuja la decisión mientras se sigue leyendo más
-              abajo. `lg:sticky` no compite con el header (que es sticky
+              abajo. `md:sticky` (mismo punto de corte que el grid de
+              arriba — antes era `lg`, 1024px, y quedaba desactivado en
+              ventanas de escritorio más angostas, típicas de un notebook
+              sin maximizar) no compite con el header (que es sticky
               top-0 z-40): top-24 deja el hueco y z-10 lo mantiene por
-              encima del contenido que sigue pasando debajo. En móvil no
-              hace falta sticky: el reordenamiento solo ya lo deja visible
-              sin scroll. */}
-          <div className="lg:sticky lg:top-24 lg:z-10">
+              encima del contenido que sigue pasando debajo. En celular
+              no hace falta sticky: el reordenamiento solo ya lo deja
+              visible sin scroll. */}
+          <div className="md:sticky md:top-24 md:z-10">
             <AvisoUrgenciaStock producto={producto} />
           </div>
 
