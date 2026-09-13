@@ -213,43 +213,42 @@ export default async function FichaProducto({ params }: PropsPagina) {
 
           {/* El "buy box" va INMEDIATAMENTE después del precio, antes de la
               descripción, para que se vea sin scrollear al entrar a la
-              ficha — con fotos grandes, dejarlo bajo la imagen (como se
-              probó antes) lo mandaba fuera de pantalla. `lg:sticky` lo
-              mantiene a la vista mientras se lee la descripción en
-              pantallas anchas, sin competir con el header (que es sticky
-              top-0 z-40): top-24 dejando el hueco y z-10 quedando siempre
-              por debajo. En móvil no hace falta sticky: el reordenamiento
-              solo ya lo deja visible sin scroll. */}
+              ficha. NO es sticky: baja con el resto del contenido, igual
+              que la foto — solo el aviso de stock (más abajo) se mantiene
+              fijo mientras se lee la descripción. */}
+          {producto.precio_a_consultar ? (
+            <CotizarWhatsapp producto={producto} />
+          ) : (
+            <AccionesProducto producto={producto} />
+          )}
+
+          {/* El aviso de que queda poco es lo único fijo de la ficha: es
+              el dato que empuja la decisión mientras se sigue leyendo más
+              abajo. `lg:sticky` no compite con el header (que es sticky
+              top-0 z-40): top-24 deja el hueco y z-10 lo mantiene por
+              encima del contenido que sigue pasando debajo. En móvil no
+              hace falta sticky: el reordenamiento solo ya lo deja visible
+              sin scroll. */}
           <div className="lg:sticky lg:top-24 lg:z-10">
-            {producto.precio_a_consultar ? (
-              <CotizarWhatsapp producto={producto} />
-            ) : (
-              <AccionesProducto producto={producto} />
-            )}
-
-            {/* Dentro del bloque sticky y pegado al botón: el aviso de que
-                queda poco solo sirve en el instante en que se decide la
-                compra. Más abajo en la página lo leería alguien que ya
-                decidió irse. */}
             <AvisoUrgenciaStock producto={producto} />
-
-            {/* Viene en camino: fecha estimada, reserva con pago del 100% y
-                la garantía de devolución total, que es lo que hace razonable
-                pagar por algo que todavía no está. */}
-            <AvisoPorLlegar producto={producto} />
-
-            {/* La lista de espera solo tiene sentido cuando el cliente NO
-                puede llevárselo hoy: agotado, o por llegar y prefiere no
-                pagar por adelantado (ese es el caso de quien quiere pagar
-                presencial). Con stock disponible estorbaría la compra. */}
-            {(producto.por_llegar || producto.stock_web <= 0) && !producto.es_pedido_encargo && (
-              <AvisameProducto
-                sku={producto.sku}
-                nombre={producto.nombre}
-                whatsapp={process.env.NEXT_PUBLIC_WHATSAPP_NUMBER}
-              />
-            )}
           </div>
+
+          {/* Viene en camino: fecha estimada, reserva con pago del 100% y
+              la garantía de devolución total, que es lo que hace razonable
+              pagar por algo que todavía no está. */}
+          <AvisoPorLlegar producto={producto} />
+
+          {/* La lista de espera solo tiene sentido cuando el cliente NO
+              puede llevárselo hoy: agotado, o por llegar y prefiere no
+              pagar por adelantado (ese es el caso de quien quiere pagar
+              presencial). Con stock disponible estorbaría la compra. */}
+          {(producto.por_llegar || producto.stock_web <= 0) && !producto.es_pedido_encargo && (
+            <AvisameProducto
+              sku={producto.sku}
+              nombre={producto.nombre}
+              whatsapp={process.env.NEXT_PUBLIC_WHATSAPP_NUMBER}
+            />
+          )}
 
           {/* Justo bajo el botón de compra: es el momento exacto en que el
               cliente piensa "¿con qué pago?". Enterarse de que puede pagar
