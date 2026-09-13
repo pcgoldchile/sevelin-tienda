@@ -89,10 +89,11 @@ export default async function FichaEncargo({ params }: PropsPagina) {
                   [&_h3]:text-xs [&_h3]:font-bold [&_h3]:uppercase [&_h3]:tracking-[0.12em] [&_h3]:text-primary
                   [&_h3:first-child]:mt-0
                   [&_ul]:m-0 [&_ul]:grid [&_ul]:list-none [&_ul]:gap-2 [&_ul]:p-0 sm:[&_ul]:grid-cols-2
-                  [&_li]:relative [&_li]:flex [&_li]:items-start [&_li]:gap-2.5
-                  [&_li]:rounded-lg [&_li]:border [&_li]:border-border [&_li]:bg-surface-sunken/60
-                  [&_li]:px-3 [&_li]:py-2.5 [&_li]:leading-snug
+                  [&_li]:relative [&_li]:rounded-lg [&_li]:border [&_li]:border-border [&_li]:bg-surface-sunken/60
+                  [&_li]:py-2.5 [&_li]:pl-9 [&_li]:pr-3 [&_li]:leading-snug
                   [&_li]:transition-colors [&_li]:hover:border-primary/40
+                  [&_li>strong]:block [&_li>strong]:mb-0.5
+                  [&_li]:before:absolute [&_li]:before:left-3 [&_li]:before:top-2.5
                   [&_li]:before:flex [&_li]:before:h-5 [&_li]:before:w-5 [&_li]:before:shrink-0
                   [&_li]:before:items-center [&_li]:before:justify-center [&_li]:before:rounded-full
                   [&_li]:before:bg-primary/15 [&_li]:before:text-[11px] [&_li]:before:font-bold

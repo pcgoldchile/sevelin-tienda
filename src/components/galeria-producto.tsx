@@ -27,12 +27,7 @@ export function GaleriaProducto({
   }
 
   return (
-    // lg:self-start + sticky: en pantallas de escritorio la columna de texto
-    // (descripción, características) suele ser mucho más alta que la foto —
-    // sin esto, el grid (align-items: stretch por defecto) deja la foto
-    // arriba y un bloque de espacio vacío abajo mientras se lee el resto.
-    // Mismo criterio que el "buy box" sticky de la derecha (ver page.tsx).
-    <div className="flex flex-col gap-3 lg:sticky lg:top-24 lg:self-start">
+    <div className="flex flex-col gap-3">
       <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-surface-sunken shadow-elevated-sm">
         <AnimatePresence mode="wait">
           <motion.div
