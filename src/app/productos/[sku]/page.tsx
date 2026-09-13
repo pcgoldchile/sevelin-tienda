@@ -168,18 +168,10 @@ export default async function FichaProducto({ params }: PropsPagina) {
         )}
       </nav>
 
-      {/* Grid con posición explícita (col/row-start) en vez de dos columnas
-          de flujo normal: en escritorio la foto+botón viven en la columna
-          izquierda y el precio+aviso de stock en la derecha, pero en
-          celular (una sola columna) TODO cae a su orden natural de lectura
-          — foto, título, precio, botón, aviso — sin que el botón de compra
-          quede antes que el nombre y el precio del producto. */}
       <div className="grid gap-10 lg:grid-cols-2">
-        <div className="lg:col-start-1 lg:row-start-1">
-          <GaleriaProducto imagenes={producto.imagen_urls || []} nombre={producto.nombre} categoria={producto.categoria} />
-        </div>
+        <GaleriaProducto imagenes={producto.imagen_urls || []} nombre={producto.nombre} categoria={producto.categoria} />
 
-        <div className="flex flex-col gap-4 lg:col-start-2 lg:row-start-1">
+        <div className="flex flex-col gap-4">
           <EtiquetaProductoBadge etiqueta={producto.etiqueta_web} />
           {/* La marca va ARRIBA del nombre, como en cualquier ficha de
               retail: es lo primero que busca quien ya sabe qué marca
@@ -218,52 +210,51 @@ export default async function FichaProducto({ params }: PropsPagina) {
               </>
             )}
           </div>
-        </div>
 
-        {/* El "buy box" va pegado a la foto, no fijo: baja con el resto del
-            contenido al hacer scroll. Lo único que se mantiene a la vista
-            mientras se lee la descripción es el aviso de stock (columna
-            derecha), no el botón en sí. */}
-        <div className="lg:col-start-1 lg:row-start-2">
-          {producto.precio_a_consultar ? (
-            <CotizarWhatsapp producto={producto} />
-          ) : (
-            <AccionesProducto producto={producto} />
-          )}
-        </div>
+          {/* El "buy box" va INMEDIATAMENTE después del precio, antes de la
+              descripción, para que se vea sin scrollear al entrar a la
+              ficha — con fotos grandes, dejarlo bajo la imagen (como se
+              probó antes) lo mandaba fuera de pantalla. `lg:sticky` lo
+              mantiene a la vista mientras se lee la descripción en
+              pantallas anchas, sin competir con el header (que es sticky
+              top-0 z-40): top-24 dejando el hueco y z-10 quedando siempre
+              por debajo. En móvil no hace falta sticky: el reordenamiento
+              solo ya lo deja visible sin scroll. */}
+          <div className="lg:sticky lg:top-24 lg:z-10">
+            {producto.precio_a_consultar ? (
+              <CotizarWhatsapp producto={producto} />
+            ) : (
+              <AccionesProducto producto={producto} />
+            )}
 
-        {/* El aviso de stock crítico es lo único que se mantiene fijo: es
-            el dato que empuja la decisión mientras se sigue leyendo más
-            abajo. `lg:sticky` no compite con el header (que es sticky
-            top-0 z-40): top-24 deja el hueco y z-10 lo mantiene por encima
-            del contenido que sigue pasando debajo. En móvil no hace falta
-            sticky: el reordenamiento solo ya lo deja visible sin scroll. */}
-        <div className="lg:sticky lg:top-24 lg:z-10 lg:col-start-2 lg:row-start-2">
-          <AvisoUrgenciaStock producto={producto} />
-        </div>
+            {/* Dentro del bloque sticky y pegado al botón: el aviso de que
+                queda poco solo sirve en el instante en que se decide la
+                compra. Más abajo en la página lo leería alguien que ya
+                decidió irse. */}
+            <AvisoUrgenciaStock producto={producto} />
 
-        <div className="flex flex-col gap-4 lg:col-start-2 lg:row-start-3">
-          {/* Viene en camino: fecha estimada, reserva con pago del 100% y
-              la garantía de devolución total, que es lo que hace razonable
-              pagar por algo que todavía no está. */}
-          <AvisoPorLlegar producto={producto} />
+            {/* Viene en camino: fecha estimada, reserva con pago del 100% y
+                la garantía de devolución total, que es lo que hace razonable
+                pagar por algo que todavía no está. */}
+            <AvisoPorLlegar producto={producto} />
 
-          {/* La lista de espera solo tiene sentido cuando el cliente NO
-              puede llevárselo hoy: agotado, o por llegar y prefiere no
-              pagar por adelantado (ese es el caso de quien quiere pagar
-              presencial). Con stock disponible estorbaría la compra. */}
-          {(producto.por_llegar || producto.stock_web <= 0) && !producto.es_pedido_encargo && (
-            <AvisameProducto
-              sku={producto.sku}
-              nombre={producto.nombre}
-              whatsapp={process.env.NEXT_PUBLIC_WHATSAPP_NUMBER}
-            />
-          )}
+            {/* La lista de espera solo tiene sentido cuando el cliente NO
+                puede llevárselo hoy: agotado, o por llegar y prefiere no
+                pagar por adelantado (ese es el caso de quien quiere pagar
+                presencial). Con stock disponible estorbaría la compra. */}
+            {(producto.por_llegar || producto.stock_web <= 0) && !producto.es_pedido_encargo && (
+              <AvisameProducto
+                sku={producto.sku}
+                nombre={producto.nombre}
+                whatsapp={process.env.NEXT_PUBLIC_WHATSAPP_NUMBER}
+              />
+            )}
+          </div>
 
-          {/* El aviso de pago con tarjeta ya no está pegado al botón (que
-              ahora vive junto a la foto) pero sigue antes de la
-              descripción — es la misma pregunta que se hace el cliente
-              apenas ve el precio. */}
+          {/* Justo bajo el botón de compra: es el momento exacto en que el
+              cliente piensa "¿con qué pago?". Enterarse de que puede pagar
+              con tarjeta después de irse de la ficha no sirve de nada. */}
+          {/* Sin compra en línea no hay pago con tarjeta que anunciar. */}
           {!producto.precio_a_consultar && <AvisoPagoTarjeta />}
 
           {producto.descripcion_web && (
