@@ -61,7 +61,7 @@ export function AvisameProducto({
 
   if (listo) {
     return (
-      <div className="mt-4 flex items-start gap-3 rounded-2xl border border-accent/40 bg-accent/10 p-4">
+      <div className="mt-4 flex items-start gap-3 rounded-2xl border border-accent/40 bg-[color-mix(in_oklab,var(--color-accent)_10%,var(--color-surface))] p-4">
         <Check className="mt-0.5 h-5 w-5 shrink-0 text-accent" aria-hidden />
         <div>
           <p className="text-sm font-semibold text-ink">Listo, te avisamos</p>
@@ -77,7 +77,7 @@ export function AvisameProducto({
   const mensajeWa = encodeURIComponent(`Hola, quiero que me avisen cuando llegue: ${nombre}`);
 
   return (
-    <form onSubmit={enviar} className="mt-4 rounded-2xl border border-border bg-surface-sunken/60 p-4">
+    <form onSubmit={enviar} className="mt-4 rounded-2xl border border-border bg-[color-mix(in_oklab,var(--color-surface-sunken)_60%,var(--color-surface))] p-4">
       <p className="flex items-center gap-2 font-display text-sm font-bold uppercase tracking-wide text-ink">
         <BellRing className="h-4 w-4 shrink-0 text-accent" aria-hidden />
         Avísame cuando llegue

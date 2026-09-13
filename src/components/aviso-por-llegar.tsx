@@ -25,7 +25,7 @@ export function AvisoPorLlegar({ producto }: { producto: ProductoWeb }) {
     : null;
 
   return (
-    <aside className="mt-4 rounded-2xl border border-accent/40 bg-accent/10 p-4">
+    <aside className="mt-4 rounded-2xl border border-accent/40 bg-[color-mix(in_oklab,var(--color-accent)_10%,var(--color-surface))] p-4">
       <p className="flex items-center gap-2 font-display text-sm font-bold uppercase tracking-wide text-ink">
         <Truck className="h-4 w-4 shrink-0 text-accent" aria-hidden />
         Viene en camino

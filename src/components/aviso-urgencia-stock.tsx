@@ -21,7 +21,9 @@ export function AvisoUrgenciaStock({ producto }: { producto: ProductoWeb }) {
   return (
     <aside
       className={`mt-4 overflow-hidden rounded-2xl border p-4 ${
-        aviso.critico ? "border-primary/50 bg-primary/10" : "border-border bg-surface-sunken"
+        aviso.critico
+          ? "border-primary/50 bg-[color-mix(in_oklab,var(--color-primary)_12%,var(--color-surface))]"
+          : "border-border bg-surface-sunken"
       }`}
     >
       <p className="flex items-center gap-2 font-display text-sm font-bold uppercase tracking-wide text-ink">
