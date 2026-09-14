@@ -4,6 +4,45 @@
 > arquitectura completo (todas las fases) vive en `README-ECOMMERCE-SEVELIN.md`, en el repo del POS
 > (`sevelin-pos-oficial`) — este documento es el estado de ESTE repo (`sevelin-tienda`) nada más.
 
+**Fecha:** 13-09-2026 · **Sesión de ajustes a la ficha de producto** (`src/app/productos/[sku]/page.tsx`,
+`src/components/galeria-producto.tsx` y los avisos de stock/pago) — 6 commits, todos en producción.
+**Nota: este SNAPSHOT llevaba desde el 01-09 sin actualizarse** — hubo cambios de otras sesiones
+(checkout, cuentas, servicios técnicos, etc., ver el SNAPSHOT del POS para el resumen) que no quedaron
+documentados acá; no se auditó esa brecha en esta sesión, solo se agregó lo de hoy.
+
+- **Diseño final de la ficha (tras 4 vueltas a pedido del dueño):** la foto y el botón "Agregar al
+  carrito" quedan **fijos** (`position: sticky`) mientras se hace scroll; "Última unidad"/"Quedan X
+  unidades" **baja normal** con el resto del contenido. El botón está duplicado en el HTML a
+  propósito (uno oculto en escritorio, otro en celular) — es la única forma de que en escritorio
+  quede pegado a la foto (para fijarlos juntos) y en celular siga apareciendo después del precio, sin
+  JS de por medio.
+- **Punto de corte del diseño de escritorio bajado de `lg` (1024px) a `md` (768px)**: con 1024px,
+  cualquier ventana de escritorio no maximizada (típico notebook) caía al diseño de una sola columna
+  sin nada fijo — parecía que el sticky "no funcionaba" cuando en realidad nunca se activaba.
+- **3 avisos con fondo semitransparente corregidos** (`aviso-urgencia-stock.tsx`,
+  `aviso-por-llegar.tsx`, `avisame-producto.tsx`): al quedar fijos sobre contenido que sigue
+  scrolleando detrás, la transparencia dejaba ver el texto de atrás mezclado — ahora los tres usan
+  `color-mix` para un fondo opaco con el mismo tono.
+- **Visor ampliado con carrusel, nuevo**: clic en la foto principal abre un visor a pantalla completa
+  (mismo patrón de modal que `/carrito`) con flechas entre todas las fotos del producto, miniaturas
+  propias, teclado (←/→/Esc) y cierre al tocar fuera. La foto principal ahora tiene tope de altura
+  (`max-h-420px`): sin eso, en pantallas anchas una foto cuadrada a media columna era tan alta que el
+  botón de compra quedaba fuera de la pantalla al entrar a la ficha.
+- **Tarjetas de "Ventajas"/"Qué incluye este servicio" corregidas**: el título en negrita y el texto
+  corrían pegados en la misma línea dentro de un ítem angosto — ahora el título va en su propia línea
+  a todo el ancho de la tarjeta.
+- **Categoría "Periféricos" duplicada en `productos_web`, corregida**: un producto tenía la categoría
+  guardada con codificación rota (`Perif�ricos`), generando un segundo filtro fantasma en
+  `/productos`. Se creó además la subcategoría "Otros Periféricos" para el único producto que no
+  calzaba en las 4 que ya existían.
+- **Trampa de esta sesión, anotada para no repetirla:** el navegador de pruebas (tanto el interno
+  como la extensión de Chrome) tuvo capturas de pantalla poco confiables (frames en negro, timeouts,
+  compuestos con contenido viejo) varias veces durante la sesión — se verificó el comportamiento real
+  con `getBoundingClientRect()`/`elementFromPoint()` vía JS en vez de confiar ciegamente en las
+  capturas, y así se confirmó que el código sí funcionaba cuando la imagen parecía decir lo contrario.
+
+---
+
 **Fecha:** 01-09-2026 · **Versión activa:** v38 (**seguridad + Starken + SEO + autocompletado
 nacional** — rate limiting con Upstash Redis en los 3 endpoints de Maps [autocompletar-direccion
 60/día, detalle-direccion 30/día, cotizar-envio 40/día por IP, más burst de 10-20/10s], CSP + HSTS +

@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, ChevronLeft, ChevronRight, ZoomIn } from "lucide-react";
 
@@ -9,12 +9,17 @@ export function GaleriaProducto({
   imagenes,
   nombre,
   categoria,
+  accion,
 }: {
   imagenes: string[];
   nombre: string;
   // Opcional: arma un alt más descriptivo para Google Images sin inventar
   // nada — solo la categoría real del catálogo, si el llamador la pasa.
   categoria?: string | null;
+  // Opcional: un botón que va encima de la foto, en la esquina inferior
+  // derecha (en la ficha de producto, "Agregar" — ver BotonAgregarFoto).
+  // Va fuera del botón de ampliar: un botón dentro de otro no es HTML válido.
+  accion?: ReactNode;
 }) {
   const [activa, setActiva] = useState(0);
   const [ampliada, setAmpliada] = useState(false);
@@ -55,18 +60,17 @@ export function GaleriaProducto({
 
   return (
     <div className="flex flex-col gap-3">
-      {/* max-h además de aspect-square: en pantallas anchas, una foto
-          cuadrada a lo ancho de media columna (~600px) es tan alta que
-          empuja "Agregar al carrito" (pegado abajo, ver page.tsx) fuera
-          de la pantalla al entrar a la ficha — hay que scrollear para
-          verlo. Con el tope de altura, la foto se recorta a rectángulo
-          (el object-cover ya se encarga de que no se vea distorsionada)
-          y todo el bloque cabe en una pantalla de escritorio normal. */}
+      {/* Foto cuadrada completa otra vez (13-09-2026). Antes tenía un tope
+          de 420px de alto que la recortaba a rectángulo para que cupiera el
+          botón de compra debajo; ahora el botón chico va encima de la foto
+          (prop `accion`) y el tope de tamaño lo pone la ficha según el
+          alto de la pantalla. */}
+      <div className="relative">
       <button
         type="button"
         onClick={() => setAmpliada(true)}
         aria-label="Ampliar foto"
-        className="group relative aspect-square w-full max-h-[420px] cursor-zoom-in overflow-hidden rounded-2xl bg-surface-sunken shadow-elevated-sm"
+        className="group relative block aspect-square w-full cursor-zoom-in overflow-hidden rounded-2xl bg-surface-sunken shadow-elevated-sm"
       >
         <AnimatePresence mode="wait">
           <motion.div
@@ -85,11 +89,13 @@ export function GaleriaProducto({
             hace falta el ícono para saber que se puede tocar. */}
         <span
           aria-hidden
-          className="absolute bottom-3 right-3 hidden items-center justify-center rounded-full bg-surface-sunken/80 p-2 text-ink opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100 sm:flex"
+          className="absolute right-3 top-3 hidden items-center justify-center rounded-full bg-surface-sunken/80 p-2 text-ink opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100 sm:flex"
         >
           <ZoomIn className="h-4 w-4" />
         </span>
       </button>
+      {accion && <div className="absolute bottom-3 right-3 z-10">{accion}</div>}
+      </div>
       {imagenes.length > 1 && (
         <div className="flex gap-2">
           {imagenes.map((url, i) => (
