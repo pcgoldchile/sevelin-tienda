@@ -130,7 +130,13 @@ export default async function FichaProducto({ params }: PropsPagina) {
   };
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
+    /* En pantallas grandes la ficha se ensancha más que el resto del sitio
+       (16-09-2026). Con `max-w-6xl` fijo, cada columna medía 524px SIEMPRE,
+       así que la foto era del mismo tamaño en un notebook de 768px de alto
+       que en un monitor de 1080 — y mientras más grande la pantalla, más
+       vacío quedaba bajo la foto fija (460px a 1920×1080). El ancho extra
+       es lo único que deja crecer una foto cuadrada. */
+    <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8 xl:max-w-[1320px]">
       <script
         type="application/ld+json"
         // JSON.stringify no puede producir '</script>' válido dentro de un
@@ -169,8 +175,8 @@ export default async function FichaProducto({ params }: PropsPagina) {
         )}
       </nav>
 
-      <div className="grid gap-10 md:grid-cols-2">
-        {/* Diseño pedido por el dueño (13-09-2026):
+      <div className="grid gap-10 md:grid-cols-2 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
+        {/* Diseño pedido por el dueño (13-09-2026, ajustado el 16-09-2026):
             · SOLO la foto (con sus miniaturas) acompaña el scroll en
               escritorio: sticky en `md:top-24`, el hueco del header
               (sticky top-0 z-40). Encima lleva un botón chico "Agregar"
@@ -180,17 +186,67 @@ export default async function FichaProducto({ params }: PropsPagina) {
               y sale con el scroll normal. Sin efectos.
             La columna NO lleva self-start: tiene que estirarse a la altura
             de la columna derecha, o la foto no tendría recorrido para
-            quedarse fija. El tope de ancho (alto de pantalla − header −
-            miniaturas) evita que la foto cuadrada quede más alta que la
-            ventana y se corte mientras está fija. En celular nada es fijo. */}
+            quedarse fija. En celular nada es fijo.
+
+            EL HUECO BAJO LA FOTO (16-09-2026). Con la foto sola, al hacer
+            scroll quedaban 280–460px de columna vacía a la izquierda, y
+            crecía con el tamaño de la pantalla. No se arregla agrandando:
+            una foto cuadrada tendría que medir ~890px de ancho para llenar
+            el alto útil, y ahí la columna derecha queda aplastada;
+            estirarla sin más recortaría la imagen, que en este catálogo es
+            una gráfica CON TEXTO ("NO INCLUYE", "LIMPIEZA INTERNA").
+            Así que el hueco se LLENA: "Envíos y garantía" (o "Atención y
+            garantía" en los servicios) sube acá desde el final de la
+            columna derecha, donde casi nadie llegaba. Queda fijo junto a la
+            foto todo el rato que el cliente lee la ficha — y con él el
+            WhatsApp, que es por donde se vende de verdad.
+
+            LA TARJETA SOLO SUBE SI LA PANTALLA ES ALTA (≥940px). Medido:
+            la tarjeta ocupa 326px. En un notebook de 1366×768 —de los más
+            comunes— foto y tarjeta juntas no caben: la foto tendría que
+            bajar de 524 a ~290px y el remedio sería peor que la
+            enfermedad. En esas pantallas la tarjeta se queda donde estaba,
+            al final de la ficha, y arriba va solo la foto. Nunca se ven
+            las dos copias a la vez.
+
+            EL TOPE DE ALTO de la foto va con esa misma condición: sin la
+            tarjeta, la pantalla menos el header (`100vh-13rem`); con la
+            tarjeta, hay que descontarla además (`100vh-29rem`). Siempre
+            como tope de ANCHO, porque la foto es cuadrada: el lado
+            resultante es el menor entre el ancho de la columna y ese tope.
+
+            OJO: el tope va SOLO en la foto, nunca en el bloque fijo
+            completo. Puesto en el bloque, la tarjeta heredaba el ancho de
+            la foto, su grilla de dos columnas se partía en una y crecía de
+            326 a 382px de alto — con lo que el bloque terminaba
+            saliéndose de la pantalla justo por lo que el tope intentaba
+            evitar.
+
+            Y LAS MINIATURAS TAMBIÉN CUENTAN: una fila de miniaturas suma
+            76px al bloque fijo. Con 8 fotos y la tarjeta arriba, el bloque
+            se salía 46px de la pantalla (probado con el Power Bank LinkOn).
+            Como el servidor ya sabe cuántas fotos tiene el producto, el
+            tope se elige acá en vez de descontarle esos 76px a TODOS los
+            productos, incluidos los de una sola foto, que son mayoría. */}
         <div className="flex flex-col">
-          <div className="md:sticky md:top-24 md:z-10 md:mx-auto md:w-full md:max-w-[calc(100vh-14rem)]">
-            <GaleriaProducto
-              imagenes={producto.imagen_urls || []}
-              nombre={producto.nombre}
-              categoria={producto.categoria}
-              accion={producto.precio_a_consultar ? undefined : <BotonAgregarFoto producto={producto} />}
-            />
+          <div className="md:sticky md:top-24 md:z-10 md:flex md:flex-col md:gap-4">
+            <div
+              className={
+                (producto.imagen_urls?.length || 0) > 1
+                  ? "md:mx-auto md:w-full md:max-w-[calc(100vh-13rem)] [@media(min-width:768px)_and_(min-height:940px)]:max-w-[calc(100vh-33rem)]"
+                  : "md:mx-auto md:w-full md:max-w-[calc(100vh-13rem)] [@media(min-width:768px)_and_(min-height:940px)]:max-w-[calc(100vh-29rem)]"
+              }
+            >
+              <GaleriaProducto
+                imagenes={producto.imagen_urls || []}
+                nombre={producto.nombre}
+                categoria={producto.categoria}
+                accion={producto.precio_a_consultar ? undefined : <BotonAgregarFoto producto={producto} />}
+              />
+            </div>
+            <div className="hidden [@media(min-width:768px)_and_(min-height:940px)]:block">
+              <InfoEnvioProducto esServicio={esServicioTecnico(producto)} />
+            </div>
           </div>
         </div>
 
@@ -309,7 +365,13 @@ export default async function FichaProducto({ params }: PropsPagina) {
             </div>
           )}
 
-          <InfoEnvioProducto esServicio={esServicioTecnico(producto)} />
+          {/* La misma tarjeta de arriba: se muestra acá, al final de la
+              ficha, en celular y en pantallas de escritorio bajas. En
+              pantallas altas sube a la columna de la foto y esta copia se
+              oculta — nunca se ven las dos. */}
+          <div className="[@media(min-width:768px)_and_(min-height:940px)]:hidden">
+            <InfoEnvioProducto esServicio={esServicioTecnico(producto)} />
+          </div>
         </div>
       </div>
 
