@@ -106,9 +106,12 @@ export function HeroCarrusel() {
       aria-label="Destacados de Sevelin"
     >
       <div className="relative mx-auto flex min-h-[380px] max-w-6xl flex-col justify-center gap-4 px-4 py-20 sm:px-6 lg:px-8">
-        <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.3em] text-primary">
+        {/* Antes decía "Sevelin // sistema en línea", en jerga de HUD. No
+            le dice nada a un cliente que entra a comprar un cable; ahora
+            dice dónde está y qué encuentra. */}
+        <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-primary-soft">
           <Zap className="h-3.5 w-3.5" aria-hidden />
-          Sevelin // sistema en línea
+          Sevelin · Electrónica en Arica
         </div>
 
         <AnimatePresence mode="wait">
@@ -203,13 +206,9 @@ export function HeroCarrusel() {
         </span>
       </div>
 
-      {/* Marco HUD — esquinas tipo visor, puramente decorativo */}
-      <div aria-hidden className="pointer-events-none absolute inset-4 hidden sm:block">
-        <span className="absolute left-0 top-0 h-6 w-6 border-l-2 border-t-2 border-primary/40" />
-        <span className="absolute right-0 top-0 h-6 w-6 border-r-2 border-t-2 border-accent/40" />
-        <span className="absolute bottom-0 left-0 h-6 w-6 border-b-2 border-l-2 border-accent/40" />
-        <span className="absolute bottom-0 right-0 h-6 w-6 border-b-2 border-r-2 border-primary/40" />
-      </div>
+      {/* Acá iba un "marco HUD" de esquinas tipo visor. Se quitó en el
+          rediseño del 17-09-2026: era exactamente el tipo de línea
+          geométrica que el dueño pidió sacar. */}
     </section>
   );
 }

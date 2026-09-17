@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Sans, Orbitron, Rajdhani } from "next/font/google";
+import { IBM_Plex_Sans } from "next/font/google";
 import { MotionConfig } from "framer-motion";
 import "./globals.css";
 import { listarCategorias, listarArbolCategorias } from "@/lib/catalogo";
@@ -14,27 +14,17 @@ import { FondoCinematico } from "@/components/fx/fondo-cinematico";
 import { VisitTracker } from "@/components/visit-tracker";
 import { MetaPixel } from "@/components/meta-pixel";
 
-// Tipografía cyberpunk/HUD (ver src/app/globals.css): Orbitron para títulos
-// (geométrica, angular — el look "gamer" de Razer/ROG) + IBM Plex Sans para
-// el cuerpo (buen soporte de números tabulares, útil para precios CLP).
-const orbitron = Orbitron({
-  variable: "--font-orbitron",
-  subsets: ["latin"],
-  weight: ["500", "600", "700", "800"],
-});
-
+// UNA SOLA TIPOGRAFÍA (rediseño 17-09-2026). Antes eran tres: Orbitron para
+// títulos y Rajdhani para precios, las dos angulares tipo Razer/ROG — parte
+// de lo "geométrico" que el dueño pidió sacar. Ahora títulos, cuerpo y
+// precios usan IBM Plex Sans, que además tiene buenos números tabulares
+// para los montos en pesos. Dos fuentes menos que descargar en cada visita.
+// Para devolver Orbitron: reponer la fuente acá y apuntarle --font-display
+// en globals.css.
 const plexSans = IBM_Plex_Sans({
   variable: "--font-plex",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
-});
-
-// Rajdhani: números más claros al ojo que Orbitron para precios (misma
-// familia "gamer/HUD" pero legible en tamaños chicos, estilo esports).
-const rajdhani = Rajdhani({
-  variable: "--font-rajdhani",
-  subsets: ["latin"],
-  weight: ["600", "700"],
 });
 
 // URL real del sitio — mismo criterio que el resto del proyecto
@@ -79,7 +69,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="es"
-      className={`${orbitron.variable} ${plexSans.variable} ${rajdhani.variable} h-full antialiased`}
+      className={`${plexSans.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-paper text-ink">
         {/* Enlace de salto para teclado — invisible hasta que recibe foco.

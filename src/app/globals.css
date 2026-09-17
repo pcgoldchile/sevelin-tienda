@@ -2,36 +2,70 @@
 
 /*
  * Sistema de diseño de Sevelin — tienda de electrónica en Arica.
- * Rediseño cyberpunk/gamer estilo Razer / ROG: fondo casi-negro (#080811)
- * con acentos neón cian + magenta, cristal translúcido y glow animado.
- * Un solo tema oscuro, deliberado — sin modo claro por ahora.
+ *
+ * REDISEÑO 17-09-2026 (pedido del dueño): "algo de un solo color oscuro,
+ * si es posible negro, sin diseño de esas líneas geométricas, solo el
+ * color y yap". Antes era cyberpunk/gamer estilo Razer/ROG: cian + magenta
+ * neón, glows, rejilla hexagonal y bordes que giraban al pasar el mouse.
+ *
+ * Ahora: NEGRO PLANO + UN SOLO ACENTO AZUL. Sin gradientes, sin glow, sin
+ * fondo geométrico. Las superficies se distinguen por luminosidad (negro →
+ * casi negro → borde gris), no por color.
+ *
+ * CÓMO SE HIZO EL CAMBIO, y por qué importa saberlo: hay 224 usos de
+ * `primary` y `accent` repartidos en los componentes. NO se tocó ninguno —
+ * se redefinieron los tokens de acá abajo. Para volver atrás, o para
+ * cambiar el acento otra vez, basta este archivo.
+ *
+ * `accent` ya no es un segundo color: es el mismo azul en otro tono. Se
+ * mantiene el token porque lo usan decenas de componentes, y borrarlo
+ * obligaría a editarlos todos para no ganar nada.
+ *
+ * Un solo tema oscuro, deliberado — sin modo claro.
  */
 :root {
-  --color-ink: #f4f8ff;
-  --color-ink-soft: #a6b3d6;
-  --color-ink-faint: #626f96;
-  --color-paper: #080811;
-  --color-surface: #10101e;
-  --color-surface-sunken: #050509;
-  --color-border: #24243f;
-  --color-border-strong: #3d3d66;
+  --color-ink: #f5f5f7;
+  --color-ink-soft: #a1a1aa;
+  --color-ink-faint: #71717a;
 
-  --color-primary: #00f0ff;
-  --color-primary-deep: #00a8c2;
-  --color-primary-soft: #7df9ff;
+  /* Negro puro para el fondo. Las tarjetas suben apenas (#0d0d10) para
+     separarse sin dejar de leerse como "negro". */
+  --color-paper: #000000;
+  --color-surface: #0d0d10;
+  --color-surface-sunken: #000000;
+  --color-border: #26262b;
+  --color-border-strong: #3f3f46;
 
-  --color-accent: #ff2ec4;
-  --color-accent-deep: #d4109c;
-  --color-accent-soft: #ffd6f4;
+  /* Azul eléctrico, plano. `primary` es el del botón sólido (lleva texto
+     blanco encima); `primary-soft` es el que se usa como TEXTO sobre negro,
+     donde un azul medio se leería apagado. */
+  --color-primary: #3b82f6;
+  --color-primary-deep: #1d4ed8;
+  --color-primary-soft: #93c5fd;
 
-  --color-success: #29ffb0;
-  --color-success-soft: #06281f;
+  /* El antiguo magenta. Ahora es el mismo azul un punto más profundo, para
+     que donde el diseño usaba dos colores siga habiendo jerarquía sin
+     meter un segundo tono ajeno. */
+  --color-accent: #2563eb;
+  --color-accent-deep: #1e40af;
+  --color-accent-soft: #bfdbfe;
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.35), 0 10px 24px rgba(0, 0, 0, 0.45);
-  --shadow-lg: 0 8px 20px rgba(0, 0, 0, 0.45), 0 24px 56px rgba(0, 0, 0, 0.55);
-  --shadow-glow-primary: 0 0 0 1px rgba(0, 240, 255, 0.35), 0 0 20px -2px rgba(0, 240, 255, 0.55), 0 10px 30px -6px rgba(0, 240, 255, 0.4);
-  --shadow-glow-accent: 0 0 0 1px rgba(255, 46, 196, 0.32), 0 0 20px -2px rgba(255, 46, 196, 0.55), 0 10px 30px -6px rgba(255, 46, 196, 0.4);
+  /* Verde solo para "salió bien" — es semántico, no decorativo, así que se
+     queda; pero baja del verde neón a uno sobrio. */
+  --color-success: #22c55e;
+  --color-success-soft: #052e16;
+
+  /* Sombras neutras: negro puro, sin tinte de color. */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.6);
+  --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.55), 0 10px 24px rgba(0, 0, 0, 0.6);
+  --shadow-lg: 0 8px 20px rgba(0, 0, 0, 0.6), 0 24px 56px rgba(0, 0, 0, 0.7);
+
+  /* Los dos "glow" siguen existiendo porque 21 componentes los usan para
+     marcar hover y foco. Ya no son un resplandor de neón: ahora son un
+     anillo delgado del acento más una sombra negra. Siguen diciendo "esto
+     está activo" sin iluminar media pantalla. */
+  --shadow-glow-primary: 0 0 0 1px rgba(59, 130, 246, 0.55), 0 8px 24px -8px rgba(0, 0, 0, 0.8);
+  --shadow-glow-accent: 0 0 0 1px rgba(37, 99, 235, 0.55), 0 8px 24px -8px rgba(0, 0, 0, 0.8);
 }
 
 @theme inline {
@@ -51,9 +85,9 @@
   --color-accent-soft: var(--color-accent-soft);
   --color-success: var(--color-success);
   --color-success-soft: var(--color-success-soft);
-  --font-display: var(--font-orbitron), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-plex), ui-sans-serif, system-ui, sans-serif;
   --font-sans: var(--font-plex), ui-sans-serif, system-ui, sans-serif;
-  --font-precio: var(--font-rajdhani), ui-sans-serif, system-ui, sans-serif;
+  --font-precio: var(--font-plex), ui-sans-serif, system-ui, sans-serif;
   --shadow-elevated-sm: var(--shadow-sm);
   --shadow-elevated-md: var(--shadow-md);
   --shadow-elevated-lg: var(--shadow-lg);
@@ -68,18 +102,23 @@ body {
   font-feature-settings: "tnum" 1;
 }
 
+/* Los títulos ya no usan Orbitron (la tipografía angular "gamer"): eso era
+   parte de lo geométrico que el dueño pidió sacar. Ahora es la misma
+   familia del cuerpo, un poco más apretada — la jerarquía la da el tamaño y
+   el peso, no una fuente distinta. Para devolver Orbitron basta cambiar
+   --font-display allá arriba. */
 h1,
 h2,
 h3,
 h4 {
   font-family: var(--font-display);
   text-wrap: balance;
-  letter-spacing: 0.01em;
+  letter-spacing: -0.01em;
 }
 
 ::selection {
-  background: var(--color-accent-soft);
-  color: var(--color-surface-sunken);
+  background: var(--color-primary);
+  color: #ffffff;
 }
 
 :focus-visible {
@@ -88,110 +127,50 @@ h4 {
 }
 
 /* ---------------------------------------------------------------------
- * Capa FX cyberpunk — usada por src/components/fx/*.
- * Todo esto es puramente decorativo (aria-hidden en su uso), así que vive
- * acá como utilidades compartidas en vez de repetir keyframes por archivo.
+ * Utilidades compartidas (las usa src/components/**).
+ * Los nombres de clase se conservan a propósito aunque ya no describan un
+ * efecto de neón: renombrarlos obligaría a editar decenas de componentes
+ * sin cambiar nada de lo que se ve.
  * ------------------------------------------------------------------- */
 
-/* Panel de cristal translúcido con borde de neón — quieto en reposo (nada
-   gira solo, ver feedback anterior), y SOLO al pasar el mouse el borde
-   cobra vida: un conic-gradient cian/magenta que rota alrededor del
-   perímetro mientras dura el hover, más un glow que se intensifica. Al
-   salir del hover, se detiene y vuelve a quedar estático. El borde real es
-   un pseudo-elemento con 1.5px simulados por mask, así el interior mantiene
-   el backdrop-blur limpio sin que el gradiente se filtre al contenido. */
-@property --angulo {
-  syntax: "<angle>";
-  initial-value: 0deg;
-  inherits: false;
-}
-
-@keyframes borde-neon-giro {
-  to {
-    --angulo: 360deg;
-  }
-}
-
+/* Antes: cristal translúcido con un borde conic-gradient cian/magenta que
+   giraba al pasar el mouse. Ahora: superficie sólida con borde de 1px. Al
+   hover solo se aclara el borde — sin animación, sin gradiente, sin blur.
+   El backdrop-filter también se fue: sobre negro plano no aportaba nada y
+   costaba GPU en celulares. */
 .panel-hud {
   position: relative;
-  background: color-mix(in oklab, var(--color-surface) 78%, transparent);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: inherit;
-  isolation: isolate;
-  transition: box-shadow 0.4s ease;
-}
-
-.panel-hud::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: 1.5px;
-  background: conic-gradient(
-    from var(--angulo, 0deg),
-    var(--color-primary),
-    var(--color-accent),
-    var(--color-primary-soft),
-    var(--color-accent),
-    var(--color-primary)
-  );
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  mask-composite: exclude;
-  opacity: 0.35;
-  transition: opacity 0.35s ease;
-  pointer-events: none;
-  z-index: 1;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
 }
 
 .panel-hud:hover,
 .panel-hud[data-activo="true"] {
-  box-shadow: var(--shadow-glow-primary);
+  border-color: var(--color-border-strong);
 }
 
-.panel-hud:hover::before,
-.panel-hud[data-activo="true"]::before {
-  opacity: 1;
-  animation: borde-neon-giro 2.4s linear infinite;
+.panel-hud[data-activo="true"] {
+  border-color: var(--color-primary);
 }
 
-/* prefers-reduced-motion: el borde igual se intensifica al hover (avisa que
-   la tarjeta es interactiva) pero sin el giro — solo un fade, como pide
-   MotionConfig reducedMotion="user" en layout.tsx para el resto de la app. */
-@media (prefers-reduced-motion: reduce) {
-  .panel-hud:hover::before,
-  .panel-hud[data-activo="true"]::before {
-    animation: none;
-  }
-}
-
-.panel-hud > * {
-  position: relative;
-  z-index: 2;
-}
-
-/* Anillo de carga neón (ver neon-spinner.tsx) — mismo conic-gradient +
-   `--angulo` que .panel-hud, enmascarado a un anillo delgado en vez de un
-   borde de tarjeta. El `filter: drop-shadow` (no box-shadow) es a
-   propósito: box-shadow no sigue la forma del mask, drop-shadow sí. */
+/* Anillo de carga (ver neon-spinner.tsx). Sigue girando —es un indicador de
+   que algo está pasando, no decoración— pero en un solo color y sin el
+   drop-shadow de neón. */
 .spinner-neon {
-  --angulo: 0deg;
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: conic-gradient(
-    from var(--angulo, 0deg),
-    transparent 0deg,
-    var(--color-primary) 90deg,
-    var(--color-accent) 180deg,
-    transparent 270deg
-  );
-  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2.5px));
-  mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2.5px));
-  animation: borde-neon-giro 0.85s linear infinite;
-  filter: drop-shadow(0 0 3px var(--color-primary)) drop-shadow(0 0 7px color-mix(in oklab, var(--color-accent) 55%, transparent));
+  border: 2px solid var(--color-border-strong);
+  border-top-color: var(--color-primary);
+  animation: spinner-giro 0.75s linear infinite;
+}
+
+@keyframes spinner-giro {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -201,21 +180,20 @@ h4 {
   }
 }
 
-.texto-glow-primary {
-  text-shadow: 0 0 12px color-mix(in oklab, var(--color-primary) 65%, transparent), 0 0 32px color-mix(in oklab, var(--color-primary) 35%, transparent);
-}
-
+/* El glow de texto se eliminó (era text-shadow de neón). Las clases siguen
+   existiendo porque 8 componentes las usan; ahora no hacen nada visual,
+   así no hubo que editarlos. */
+.texto-glow-primary,
 .texto-glow-accent {
-  text-shadow: 0 0 12px color-mix(in oklab, var(--color-accent) 65%, transparent), 0 0 32px color-mix(in oklab, var(--color-accent) 35%, transparent);
+  text-shadow: none;
 }
 
-/* Precio estilo HUD/gamer: tipografía Rajdhani (más clara que Orbitron para
-   números), chip con borde de neón fijo — sin depender de .panel-hud, así
-   no hereda su glow de hover pensado para tarjetas completas. */
+/* Precios: misma tipografía que todo lo demás, con números tabulares para
+   que las columnas de montos queden alineadas. */
 .precio-gamer {
   font-family: var(--font-precio);
   font-weight: 700;
-  letter-spacing: 0.02em;
+  letter-spacing: 0;
   font-variant-numeric: tabular-nums;
 }
 
@@ -226,8 +204,7 @@ h4 {
 
 /* Textura de fondo de la franja — rayas diagonales tricolor MUY tenues
    (8% opacidad): se nota como "hay algo festivo ahí" sin competir con el
-   texto ni con el resto de la paleta cian/magenta del sitio. Estática
-   (sin animación) — es fondo, no protagonista. */
+   texto. Estática (sin animación) — es fondo, no protagonista. */
 .textura-fiestas-patrias {
   background-image: repeating-linear-gradient(
     135deg,
