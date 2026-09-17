@@ -4,7 +4,56 @@
 > arquitectura completo (todas las fases) vive en `README-ECOMMERCE-SEVELIN.md`, en el repo del POS
 > (`sevelin-pos-oficial`) — este documento es el estado de ESTE repo (`sevelin-tienda`) nada más.
 
-**Fecha:** 13-09-2026 · **Sesión de ajustes a la ficha de producto** (`src/app/productos/[sku]/page.tsx`,
+**Fecha:** 17-09-2026 · **Dos cambios grandes, pedidos por el dueño en la misma sesión.**
+
+### 1. Rediseño: negro plano + un solo acento azul
+Antes era cyberpunk/gamer estilo Razer/ROG (cian + magenta neón, glows, rejilla hexagonal de fondo,
+bordes que giraban al hover). El dueño pidió "un solo color oscuro, si es posible negro, sin esas
+líneas geométricas, solo el color y yap".
+
+- **Cómo se hizo, que es lo que importa para mantenerlo:** hay **224 usos** de `primary` y `accent`
+  repartidos por los componentes. **No se tocó ninguno** — se redefinieron los TOKENS en
+  `globals.css`. Para volver atrás o cambiar el acento otra vez, basta ese archivo.
+- `accent` deja de ser magenta y pasa a ser el mismo azul un punto más profundo. Se conserva el
+  token porque lo usan decenas de componentes; borrarlo obligaría a editarlos todos sin ganar nada.
+- Los `shadow-glow-*` pasan de resplandor de neón a un anillo de 1px + sombra negra. Mismos nombres
+  de clase (21 componentes los usan), sin editar ninguno.
+- `fondo-cinematico.tsx` tenía 5 capas decorativas (rejilla hexagonal ×2, piso synthwave, dos
+  resplandores, scanlines CRT y viñeta). Ahora pinta negro y nada más. **El componente no se borró:**
+  sigue montado en `layout.tsx`, listo si algún día se quiere una textura.
+- Fuera el marco HUD de esquinas del hero; "Sevelin // sistema en línea" → "Sevelin · Electrónica en
+  Arica".
+- **Una sola tipografía:** se van Orbitron y Rajdhani (las dos angulares tipo gamer). Todo usa IBM
+  Plex Sans, que ya estaba. Dos fuentes menos por visita.
+- **Quedan textos en MAYÚSCULAS por todo el sitio** — es lo que sobrevive del look gamer. No se
+  tocó porque el dueño no lo pidió y son decenas de archivos: preguntarle antes.
+
+### 2. Cotizador en el carrito (`supabase/35`)
+"Que el que selecciona sus productos, aparte de comprarlos, pueda cotizarlos y hacerlos en
+documento, para que las empresas o clientes hagan su cotización ellos mismos."
+
+- Botón **"📄 Cotizar estos productos"** en `/carrito`, junto a Compartir (no junto a "Ir a pagar":
+  las dos son formas de llevarse el carrito sin comprar todavía).
+- Formulario con nombre y correo obligatorios; razón social, RUT y giro **opcionales** (quien cotiza
+  también puede ser una persona armando un presupuesto).
+- **Neto + IVA 19% desglosados.** El neto se saca hacia atrás del precio final (÷ 1,19), redondeado
+  **por línea**, y el IVA sale como `total − neto`, nunca al revés: así el total es exactamente el
+  mismo que ve en la tienda y la suma cuadra al peso. Verificado contra la base.
+- **PDF que se descarga al instante** (`jspdf`, dependencia nueva, cargada con `import()` dinámico
+  solo al hacer clic — no pesa para nadie más). Con marca de agua **VENCIDA** si ya venció.
+- **Vigencia: hasta el final del día de emisión, hora de Chile.** El cálculo pasa por `Intl` con
+  `America/Santiago` a propósito: Vercel corre en UTC y cotizar a las 23:00 de Chile habría dado un
+  día de más. Probado en verano e invierno. El plazo es una constante
+  (`DIAS_VALIDEZ_COTIZACION`): para una empresa un día es corto y es probable que haya que subirlo.
+- **Los montos van CONGELADOS** en la tabla: un documento emitido no puede cambiar si mañana sube un
+  precio. **No reserva stock**, y la página y el PDF lo dicen con todas sus letras.
+- Correo opcional vía Resend. **Freno de tasa nuevo** (`crear-cotizacion`, 3/min y 15/día por IP):
+  el endpoint manda correo, y sin freno sirve de relay para spamear desde el dominio de Sevelin.
+- **Panel "📄 Cotizaciones" en el POS** (Página Web): quién cotizó, cuánto, si sigue vigente y cuánta
+  plata hay en cotizaciones vigentes sin revisar. Solo lectura + marcar como revisada.
+- `cotizaciones_web` nace **con RLS y cero políticas públicas**, verificado contra la base.
+
+**Sesión anterior — 13-09-2026, ajustes a la ficha de producto** (`src/app/productos/[sku]/page.tsx`,
 `src/components/galeria-producto.tsx` y los avisos de stock/pago) — 6 commits, todos en producción.
 **Nota: este SNAPSHOT llevaba desde el 01-09 sin actualizarse** — hubo cambios de otras sesiones
 (checkout, cuentas, servicios técnicos, etc., ver el SNAPSHOT del POS para el resumen) que no quedaron

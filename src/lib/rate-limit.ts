@@ -36,7 +36,7 @@ if (!redisConfigurado) {
 
 const redis = redisConfigurado ? Redis.fromEnv() : null;
 
-export type NombreLimite = 'autocompletar-direccion' | 'detalle-direccion' | 'cotizar-envio';
+export type NombreLimite = 'autocompletar-direccion' | 'detalle-direccion' | 'cotizar-envio' | 'crear-cotizacion';
 
 interface ConfigLimite {
   /** Ráfaga corta: frena un script que dispara muchas peticiones seguidas. */
@@ -69,6 +69,13 @@ const CONFIGURACION: Record<NombreLimite, ConfigLimite> = {
   'detalle-direccion': { rafagaMax: 10, rafagaVentana: '10 s', diarioMax: 30 },
   // Se dispara con debounce (600ms) mientras se edita dirección/cantidades.
   'cotizar-envio': { rafagaMax: 15, rafagaVentana: '10 s', diarioMax: 40 },
+  /* Cotizaciones (supabase/35). Acá el costo que se frena no es Google: es
+     que el endpoint MANDA UN CORREO a la dirección que le pasen. Sin freno
+     sirve de relay para spamear a un tercero desde el dominio de Sevelin, y
+     eso quema la reputación del remitente en Resend. Una persona real
+     cotiza una o dos veces; 15 al día por IP deja margen para una oficina
+     con IP compartida sin dejar margen para abusar. */
+  'crear-cotizacion': { rafagaMax: 3, rafagaVentana: '60 s', diarioMax: 15 },
 };
 
 const limitadores = new Map<NombreLimite, { rafaga: Ratelimit; diario: Ratelimit }>();

@@ -9,6 +9,7 @@ import { formatoCLP } from "@/lib/formato";
 import { HAY_RECARGO, recargoTotal } from "@/lib/precios-medio-pago";
 import { useCarrito } from "@/context/carrito-context";
 import { AvisoPagoTarjeta } from "@/components/aviso-pago-tarjeta";
+import { ModalCotizar } from "@/components/modal-cotizar";
 
 export default function CarritoPage() {
   const {
@@ -30,6 +31,8 @@ export default function CarritoPage() {
   // portapapeles, así que sin este botón no había forma de copiarlo a mano
   // después de compartirlo una vez.
   const [linkCompartido, setLinkCompartido] = useState<string | null>(null);
+  // Cotización (supabase/35): el cliente se genera su propio documento
+  const [cotizando, setCotizando] = useState(false);
 
   const todosSeleccionados = items.length > 0 && items.every((item) => item.seleccionado);
 
@@ -237,6 +240,18 @@ export default function CarritoPage() {
           </div>
 
           <div className="mt-4 flex flex-col gap-2 border-t border-border pt-4">
+            {/* Cotizar (supabase/35). Va junto a "Compartir", no junto a "Ir
+                a pagar": las dos son formas de LLEVARSE el carrito sin
+                comprarlo todavía, y competir con el botón de pago sería
+                darle una salida a alguien que ya venía decidido. */}
+            <button
+              type="button"
+              onClick={() => setCotizando(true)}
+              disabled={itemsSeleccionados.length === 0}
+              className="w-full rounded-full border border-border px-4 py-2.5 text-sm font-medium text-ink-soft transition-colors hover:border-border-strong hover:text-ink disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              📄 Cotizar estos productos
+            </button>
             <button
               type="button"
               onClick={compartirCarrito}
@@ -297,6 +312,12 @@ export default function CarritoPage() {
           </div>
         )}
       </AnimatePresence>
+
+      <ModalCotizar
+        items={itemsSeleccionados}
+        abierto={cotizando}
+        onCerrar={() => setCotizando(false)}
+      />
     </main>
   );
 }
