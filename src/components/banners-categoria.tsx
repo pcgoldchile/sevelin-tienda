@@ -23,9 +23,21 @@ const CATEGORIAS_DESTACADAS = [
   { nombre: "Periféricos", etiqueta: "Periféricos" },
 ];
 
+// Cuando hay varios productos empatados en el precio más bajo de una
+// categoría (22-09-2026: 7 monitores a $45.000), esto elige cuál mostrar
+// — el dueño prefirió el HP V193b al AOC que salía. Es solo una
+// preferencia DENTRO del empate: si deja de estar empatado (sube de
+// precio o se agota), productoMasBaratoPorCategoria vuelve sola al más
+// barato real. Se edita acá a mano, mismo criterio que el resto de este
+// archivo (sin panel de gestión, fuera de alcance).
+const PRODUCTO_PREFERIDO_EN_EMPATE: Record<string, string> = {
+  Monitores: "monitor-hp-19-v193b-reacondicionado-238",
+};
+
 export async function BannersCategoria() {
   const productos = await productoMasBaratoPorCategoria(
-    CATEGORIAS_DESTACADAS.map((c) => c.nombre)
+    CATEGORIAS_DESTACADAS.map((c) => c.nombre),
+    PRODUCTO_PREFERIDO_EN_EMPATE
   ).catch(() => ({}) as Record<string, ProductoWeb>);
 
   return (

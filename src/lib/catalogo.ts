@@ -230,12 +230,27 @@ export async function listarMasVendidos(limite = 8): Promise<ProductoWeb[]> {
  * de la categoría ("Desde $X") y siempre apunta a algo que existe hoy.
  *
  * Se hace una consulta por categoría en vez de traer el catálogo entero y
- * agrupar en memoria: son 3 categorías y cada consulta pide UNA fila
- * (`limit(1)` sobre un índice de precio), lo que pesa muchísimo menos que
- * traer los ~65 productos publicados solo para quedarse con 3.
+ * agrupar en memoria: son 3 categorías y cada consulta pide unas pocas
+ * filas (`limit(8)` sobre un índice de precio), lo que pesa muchísimo
+ * menos que traer los ~65 productos publicados solo para quedarse con 3.
+ *
+ * EMPATES DE PRECIO (22-09-2026): en "Monitores" hay 7 productos a
+ * $45.000 a la vez — un `limit(1)` sin segundo criterio de orden deja el
+ * desempate en manos de Postgres, que no lo garantiza estable: el banner
+ * podía mostrar un monitor distinto de una consulta a otra sin que nadie
+ * hubiera cambiado nada. Ahora se piden los primeros 8 (ordenados por
+ * precio y, para que el empate sea siempre el mismo, por SKU) y se elige
+ * a mano entre los que están empatados en el precio más bajo.
+ *
+ * `preferidos` deja elegir CUÁL de los empatados mostrar (pedido del
+ * dueño: prefería el monitor HP V193b al AOC que salía). Es solo una
+ * preferencia dentro del empate — si ese producto sube de precio, se
+ * agota o deja de estar empatado, el banner vuelve solo al más barato
+ * real sin que nadie tenga que acordarse de tocar esto.
  */
 export async function productoMasBaratoPorCategoria(
-  categorias: string[]
+  categorias: string[],
+  preferidos: Record<string, string> = {}
 ): Promise<Record<string, ProductoWeb>> {
   const resultados = await Promise.all(
     categorias.map(async (categoria) => {
@@ -247,13 +262,20 @@ export async function productoMasBaratoPorCategoria(
         .gt('stock_web', 0)
         .eq('categoria', categoria)
         .order('precio_web', { ascending: true })
-        .limit(1)
-        .maybeSingle();
+        .order('sku', { ascending: true })
+        .limit(8);
 
       // Una categoría vacía no es un error: el banner simplemente se
       // muestra sin foto ni precio, como ya hacía antes.
-      if (error) return null;
-      return data ? ([categoria, data] as const) : null;
+      if (error || !data || data.length === 0) return null;
+
+      const precioMinimo = data[0].precio_web;
+      const empatados = data.filter((p) => p.precio_web === precioMinimo);
+      const preferido = preferidos[categoria];
+      const elegido =
+        (preferido && empatados.find((p) => p.sku === preferido)) ?? empatados[0];
+
+      return [categoria, elegido] as const;
     })
   );
 
