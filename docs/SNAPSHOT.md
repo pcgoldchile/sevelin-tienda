@@ -4,6 +4,33 @@
 > arquitectura completo (todas las fases) vive en `README-ECOMMERCE-SEVELIN.md`, en el repo del POS
 > (`sevelin-pos-oficial`) — este documento es el estado de ESTE repo (`sevelin-tienda`) nada más.
 
+**Fecha:** 22-09-2026 · **Dos bugs de direcciones de producto, encontrados probando contra producción.**
+
+### El SKU es la URL, y no se estaba decodificando
+Un producto tenía el código del escáner como SKU (`TECMOU150 E4U`, **con espacio**) y su ficha daba
+**404** aunque estuviera publicada y con stock 9.
+
+**La causa:** Next entrega el parámetro de ruta **SIN decodificar**. Con
+`/productos/TECMOU150%20E4U` el handler recibe literalmente `"TECMOU150%20E4U"`, que no existe en la
+base. Comprobado instrumentando la app en local, no deducido.
+
+- **Dato corregido en el POS:** el código de barras volvió a su campo (`codigo_barras`) y el producto
+  quedó con SKU `TECMOU150-E4U`. Era el único de 110 publicados con un carácter que rompe una URL.
+- **Código:** `src/lib/sku-url.ts` con `skuDesdeRuta()` (tolerante a secuencias mal formadas, que si
+  no darían 500 en vez de 404) y `rutaDeSku()`. Aplicado en `/productos/[sku]`,
+  `/pedidos-por-encargo/[sku]`, la API interna, el sitemap, el canonical, el OpenGraph, el JSON-LD y
+  las tarjetas del catálogo — todas armaban el enlace con el SKU crudo.
+
+### Los 18 encargos del sitemap apuntaban a una ruta que los rechaza
+`sitemap.ts` publicaba **todos** los productos como `/productos/<sku>`, incluidos los de encargo. Pero
+esa ficha los rechaza a propósito (`notFound`), así que eran **18 URLs muertas entregadas a Google**.
+Ahora cada uno va a `/pedidos-por-encargo/<sku>`.
+
+> ⚠️ **Regla que sale de esto:** el SKU viene del POS y lo escribe una persona. Nunca meterlo crudo en
+> una URL, ni leerlo de una ruta sin pasar por `lib/sku-url`.
+
+---
+
 **Fecha:** 17-09-2026 · **Dos cambios grandes, pedidos por el dueño en la misma sesión.**
 
 ### 1. Rediseño: negro plano + un solo acento azul
