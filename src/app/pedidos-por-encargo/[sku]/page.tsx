@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { after } from "next/server";
 import { obtenerEncargoPorSku } from "@/lib/encargos";
+import { skuDesdeRuta } from "@/lib/sku-url";
 import { formatoCLP } from "@/lib/formato";
 import { sanitizarDescripcionHtml } from "@/lib/sanitizar-html";
 import { registrarVistaProducto } from "@/lib/eventos-web";
@@ -27,7 +28,7 @@ export default async function FichaEncargo({ params }: PropsPagina) {
 
   let producto: Awaited<ReturnType<typeof obtenerEncargoPorSku>>;
   try {
-    producto = await obtenerEncargoPorSku(sku);
+    producto = await obtenerEncargoPorSku(skuDesdeRuta(sku));
   } catch (err) {
     console.error("[FichaEncargo] No se pudo cargar el producto:", err instanceof Error ? err.message : err);
     return (

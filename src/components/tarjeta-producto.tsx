@@ -12,6 +12,7 @@ import { useCarrito } from "@/context/carrito-context";
 import { useToast } from "@/context/toast-context";
 import { EtiquetaProductoBadge } from "@/components/etiqueta-producto-badge";
 import { avisoUrgenciaStock } from "@/lib/urgencia-stock";
+import { rutaDeSku } from "@/lib/sku-url";
 import type { ProductoWeb } from "@/lib/tipos";
 
 // Confetti cian/magenta al agregar al carrito — un pequeño "loot get" gamer.
@@ -58,9 +59,11 @@ export function TarjetaProducto({ producto }: { producto: ProductoWeb }) {
      respondía 404. Bug real reportado el 10-09-2026, con las 18 tarjetas
      de video recién publicadas — ninguna se podía abrir. La misma
      distinción ya existía en acciones-producto.tsx; faltaba acá. */
+  /* El SKU se codifica: es la dirección pública del producto y puede traer
+     espacios o tildes, que sin escapar rompen el enlace (ver lib/sku-url). */
   const rutaFicha = producto.es_pedido_encargo
-    ? `/pedidos-por-encargo/${producto.sku}`
-    : `/productos/${producto.sku}`;
+    ? `/pedidos-por-encargo/${rutaDeSku(producto.sku)}`
+    : `/productos/${rutaDeSku(producto.sku)}`;
   const topeCantidad = producto.es_pedido_encargo ? 99 : producto.stock_web;
 
   function cantidadEscrita() {

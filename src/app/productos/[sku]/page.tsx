@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { after } from "next/server";
 import { obtenerProductoPorSku, productosRelacionados } from "@/lib/catalogo";
+import { skuDesdeRuta, rutaDeSku } from "@/lib/sku-url";
 import { formatoCLP } from "@/lib/formato";
 import { HAY_RECARGO, precioConRecargo } from "@/lib/precios-medio-pago";
 import { sanitizarDescripcionHtml } from "@/lib/sanitizar-html";
@@ -39,7 +40,7 @@ interface PropsPagina {
  */
 export async function generateMetadata({ params }: PropsPagina): Promise<Metadata> {
   const { sku } = await params;
-  const producto = await obtenerProductoPorSku(sku).catch(() => null);
+  const producto = await obtenerProductoPorSku(skuDesdeRuta(sku)).catch(() => null);
   if (!producto || producto.es_pedido_encargo) return {};
 
   // meta_titulo_web/meta_descripcion_web (opcionales, a mano o con el botón
@@ -57,11 +58,11 @@ export async function generateMetadata({ params }: PropsPagina): Promise<Metadat
   return {
     title: tituloSeo,
     description: descripcionPlana,
-    alternates: { canonical: `/productos/${producto.sku}` },
+    alternates: { canonical: `/productos/${rutaDeSku(producto.sku)}` },
     openGraph: {
       title: tituloSeo,
       description: descripcionPlana,
-      url: `/productos/${producto.sku}`,
+      url: `/productos/${rutaDeSku(producto.sku)}`,
       images: imagen ? [{ url: imagen, width: 1000, height: 1000, alt: producto.nombre }] : undefined,
     },
     twitter: {
@@ -79,7 +80,7 @@ export default async function FichaProducto({ params }: PropsPagina) {
   // muestra un estado de error en vez de tumbar la página con un 500.
   let producto: Awaited<ReturnType<typeof obtenerProductoPorSku>>;
   try {
-    producto = await obtenerProductoPorSku(sku);
+    producto = await obtenerProductoPorSku(skuDesdeRuta(sku));
   } catch (err) {
     console.error("[FichaProducto] No se pudo cargar el producto:", err instanceof Error ? err.message : err);
     return (
@@ -122,7 +123,7 @@ export default async function FichaProducto({ params }: PropsPagina) {
     description: producto.descripcion_web ? textoPlanoDesdeHtml(producto.descripcion_web) : producto.nombre,
     offers: {
       '@type': 'Offer',
-      url: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://sevelin.cl'}/productos/${producto.sku}`,
+      url: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://sevelin.cl'}/productos/${rutaDeSku(producto.sku)}`,
       priceCurrency: 'CLP',
       price: producto.precio_web,
       availability: producto.stock_web > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
