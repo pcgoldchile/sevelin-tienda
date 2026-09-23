@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { anotarAviso } from '@/lib/avisos-producto';
-import { obtenerProductoPorSku } from '@/lib/catalogo';
+import { obtenerProductoPublicado } from '@/lib/catalogo';
 
 /**
  * POST /api/avisos — "avísame cuando llegue".
@@ -37,7 +37,10 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const producto = await obtenerProductoPorSku(sku).catch(() => null);
+  /* Publicado, con o sin stock: este aviso existe PARA los agotados.
+     Con la función estricta respondía 404 'Producto no encontrado'
+     exactamente en el único caso para el que fue escrito. */
+  const producto = await obtenerProductoPublicado(sku).catch(() => null);
   if (!producto) return NextResponse.json({ error: 'Producto no encontrado' }, { status: 404 });
 
   try {

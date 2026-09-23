@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { after } from "next/server";
-import { obtenerProductoPorSku, productosRelacionados } from "@/lib/catalogo";
+import { obtenerProductoPublicado, productosRelacionados } from "@/lib/catalogo";
 import { skuDesdeRuta, rutaDeSku } from "@/lib/sku-url";
 import { formatoCLP } from "@/lib/formato";
 import { HAY_RECARGO, precioConRecargo } from "@/lib/precios-medio-pago";
@@ -34,13 +34,13 @@ interface PropsPagina {
  * sesión de SEO): Google las veía "iguales" entre sí, y compartir un link
  * de un producto puntual en WhatsApp/Instagram mostraba el logo genérico
  * del sitio en vez de la foto/precio real. `generateMetadata` corre en el
- * servidor ANTES de renderizar la página — mismo `obtenerProductoPorSku`
+ * servidor ANTES de renderizar la página — mismo `obtenerProductoPublicado`
  * que ya usa el componente, sin pedirlo dos veces gracias al `fetch`
  * cacheado de Next para la misma request.
  */
 export async function generateMetadata({ params }: PropsPagina): Promise<Metadata> {
   const { sku } = await params;
-  const producto = await obtenerProductoPorSku(skuDesdeRuta(sku)).catch(() => null);
+  const producto = await obtenerProductoPublicado(skuDesdeRuta(sku)).catch(() => null);
   if (!producto || producto.es_pedido_encargo) return {};
 
   // meta_titulo_web/meta_descripcion_web (opcionales, a mano o con el botón
@@ -78,9 +78,9 @@ export default async function FichaProducto({ params }: PropsPagina) {
 
   // Mismo criterio que Home/Productos: si Supabase Web no responde, se
   // muestra un estado de error en vez de tumbar la página con un 500.
-  let producto: Awaited<ReturnType<typeof obtenerProductoPorSku>>;
+  let producto: Awaited<ReturnType<typeof obtenerProductoPublicado>>;
   try {
-    producto = await obtenerProductoPorSku(skuDesdeRuta(sku));
+    producto = await obtenerProductoPublicado(skuDesdeRuta(sku));
   } catch (err) {
     console.error("[FichaProducto] No se pudo cargar el producto:", err instanceof Error ? err.message : err);
     return (
@@ -93,6 +93,10 @@ export default async function FichaProducto({ params }: PropsPagina) {
   // criterio de "sección aparte" que el resto del catálogo (ver
   // src/app/pedidos-por-encargo/[sku]/page.tsx).
   if (!producto || producto.es_pedido_encargo) notFound();
+
+  /* Agotado de verdad: sin unidades, sin reposición anunciada y sin ser
+     encargo. Los `por_llegar` NO entran acá: esos sí se pueden reservar. */
+  const agotado = !producto.por_llegar && producto.stock_web <= 0;
 
   // Relacionados: mismo criterio de resiliencia que el resto de la página
   // — si falla, la ficha se muestra igual, solo sin esa sección.
@@ -291,9 +295,25 @@ export default async function FichaProducto({ params }: PropsPagina) {
             )}
           </div>
 
-          {/* Cuadro de compra bajo el precio, en celular y en escritorio. */}
+          {/* Cuadro de compra bajo el precio, en celular y en escritorio.
+
+              AGOTADO (23-09-2026): desde que la ficha se muestra también sin
+              stock, acá NO puede ir el cuadro de compra. Su botón "Agregar al
+              carrito" nunca estuvo bloqueado por stock —no hacía falta, porque
+              la ficha devolvía 404— así que dejarlo habría permitido llenar el
+              carrito con algo que el checkout después rechaza. En su lugar va
+              el cartel de agotado, y justo debajo el "Avísame cuando llegue"
+              que ya estaba escrito y nunca fue alcanzable. */}
           <div>
-            {producto.precio_a_consultar ? (
+            {agotado ? (
+              <div className="rounded-2xl border border-border bg-surface-sunken p-4">
+                <p className="text-sm font-semibold text-ink">Agotado por ahora</p>
+                <p className="mt-1 text-sm text-ink-soft">
+                  Este producto no está disponible en este momento. Déjanos tu correo aquí abajo y
+                  te avisamos apenas vuelva a haber.
+                </p>
+              </div>
+            ) : producto.precio_a_consultar ? (
               <CotizarWhatsapp producto={producto} />
             ) : (
               <AccionesProducto producto={producto} />

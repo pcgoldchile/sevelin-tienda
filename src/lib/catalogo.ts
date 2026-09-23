@@ -52,6 +52,55 @@ export async function obtenerProductoPorSku(sku: string): Promise<ProductoWeb | 
 }
 
 /**
+ * El mismo producto, pero SIN exigir que se pueda vender hoy (23-09-2026).
+ *
+ * POR QUÉ SON DOS FUNCIONES Y NO UN PARÁMETRO
+ *   `obtenerProductoPorSku` la usan el CHECKOUT, la cotización de envío,
+ *   el carrito compartido y los recordatorios: ahí un producto agotado
+ *   tiene que seguir siendo invisible, o se podría pagar algo que no hay.
+ *   Relajar esa función habría abierto esa puerta en seis lugares de una.
+ *
+ *   Esta otra es para MOSTRAR: la ficha, el aviso "avísame cuando llegue"
+ *   y la API pública. Un producto agotado sí tiene página — con su cartel
+ *   de Agotado y sin cuadro de compra.
+ *
+ * EL PROBLEMA QUE RESUELVE
+ *   Hasta hoy la ficha de un producto con stock 0 devolvía 404. Eso dejaba
+ *   20 productos publicados fuera del feed de Google y de Meta, rompía los
+ *   links que ya estaban indexados, y —lo peor— hacía inalcanzable el
+ *   formulario "Avísame cuando llegue", que está programado para aparecer
+ *   exactamente cuando el stock es 0. La tabla de avisos tenía 0 filas.
+ */
+export async function obtenerProductoPublicado(sku: string): Promise<ProductoWeb | null> {
+  const { data, error } = await supabaseWeb
+    .from('productos_web')
+    .select('*')
+    .eq('sku', sku)
+    .eq('publicado_web', true)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+/**
+ * Todo lo publicado que no sea pedido por encargo, haya stock o no.
+ * La usa el sitemap: un agotado con ficha viva debe poder indexarse, que
+ * es justamente lo que lo mantiene en Google mientras vuelve a haber.
+ */
+export async function listarPublicados(): Promise<ProductoWeb[]> {
+  const { data, error } = await supabaseWeb
+    .from('productos_web')
+    .select('*')
+    .eq('publicado_web', true)
+    .eq('es_pedido_encargo', false)
+    .order('nombre', { ascending: true });
+
+  if (error) throw new Error(error.message);
+  return data || [];
+}
+
+/**
  * Productos puntuales por SKU exacto, para los banners de categoría del home
  * (ver banners-categoria.tsx) — no es un buscador genérico, solo resuelve la
  * foto real de 3 productos fijos elegidos a mano. Devuelve un mapa por SKU

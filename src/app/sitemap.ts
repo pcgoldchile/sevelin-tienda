@@ -1,5 +1,5 @@
 import type { MetadataRoute } from 'next';
-import { listarCatalogo } from '@/lib/catalogo';
+import { listarPublicados } from '@/lib/catalogo';
 import { listarEncargos } from '@/lib/encargos';
 import { rutaDeSku } from '@/lib/sku-url';
 
@@ -30,7 +30,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   let productos: MetadataRoute.Sitemap = [];
   try {
-    const [catalogo, encargos] = await Promise.all([listarCatalogo(), listarEncargos()]);
+    /* listarPublicados y no listarCatalogo: desde el 23-09-2026 la ficha
+       de un agotado sí existe, y mantenerla indexada es lo que conserva
+       su lugar en Google mientras vuelve a haber stock. */
+    const [catalogo, encargos] = await Promise.all([listarPublicados(), listarEncargos()]);
     /* Cada producto va a SU ruta. Los de encargo viven en
        /pedidos-por-encargo: la ficha de /productos los rechaza a propósito
        (notFound), así que mandarlos ahí publicaba 18 URLs muertas en el

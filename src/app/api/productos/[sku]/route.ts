@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { obtenerProductoPorSku } from '@/lib/catalogo';
+import { obtenerProductoPublicado } from '@/lib/catalogo';
 import { skuDesdeRuta } from '@/lib/sku-url';
 
 // GET /api/productos/:sku — ficha de un producto (README sección 5).
@@ -8,7 +8,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ sku
   try {
     // Next entrega el parámetro SIN decodificar: un SKU con espacio llega
     // como "TECMOU150%20E4U" y no calzaría con la base (ver lib/sku-url).
-    const producto = await obtenerProductoPorSku(skuDesdeRuta(sku));
+    const producto = await obtenerProductoPublicado(skuDesdeRuta(sku));
     if (!producto) return NextResponse.json({ error: 'Producto no encontrado' }, { status: 404 });
     return NextResponse.json(producto);
   } catch (err) {
