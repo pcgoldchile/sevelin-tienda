@@ -115,7 +115,11 @@ export function DescargarCotizacion({
         // Un nombre largo se parte en varias líneas; si ya no cabe en la
         // página, se abre otra y se repite la cabecera (sin esto, una
         // cotización de 20 productos se cortaba a la mitad).
-        const nombreCortado = doc.splitTextToSize(l.nombre, xCant - MARGEN - 6) as string[];
+        // La fuente debe ser la misma con que se dibuja (9 normal); si no, se mide con
+        // la del último texto y el nombre se pasa de ancho y tapa la cantidad.
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "normal");
+        const nombreCortado = doc.splitTextToSize(l.nombre, xCant - MARGEN - 16) as string[];
         const alto = Math.max(6, nombreCortado.length * 4.5 + 2);
         if (y + alto > ALTO_PAGINA - 40) {
           doc.addPage();
