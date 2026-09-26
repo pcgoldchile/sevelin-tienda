@@ -4,7 +4,39 @@
 > arquitectura completo (todas las fases) vive en `README-ECOMMERCE-SEVELIN.md`, en el repo del POS
 > (`sevelin-pos-oficial`) — este documento es el estado de ESTE repo (`sevelin-tienda`) nada más.
 
-**Fecha:** 22-09-2026 · **Dos bugs de direcciones de producto, encontrados probando contra producción.**
+**Fecha:** 26-09-2026 · **Auditoría de Salud: 5 de los 7 errores de la tienda venían de `next dev`, no de clientes.**
+
+### Salud de la tienda = solo producción
+`engancharConsoleError()` guardaba en la base web (la de producción) **todo** `console.error` del
+servidor, también en `next dev`. Además, `next dev` reenvía los errores del navegador con el prefijo
+`[browser]`. Así llegaron a Salud los 4 `eval() is not supported` (aviso de React en modo desarrollo)
+y el `522` del Home del 23-09. Los dos están en `.next/dev/logs/next-development.log` del PC del
+dueño, 1 a 2 minutos antes de cada commit.
+- `registrarErrorSalud()` ya no registra con `NODE_ENV !== 'production'` ni durante `next build`
+  (`NEXT_PHASE`).
+- Si Supabase responde con la página HTML de Cloudflare, se guarda su título
+  (`[página de error: supabase.co | 522: Connection timed out]`), no 500 letras de HTML.
+- Los 2 `useCarrito debe usarse dentro de <CarritoProvider>` del 21-09 no se pudieron atribuir: el
+  log de dev ya se había sobrescrito. En producción no puede pasar, porque el provider envuelve todo
+  el layout. **Si vuelve a aparecer desde ahora, es real.**
+
+### La Home ya no cachea una versión rota
+Con Supabase caído, el `catch` de la Home mostraba "revisa `SUPABASE_WEB_URL` /
+`SUPABASE_WEB_SERVICE_ROLE_KEY"` (nombres de variables, a clientes). Como la Home es ISR de 60 s,
+**esa versión rota quedaba cacheada**. Ahora, fuera del build, el error se relanza: Next sigue
+sirviendo la última Home buena y reintenta en la próxima visita (comportamiento documentado de ISR).
+Solo durante `next build`, donde no hay Home anterior, se muestra un aviso, ahora sin variables.
+- **Verificado con el build de producción real**, con Supabase apuntado a un puerto muerto: la
+  regeneración se intentó y falló, y la visita siguiente mostró la misma Home con sus 16 productos.
+- `process.env.NEXT_PHASE` queda como lectura en tiempo de ejecución en el código compilado
+  (comprobado en `.next/server`). No se congela en el build.
+
+> ⚠️ `/por-llegar` y `/pedidos-por-encargo` (también ISR) siguen atrapando el error y cachean 60 s un
+> "no disponible" durante una caída. El mensaje es amable y no tiene variables, así que se dejaron así.
+
+---
+
+**22-09-2026** · **Dos bugs de direcciones de producto, encontrados probando contra producción.**
 
 ### El SKU es la URL, y no se estaba decodificando
 Un producto tenía el código del escáner como SKU (`TECMOU150 E4U`, **con espacio**) y su ficha daba

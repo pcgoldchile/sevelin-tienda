@@ -38,9 +38,19 @@ export interface ErrorSalud {
   detalle?: string | null;
 }
 
+/** Supabase caído responde con la página HTML de Cloudflare: se guarda su título, no 500 letras de HTML. */
+function resumirPaginaHtml(texto: string): string {
+  const inicio = texto.search(/<!DOCTYPE html|<html[\s>]/i);
+  if (inicio === -1) return texto;
+  const titulo = texto.slice(inicio).match(/<title>([^<]*)<\/title>/i)?.[1]?.trim();
+  return `${texto.slice(0, inicio)}[página de error: ${titulo || 'sin título'}]`;
+}
+
 export async function registrarErrorSalud(e: ErrorSalud): Promise<void> {
+  // `next dev` y los build locales usan la base de producción: sus errores no los vio ningún cliente.
+  if (process.env.NODE_ENV !== 'production' || process.env.NEXT_PHASE === 'phase-production-build') return;
   if (registrando) return;
-  const mensaje = enmascararSecretos(e.mensaje || 'Error sin mensaje').slice(0, 500);
+  const mensaje = enmascararSecretos(resumirPaginaHtml(e.mensaje || 'Error sin mensaje')).slice(0, 500);
   const clave = `${e.ruta || ''}|${mensaje}`;
   const ahora = Date.now();
   if ((ULTIMO_REGISTRO.get(clave) || 0) > ahora - VENTANA_MS) return;

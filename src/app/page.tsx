@@ -15,11 +15,6 @@ export const revalidate = 60;
 const CANTIDAD_DESTACADOS = 8;
 
 export default async function Home() {
-  /* Si Supabase Web todavía no está configurado (o tiene un problema
-     transitorio), se muestra la sección de destacados vacía en vez de
-     tumbar la página completa con un error 500 — tanto en producción como
-     al compilar (`next build` prerenderiza esta página, y sin credenciales
-     reales fallaría el build entero sin este manejo). */
   /* "Destacados" = los más vendidos según el POS (`unidades_vendidas`, que
      el POS empuja vía POST /api/sync/mas-vendidos). Antes eran simplemente
      los 8 primeros del catálogo por orden alfabético, que no es un
@@ -30,6 +25,9 @@ export default async function Home() {
     destacados = await listarMasVendidos(CANTIDAD_DESTACADOS);
   } catch (err) {
     console.error("[Home] No se pudo cargar el catálogo:", err instanceof Error ? err.message : err);
+    // Relanzar hace que ISR siga sirviendo la última Home buena; atrapado, cacheaba una Home rota.
+    // En el build no hay Home anterior, así que ahí se muestra el aviso.
+    if (process.env.NEXT_PHASE !== "phase-production-build") throw err;
     errorCatalogo = true;
   }
 
@@ -59,9 +57,7 @@ export default async function Home() {
 
         {errorCatalogo ? (
           <p className="mt-10 text-ink-soft">
-            El catálogo no está disponible en este momento. Si esto persiste, revisa
-            <code className="mx-1 rounded bg-surface-sunken px-1">SUPABASE_WEB_URL</code> /
-            <code className="mx-1 rounded bg-surface-sunken px-1">SUPABASE_WEB_SERVICE_ROLE_KEY</code>.
+            Los destacados no están disponibles en este momento. Vuelve a intentarlo en unos minutos.
           </p>
         ) : destacados.length === 0 ? (
           <p className="mt-10 text-ink-soft">
