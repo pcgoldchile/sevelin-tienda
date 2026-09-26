@@ -12,4 +12,4 @@
  * (`<BannerFiestasPatrias />`) desaparece solo, no hace falta tocar nada
  * más — ver src/app/layout.tsx.
  */
-export const FIESTAS_PATRIAS_ACTIVO = true;
+export const FIESTAS_PATRIAS_ACTIVO = false;
