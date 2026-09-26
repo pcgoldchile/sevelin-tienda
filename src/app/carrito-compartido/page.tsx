@@ -1,6 +1,9 @@
 import { obtenerProductoPorSku } from "@/lib/catalogo";
 import { obtenerCarritoCompartido } from "@/lib/carritos-web";
+import Link from "next/link";
+import { rutaDeSku } from "@/lib/sku-url";
 import { AgregarCarritoCompartido } from "./agregar-carrito-compartido";
+import { MiniaturaAmpliable } from "./miniatura-ampliable";
 
 interface Props {
   searchParams: Promise<{ t?: string }>;
@@ -61,11 +64,19 @@ export default async function CarritoCompartido({ searchParams }: Props) {
       {disponibles.length > 0 && (
         <ul className="mt-6 flex flex-col gap-3">
           {disponibles.map(({ solicitado, producto }) => (
-            <li key={solicitado.sku} className="flex items-center justify-between rounded-xl bg-surface p-3 shadow-elevated-md">
-              <span className="text-sm font-medium text-ink">
+            <li key={solicitado.sku} className="flex items-center gap-3 rounded-xl bg-surface p-3 shadow-elevated-md">
+              <MiniaturaAmpliable imagenes={producto!.imagen_urls ?? []} nombre={producto!.nombre} />
+              <Link
+                href={
+                  producto!.es_pedido_encargo
+                    ? `/pedidos-por-encargo/${rutaDeSku(producto!.sku)}`
+                    : `/productos/${rutaDeSku(producto!.sku)}`
+                }
+                className="min-w-0 flex-1 text-sm font-medium text-ink hover:text-accent hover:underline"
+              >
                 {producto!.nombre} × {Math.min(solicitado.cantidad, producto!.stock_web)}
-              </span>
-              <span className="text-sm text-ink-soft tabular-nums">
+              </Link>
+              <span className="shrink-0 text-sm text-ink-soft tabular-nums">
                 {(producto!.precio_web * Math.min(solicitado.cantidad, producto!.stock_web)).toLocaleString("es-CL", {
                   style: "currency",
                   currency: "CLP",
