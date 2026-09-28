@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LinkPreferenciasCookies } from "@/components/aviso-cookies";
 
 export function Footer() {
   const whatsapp = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER;
@@ -38,6 +39,9 @@ export function Footer() {
             </li>
             <li>
               <Link href="/privacidad" className="transition-colors hover:text-accent">Política de Privacidad</Link>
+            </li>
+            <li>
+              <LinkPreferenciasCookies className="text-left transition-colors hover:text-accent" />
             </li>
           </ul>
         </div>

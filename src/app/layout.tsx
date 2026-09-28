@@ -13,6 +13,7 @@ import { WhatsappFlotante } from "@/components/whatsapp-flotante";
 import { FondoCinematico } from "@/components/fx/fondo-cinematico";
 import { VisitTracker } from "@/components/visit-tracker";
 import { MetaPixel } from "@/components/meta-pixel";
+import { AvisoCookies } from "@/components/aviso-cookies";
 
 // UNA SOLA TIPOGRAFÍA (rediseño 17-09-2026). Antes eran tres: Orbitron para
 // títulos y Rajdhani para precios, las dos angulares tipo Razer/ROG — parte
@@ -102,6 +103,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
                 <div id="contenido">{children}</div>
                 <Footer />
                 <WhatsappFlotante />
+                <AvisoCookies />
               </CarritoProvider>
             </ToastProvider>
           </SesionProvider>

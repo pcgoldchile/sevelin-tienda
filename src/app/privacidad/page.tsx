@@ -50,6 +50,12 @@ export default function Privacidad() {
               Si llegas al pago y no terminas la compra: el correo, el nombre y el teléfono que alcanzaste a
               escribir, junto con los productos de tu carrito.
             </li>
+            <li>
+              <strong>Solo si aceptas las cookies de publicidad</strong> (aviso al entrar al sitio): lo que registra
+              el Pixel de Meta en tu navegador — qué páginas y productos ves, qué agregas al carrito, tu dirección
+              IP, tu navegador y un identificador en la cookie <code>_fbp</code>. Ver{" "}
+              <a href="#cookies" className="text-accent hover:underline">Cookies</a>.
+            </li>
           </ul>
           <p className="mt-2">
             Tratamos datos de las personas que compran en esta tienda —como invitado o con cuenta— y de
@@ -67,8 +73,9 @@ export default function Privacidad() {
         <section>
           <h2 className="mb-1.5 text-base font-semibold text-ink">De dónde vienen tus datos</h2>
           <p>
-            Todos los datos que tenemos nos los entregaste tú directamente, al hacer un pedido o al crear
-            tu cuenta. No los obtenemos de fuentes de acceso público, no los compramos ni los recibimos de
+            Los datos de tu compra y de tu cuenta nos los entregaste tú directamente, al hacer un pedido o al
+            crear tu cuenta. Los del Pixel de Meta se toman automáticamente de tu navegador, y solo si lo
+            aceptaste. No obtenemos datos de fuentes de acceso público, no los compramos ni los recibimos de
             terceros.
           </p>
         </section>
@@ -84,6 +91,10 @@ export default function Privacidad() {
               Si dejas una compra a medias: enviarte <strong>un solo recordatorio</strong> por correo con el link
               a tu carrito, y poder escribirte por WhatsApp para ayudarte a terminarla. Al pie de ese correo hay
               un link para no recibir más recordatorios.
+            </li>
+            <li>
+              Si aceptas las cookies de publicidad: medir qué anuncios nuestros en Facebook e Instagram traen
+              visitas y ventas, y poder mostrar esos anuncios a personas que ya visitaron la tienda.
             </li>
           </ul>
           <p className="mt-2">
@@ -103,6 +114,11 @@ export default function Privacidad() {
             El recordatorio de una compra que dejaste a medias se basa en nuestro interés legítimo de ayudarte
             a terminarla. Puedes oponerte en cualquier momento con el link de baja de ese correo.
           </p>
+          <p className="mt-2">
+            El Pixel de Meta se basa <strong>solo en tu consentimiento</strong>: no se carga hasta que presionas
+            &quot;Aceptar&quot; en el aviso de cookies, y puedes retirarlo cuando quieras desde
+            &quot;Preferencias de cookies&quot;, al pie de cada página.
+          </p>
         </section>
 
         <section>
@@ -118,8 +134,20 @@ export default function Privacidad() {
             <li>
               Nuestro sistema interno de punto de venta, para preparar y descontar stock de tu pedido.
             </li>
+            <li>
+              <strong>Meta Platforms</strong> (Facebook e Instagram), <strong>solo si aceptas</strong> las cookies de
+              publicidad: los datos de navegación del Pixel descritos arriba. No le entregamos tu nombre, correo,
+              teléfono ni dirección. Meta trata esos datos también según su propia{" "}
+              <a href="https://www.facebook.com/privacy/policy/" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
+                política de privacidad
+              </a>
+              .
+            </li>
           </ul>
-          <p className="mt-2">Nunca vendemos ni cedemos tus datos a terceros con fines de marketing.</p>
+          <p className="mt-2">
+            Nunca vendemos tus datos. Fuera de lo que aceptes en el aviso de cookies, no los compartimos con nadie
+            con fines de publicidad.
+          </p>
         </section>
 
         <section>
@@ -131,17 +159,33 @@ export default function Privacidad() {
             significa que tus datos son objeto de una transferencia internacional.
           </p>
           <p className="mt-2">
+            Si aceptas las cookies de publicidad, los datos del Pixel los recibe Meta Platforms, Inc., en{" "}
+            <strong>Estados Unidos</strong>: también es una transferencia internacional.
+          </p>
+          <p className="mt-2">
             La Agencia de Protección de Datos Personales es la que determina qué países ofrecen un nivel
             adecuado de protección, y a esta fecha no ha emitido esa determinación respecto de estos países.
           </p>
         </section>
 
         <section>
-          <h2 className="mb-1.5 text-base font-semibold text-ink">Cookies y sesión</h2>
+          <h2 id="cookies" className="mb-1.5 scroll-mt-24 text-base font-semibold text-ink">Cookies y sesión</h2>
           <p>
-            Usamos únicamente cookies propias y funcionales: una para mantener tu sesión iniciada (Supabase
-            Auth) si creas una cuenta, y el carrito de compras se guarda en tu navegador (localStorage), no
-            en una cookie. No usamos cookies de publicidad ni de rastreo de terceros.
+            <strong>Funcionales (siempre activas):</strong> una cookie para mantener tu sesión iniciada (Supabase
+            Auth) si creas una cuenta. El carrito y tu decisión sobre las cookies de publicidad se guardan en tu
+            navegador (localStorage), no en una cookie, y no salen de tu equipo.
+          </p>
+          <p className="mt-2">
+            <strong>De publicidad (opcionales, solo si las aceptas):</strong> el Pixel de Meta crea la cookie{" "}
+            <code>_fbp</code> en este sitio, que identifica a tu navegador y dura 90 días. Si llegas desde un
+            anuncio, también la cookie <code>_fbc</code>, que dura lo mismo. Sirven para medir nuestros anuncios en
+            Facebook e Instagram y mostrárselos a quienes ya visitaron la tienda.
+          </p>
+          <p className="mt-2">
+            Mientras no presiones &quot;Aceptar&quot;, el Pixel no se carga y esas cookies no se crean. Rechazarlas no
+            cambia nada de la tienda: puedes comprar igual. Para cambiar tu decisión usa &quot;Preferencias de
+            cookies&quot;, al pie de cada página. Si las retiras, borramos <code>_fbp</code> y <code>_fbc</code> de tu
+            navegador y el Pixel deja de enviar datos.
           </p>
         </section>
 
@@ -168,6 +212,10 @@ export default function Privacidad() {
             recordatorios, guardamos solo tu correo en esa lista, para respetarlo.
           </p>
           <p className="mt-2">
+            Las cookies del Pixel de Meta (<code>_fbp</code>, <code>_fbc</code>) duran 90 días en tu navegador. Lo que
+            Meta ya recibió lo conserva Meta según su propia política.
+          </p>
+          <p className="mt-2">
             El registro de las solicitudes que nos hagas sobre tus datos se conserva junto con el correo
             desde el que la hiciste, incluso si después eliminas tu cuenta: es lo que nos permite demostrar
             que te respondimos.
@@ -180,6 +228,10 @@ export default function Privacidad() {
             No tomamos decisiones automatizadas sobre ti ni elaboramos perfiles. No analizamos tu
             comportamiento para clasificarte, no personalizamos precios ni condiciones, y ningún sistema
             decide por sí solo algo que te afecte.
+          </p>
+          <p className="mt-2">
+            Si aceptas las cookies de publicidad, Meta sí usa los datos del Pixel para decidir a quién mostrarle
+            nuestros anuncios en sus plataformas. Eso lo hace Meta, no nosotros, y solo con tu consentimiento.
           </p>
         </section>
 
@@ -222,7 +274,8 @@ export default function Privacidad() {
           <h2 className="mb-1.5 text-base font-semibold text-ink">Retirar tu consentimiento</h2>
           <p>
             Puedes retirar tu consentimiento en cualquier momento y sin dar explicaciones: desactivando las
-            comunicaciones de marketing, o eliminando tu cuenta desde tu Centro de Privacidad. Retirarlo no
+            comunicaciones de marketing, rechazando las cookies de publicidad desde &quot;Preferencias de
+            cookies&quot; (al pie de cada página), o eliminando tu cuenta desde tu Centro de Privacidad. Retirarlo no
             afecta la validez de lo que hicimos con tus datos antes de que lo retiraras, ni los registros que
             la ley tributaria nos obliga a conservar.
           </p>

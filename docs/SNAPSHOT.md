@@ -4,7 +4,33 @@
 > arquitectura completo (todas las fases) vive en `README-ECOMMERCE-SEVELIN.md`, en el repo del POS
 > (`sevelin-pos-oficial`) — este documento es el estado de ESTE repo (`sevelin-tienda`) nada más.
 
-**Fecha:** 27-09-2026 · **Recuperar ventas que se quedan en el checkout, y carritos compartidos que no vencen.**
+**Fecha:** 28-09-2026 · **Meta Pixel con aviso de cookies: se carga solo si la persona acepta.**
+
+El Pixel (`NEXT_PUBLIC_FACEBOOK_PIXEL_ID`, en Vercel desde el 09-09) ya viajaba en el código, pero la
+CSP lo bloqueaba (script-src sin `connect.facebook.net`), así que **nunca midió nada**. Y la política
+decía "no usamos cookies de publicidad ni de rastreo de terceros". Se hicieron las tres cosas juntas:
+- **CSP mínima:** `script-src` + `https://connect.facebook.net`; `img-src` y `connect-src` +
+  `https://www.facebook.com`. Nada más (ni `unsafe-eval`, ni `*.facebook.com`).
+- **Aviso de cookies** (`aviso-cookies.tsx`): "Rechazar" y "Aceptar" del mismo tamaño y estilo.
+  `meta-pixel.tsx` no monta el script sin "Aceptar" (lee la decisión con `useSyncExternalStore`; en el
+  servidor siempre es "sin decidir", así que el HTML nunca trae el Pixel). "Preferencias de cookies"
+  en el footer lo reabre; retirar manda `fbq('consent','revoke')` y borra `_fbp`/`_fbc`.
+  `autoConfig false`: el Pixel no lee formularios (el checkout tiene correo y teléfono).
+- **Privacidad 1.4 (28-09-2026):** Meta en qué datos, de dónde, para qué, base (solo consentimiento),
+  con quién, transferencia a EE.UU., cookies `_fbp`/`_fbc` y su duración, y que Meta sí usa esos datos
+  para decidir a quién mostrar anuncios.
+- **Probado en local** con un ID de Pixel falso (para no ensuciar el real): sin decidir → cero pedidos
+  a Facebook; Aceptar → `fbevents.js` + config + `/tr?ev=PageView`, sin errores de CSP; recarga →
+  carga directo; Rechazar desde el footer → borra `_fbp`, ninguna navegación manda más eventos, y al
+  recargar ya no se pide nada.
+
+> ⚠️ **Pendiente del dueño:** en el Administrador de eventos de Meta, apagar la **"Coincidencia
+> avanzada automática"** del Pixel. Si está encendida, Meta puede leer correo/teléfono de los
+> formularios, y la política dice que no le entregamos esos datos.
+
+---
+
+**27-09-2026** · **Recuperar ventas que se quedan en el checkout, y carritos compartidos que no vencen.**
 
 El recordatorio de carrito abandonado ya existía (v19/v27), pero con huecos. Datos reales de septiembre:
 13 personas dejaron su correo en el checkout, 7 compraron, y de los 6 "abandonos" 4 eran el robot de

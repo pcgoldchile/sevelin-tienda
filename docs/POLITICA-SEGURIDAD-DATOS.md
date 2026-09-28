@@ -54,9 +54,21 @@ determinación corresponde a la Agencia (Art. 28) y a esta fecha no ha sido emit
   (`src/lib/chilexpress.ts`). **El día que se implemente la creación de envíos reales pasará a
   recibir nombre, dirección y teléfono: hay que actualizar `/privacidad` ANTES de ese cambio.**
 - El POS recibe solo `producto_id` y `cantidad` para descontar stock (`src/lib/pos-interno.ts`).
-- No hay analítica, píxeles ni cookies de terceros. La única cookie es la de sesión de Supabase
-  Auth. Las tipografías se auto-hospedan en el build (`next/font/google`), el navegador del cliente
-  nunca llama a Google.
+- **Meta Pixel, solo con consentimiento (28-09-2026, política 1.4).** Único tercero de publicidad.
+  No se carga hasta que la persona presiona "Aceptar" en el aviso de cookies
+  (`src/components/aviso-cookies.tsx`, decisión en localStorage vía
+  `src/lib/consentimiento-cookies.ts`). Con consentimiento, Meta recibe eventos de navegación
+  (PageView, ViewContent, AddToCart), IP, navegador y la cookie `_fbp`/`_fbc` (90 días). Nunca
+  nombre, correo, teléfono ni dirección: `fbq('set','autoConfig',false)` impide que el Pixel lea
+  formularios o botones por su cuenta. **Además, en el Administrador de eventos de Meta la
+  "Coincidencia avanzada automática" debe quedar APAGADA** (es un ajuste del panel, no del código).
+  Retirar el consentimiento ("Preferencias de cookies", en el footer) manda
+  `fbq('consent','revoke')` y borra `_fbp`/`_fbc`. Transferencia internacional a EE.UU. declarada
+  en `/privacidad`. Si se agrega otro proveedor o finalidad, subir `VERSION_CONSENTIMIENTO_COOKIES`
+  (vuelve a preguntar) y `VERSION_POLITICA_PRIVACIDAD`.
+- Fuera del Pixel no hay analítica ni cookies de terceros: la otra cookie es la de sesión de
+  Supabase Auth. Las tipografías se auto-hospedan en el build (`next/font/google`), el navegador
+  del cliente nunca llama a Google.
 
 ---
 

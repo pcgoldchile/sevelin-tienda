@@ -27,18 +27,23 @@ const CSP = [
   // formularios de login/registro/recuperar, ver turnstile-widget.tsx) es
   // un script + iframe de terceros a propósito — Cloudflare, no un origen
   // cualquiera.
-  "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com",
+  // connect.facebook.net: fbevents.js del Meta Pixel (28-09-2026). La CSP lo
+  // permite, pero el código solo lo pide si la persona acepta el aviso de
+  // cookies (meta-pixel.tsx / aviso-cookies.tsx).
+  "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com https://connect.facebook.net",
   "style-src 'self' 'unsafe-inline'",
   // Fotos de producto: mismo bucket público de Supabase que remotePatterns
   // de abajo. blob:/data: para previews del navegador (ej. avatar/carrito).
-  "img-src 'self' data: blob: https://*.supabase.co",
+  // www.facebook.com: el Pixel envía cada evento como imagen (/tr?...) o
+  // como fetch/sendBeacon (connect-src, abajo).
+  "img-src 'self' data: blob: https://*.supabase.co https://www.facebook.com",
   "font-src 'self' data:",
   // El navegador habla directo con Supabase Auth (anon key pública, ver
   // src/lib/supabase-browser.ts) para login/registro/sesión — Google Maps
   // se llama SIEMPRE desde el servidor (src/lib/distancia.ts, places.ts),
   // nunca desde el navegador, así que no hace falta whitelistear ningún
   // host de Google acá.
-  "connect-src 'self' https://*.supabase.co https://challenges.cloudflare.com",
+  "connect-src 'self' https://*.supabase.co https://challenges.cloudflare.com https://www.facebook.com",
   "frame-src https://challenges.cloudflare.com",
   "frame-ancestors 'none'",
   "base-uri 'self'",
