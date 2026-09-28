@@ -130,6 +130,16 @@ export function Header({
             <User className="h-4 w-4" aria-hidden /> {usuario ? perfil?.nombre || "Mi cuenta" : "Iniciar sesión"}
           </Link>
         )}
+        {/* Antes solo se veía "Iniciar sesión" y quien no tenía cuenta no sabía
+            dónde crearla (dueño, 28-09-2026). Solo sin sesión. */}
+        {!cargando && !usuario && (
+          <Link
+            href="/cuenta/registro"
+            className="hidden items-center rounded-md border border-border px-3 py-1.5 text-sm font-medium text-ink-soft transition-colors hover:border-primary hover:text-primary md:flex"
+          >
+            Registrarse
+          </Link>
+        )}
 
         <Link
           href="/carrito"
@@ -373,6 +383,15 @@ export function Header({
                   onClick={() => setMenuMovilAbierto(false)}
                 >
                   <User className="h-4 w-4" aria-hidden /> {usuario ? perfil?.nombre || "Mi cuenta" : "Iniciar sesión"}
+                </Link>
+              )}
+              {!cargando && !usuario && (
+                <Link
+                  href="/cuenta/registro"
+                  className="flex items-center gap-1.5 py-1.5 pl-[22px] text-sm font-medium text-ink-soft"
+                  onClick={() => setMenuMovilAbierto(false)}
+                >
+                  Registrarse
                 </Link>
               )}
               {categorias.map((categoria) => {
