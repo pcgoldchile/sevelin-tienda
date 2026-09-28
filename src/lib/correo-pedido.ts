@@ -154,7 +154,8 @@ export function correoConfirmacionPedido(
  * vienen resueltos contra el catálogo real (nombre/precio vigentes), nunca
  * "congelados" del momento en que dejó el correo. */
 export function correoCarritoAbandonado(
-  items: { nombre: string; cantidad: number; precio_web: number; imagen_url?: string }[]
+  items: { nombre: string; cantidad: number; precio_web: number; imagen_url?: string }[],
+  enlaces: { retomar: string; baja: string }
 ): { subject: string; html: string } {
   /* Con foto, igual que la confirmación: este es el correo que intenta
      traer de vuelta a alguien que ya se fue, y una lista de nombres
@@ -163,11 +164,12 @@ export function correoCarritoAbandonado(
      catálogo), solo no se estaba pasando. Sin foto se ve idéntico al
      formato anterior — filaItemConFoto no reserva espacio vacío. */
   const filas = items.map((it) => filaItemConFoto(it.nombre, it.cantidad, it.precio_web * it.cantidad, it.imagen_url)).join('');
-  const urlTienda = process.env.NEXT_PUBLIC_SITE_URL || 'https://sevelin.cl';
+  // El botón abre SU carrito (sirve en otro teléfono o computador), no el catálogo
   const contenido = `
     <p style="margin:0 0 16px;font-size:14px;color:${TEXTO_SUAVE};">Dejaste estos productos en tu carrito — siguen disponibles, pero no alcanzaste a terminar la compra.</p>
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;">${filas}</table>
-    <a href="${urlTienda}/productos" style="display:inline-block;background:${AZUL};color:#ffffff;text-decoration:none;padding:11px 22px;border-radius:999px;font-size:14px;font-weight:600;">Volver a la tienda</a>
+    <a href="${enlaces.retomar}" style="display:inline-block;background:${AZUL};color:#ffffff;text-decoration:none;padding:11px 22px;border-radius:999px;font-size:14px;font-weight:600;">Retomar mi compra</a>
+    <p style="margin:24px 0 0;font-size:12px;color:${TEXTO_SUAVE};">Te escribimos una sola vez por este carrito. Si no quieres recibir más recordatorios como este, <a href="${enlaces.baja}" style="color:${TEXTO_SUAVE};">date de baja aquí</a>.</p>
   `;
   return {
     subject: 'Dejaste productos en tu carrito — Sevelin',

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent, type FocusEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent, type SyntheticEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
@@ -139,31 +139,39 @@ export function FormularioCheckout({
   const carritoAbandonoIdRef = useRef<string | null>(null);
   const debounceAbandonoRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Se guarda al perder el foco del campo correo (no en cada tecla): es el
-  // momento en que el cliente "completó" el dato, pedido explícito para
-  // poder recordarle el carrito si no vuelve a comprar dentro de 24h. Mejor
-  // esfuerzo — si falla, el checkout sigue funcionando exactamente igual.
-  function guardarAbandono(evento: FocusEvent<HTMLInputElement>) {
-    const correo = evento.target.value.trim();
+  // Se guarda apenas hay un correo válido (al escribirlo o al salir de nombre,
+  // correo o teléfono), con nombre y teléfono si ya están: así el dueño puede
+  // recordarle la compra por correo y escribirle por WhatsApp. Con sesión el
+  // correo viene lleno y nunca se toca, por eso no basta con el blur del correo.
+  // Mejor esfuerzo: si falla, el checkout sigue funcionando exactamente igual.
+  function guardarAbandono(evento: SyntheticEvent<HTMLInputElement>) {
+    const form = evento.currentTarget.form;
+    if (!form) return;
+    const valor = (campo: string) =>
+      String((form.elements.namedItem(campo) as HTMLInputElement | HTMLSelectElement | null)?.value || "").trim();
+    const correo = valor("email");
     if (debounceAbandonoRef.current) clearTimeout(debounceAbandonoRef.current);
-    if (!correo || !correo.includes("@") || itemsSeleccionados.length === 0) return;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(correo) || itemsSeleccionados.length === 0) return;
+    const telefono = valor("telefono");
+    const cuerpo = {
+      correo,
+      nombre: [valor("nombre"), valor("apellido")].filter(Boolean).join(" "),
+      telefono: telefono ? `${valor("codigoPais")}${telefono}` : "",
+      items: itemsSeleccionados.map((item) => ({ sku: item.sku, cantidad: item.cantidad })),
+    };
     debounceAbandonoRef.current = setTimeout(async () => {
       try {
         const respuesta = await fetch("/api/carrito/abandono", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            id: carritoAbandonoIdRef.current || undefined,
-            correo,
-            items: itemsSeleccionados.map((item) => ({ sku: item.sku, cantidad: item.cantidad })),
-          }),
+          body: JSON.stringify({ ...cuerpo, id: carritoAbandonoIdRef.current || undefined }),
         });
         const data = await respuesta.json();
         if (respuesta.ok && data.id) carritoAbandonoIdRef.current = data.id;
       } catch {
         // Best-effort — no bloquea el checkout.
       }
-    }, 400);
+    }, 800);
   }
 
   const opcionElegida = opciones?.find((o) => o.metodo === metodoElegido) ?? null;
@@ -617,6 +625,7 @@ export function FormularioCheckout({
               name="nombre"
               required
               defaultValue={perfil?.nombre || ""}
+              onBlur={guardarAbandono}
               placeholder="Nombre"
               className={`${CAMPO} flex-1`}
             />
@@ -625,6 +634,7 @@ export function FormularioCheckout({
               name="apellido"
               required
               defaultValue={perfil?.apellido || ""}
+              onBlur={guardarAbandono}
               placeholder="Apellido"
               className={`${CAMPO} flex-1`}
             />
@@ -636,9 +646,13 @@ export function FormularioCheckout({
             required
             defaultValue={usuario?.email || ""}
             onBlur={guardarAbandono}
+            onChange={guardarAbandono}
             placeholder="Correo electrónico"
             className={CAMPO}
           />
+          <p className="-mt-1 text-xs text-ink-faint">
+            Si no alcanzas a terminar, te recordamos tu carrito una sola vez por correo.
+          </p>
 
           {/* Crear cuenta va pegado al correo, que es el dato que la cuenta
               usa — no al final del formulario, donde el cliente ya está con
@@ -706,6 +720,7 @@ export function FormularioCheckout({
               required
               defaultValue={perfil?.telefono || ""}
               onChange={(e) => setTelefonoTexto(e.target.value)}
+              onBlur={guardarAbandono}
               placeholder="Número de teléfono"
               className={`${CAMPO} flex-1`}
             />

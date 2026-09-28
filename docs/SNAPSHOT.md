@@ -4,7 +4,40 @@
 > arquitectura completo (todas las fases) vive en `README-ECOMMERCE-SEVELIN.md`, en el repo del POS
 > (`sevelin-pos-oficial`) — este documento es el estado de ESTE repo (`sevelin-tienda`) nada más.
 
-**Fecha:** 26-09-2026 · **Auditoría de Salud: 5 de los 7 errores de la tienda venían de `next dev`, no de clientes.**
+**Fecha:** 27-09-2026 · **Recuperar ventas que se quedan en el checkout, y carritos compartidos que no vencen.**
+
+El recordatorio de carrito abandonado ya existía (v19/v27), pero con huecos. Datos reales de septiembre:
+13 personas dejaron su correo en el checkout, 7 compraron, y de los 6 "abandonos" 4 eran el robot de
+Google Merchant (`storebotmail.joonix.net`) y 1 una prueba. Lo que cambió (migración
+`supabase/36-recuperar-carritos.sql`, aplicada con la CLI el 27-09-2026, RLS verificado):
+- **El correo devuelve al cliente a SU carrito** ("Retomar mi compra" → `/carrito-compartido?t=…`,
+  que sirve en otro teléfono). Antes el botón iba a `/productos`. La página dice "Retoma tu compra" y,
+  si el carrito sigue en ese navegador, deja la cantidad guardada en vez de sumarla encima.
+- **El checkout guarda también nombre y teléfono** (columnas nuevas en `carritos_web`), y guarda apenas
+  hay un correo válido: al escribirlo o al salir de nombre/correo/teléfono. Antes solo al salir del
+  campo correo, así que un cliente con sesión (correo ya lleno) nunca quedaba registrado. El POS muestra
+  nombre y teléfono y su botón de WhatsApp sale con el número y el link.
+- **El robot de Google ya no cuenta** (`esCorreoDeRobot`): no se guarda ni se le escribe; el POS lo
+  filtra también de sus métricas.
+- **Baja de recordatorios** (ley 19.496, art. 28 B): link al pie del correo → `/baja-recordatorio`,
+  que confirma con un botón (POST `/api/carrito/baja`; un GET lo dispararían los antivirus de correo).
+  Lista en `correos_sin_recordatorio`; el cron y el reenvío manual la respetan.
+- **3 pasadas al día** (12:00, 17:00 y 22:00 de Chile): el plan Hobby permite un cron diario por job, y
+  admite hasta 100 jobs (doc de Vercel revisada el 27-09-2026). Antes, 1 al día.
+- **Privacidad 1.3:** la política dice qué se guarda de un checkout sin terminar, para qué, cómo darse
+  de baja, y que correo/nombre/teléfono se borran a los 90 días (el cron los anonimiza; la fila queda
+  para las métricas de conversión del POS).
+- **Los carritos compartidos no vencen** (dueño, 27-09-2026): se quitó el aviso "Este link dura 24
+  horas" y los links viejos que ya habían "expirado" vuelven a abrir. El precio y el stock se revalidan
+  al abrirlos, así que un link viejo nunca vende a un precio viejo.
+
+> ⚠️ `RESEND_FROM` local apunta a `onboarding@resend.dev` y la API key local está vencida. En
+> producción no hay rechazos de Resend registrados (ni por los recordatorios del 27-09), así que todo
+> indica que el dominio sí está verificado allá, pero no se pudo confirmar en el panel de Resend.
+
+---
+
+**26-09-2026** · **Auditoría de Salud: 5 de los 7 errores de la tienda venían de `next dev`, no de clientes.**
 
 ### Salud de la tienda = solo producción
 `engancharConsoleError()` guardaba en la base web (la de producción) **todo** `console.error` del

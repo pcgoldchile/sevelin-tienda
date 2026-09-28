@@ -46,6 +46,10 @@ export default function Privacidad() {
             <li>Dirección de envío (calle, número, comuna, región).</li>
             <li>Si solicitas factura: razón social, RUT y giro de tu empresa.</li>
             <li>Si creas una cuenta: la misma información anterior, guardada para tu próxima compra.</li>
+            <li>
+              Si llegas al pago y no terminas la compra: el correo, el nombre y el teléfono que alcanzaste a
+              escribir, junto con los productos de tu carrito.
+            </li>
           </ul>
           <p className="mt-2">
             Tratamos datos de las personas que compran en esta tienda —como invitado o con cuenta— y de
@@ -76,6 +80,11 @@ export default function Privacidad() {
             <li>Coordinar el despacho o el retiro en tienda.</li>
             <li>Emitir tu boleta o factura cuando corresponda.</li>
             <li>Contactarte sobre el estado de tu compra.</li>
+            <li>
+              Si dejas una compra a medias: enviarte <strong>un solo recordatorio</strong> por correo con el link
+              a tu carrito, y poder escribirte por WhatsApp para ayudarte a terminarla. Al pie de ese correo hay
+              un link para no recibir más recordatorios.
+            </li>
           </ul>
           <p className="mt-2">
             Enviarte promociones o novedades por correo es <strong>siempre opcional</strong>: solo lo hacemos
@@ -89,6 +98,10 @@ export default function Privacidad() {
           <p>
             Tratamos tus datos porque nos diste tu consentimiento explícito al aceptar esta política, y
             porque es necesario para ejecutar el contrato de compraventa que generas al hacer un pedido.
+          </p>
+          <p className="mt-2">
+            El recordatorio de una compra que dejaste a medias se basa en nuestro interés legítimo de ayudarte
+            a terminarla. Puedes oponerte en cualquier momento con el link de baja de ese correo.
           </p>
         </section>
 
@@ -149,6 +162,10 @@ export default function Privacidad() {
             asociados a tus pedidos se conservan mientras esté pendiente el plazo de revisión del Servicio de
             Impuestos Internos (por regla general, tres años); cumplido ese plazo los anonimizamos, de modo
             que el pedido queda registrado sin quedar asociado a ti.
+          </p>
+          <p className="mt-2">
+            Tu correo, nombre y teléfono de una compra que no terminaste se borran a los 90 días. Si pediste no recibir
+            recordatorios, guardamos solo tu correo en esa lista, para respetarlo.
           </p>
           <p className="mt-2">
             El registro de las solicitudes que nos hagas sobre tus datos se conserva junto con el correo

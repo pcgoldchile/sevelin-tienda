@@ -1,5 +1,5 @@
 import { obtenerProductoPorSku } from "@/lib/catalogo";
-import { obtenerCarritoCompartido } from "@/lib/carritos-web";
+import { obtenerCarritoPorToken } from "@/lib/carritos-web";
 import Link from "next/link";
 import { rutaDeSku } from "@/lib/sku-url";
 import { AgregarCarritoCompartido } from "./agregar-carrito-compartido";
@@ -10,17 +10,16 @@ interface Props {
 }
 
 /**
- * Landing de un carrito compartido (ver botón "🔗 Compartir carrito" en
- * carrito-drawer.tsx). El link solo trae un token — el carrito (sku+cantidad)
- * vive en `carritos_web` y expira a las 24h de creado. Acá se revalida cada
- * producto contra el catálogo real (mismo principio que el checkout: nunca
- * se confía en precio/nombre/stock "congelados" en un link viejo). Server
- * Component porque obtenerCarritoCompartido()/obtenerProductoPorSku() usan
- * supabaseWeb (service_role, nunca en el navegador).
+ * Abre un carrito guardado: uno compartido (botón "🔗 Compartir carrito") o el
+ * de un checkout que no terminó (link del correo de recordatorio). El link
+ * solo trae un token; los productos viven en `carritos_web` y no vencen. Acá
+ * se revalida cada producto contra el catálogo real (mismo principio que el
+ * checkout: nunca se confía en precio/stock "congelados" en un link viejo).
+ * Server Component porque supabaseWeb usa la service_role.
  */
 export default async function CarritoCompartido({ searchParams }: Props) {
   const { t } = await searchParams;
-  const carrito = t ? await obtenerCarritoCompartido(t) : null;
+  const carrito = t ? await obtenerCarritoPorToken(t) : null;
 
   if (!carrito) {
     return (
@@ -31,17 +30,7 @@ export default async function CarritoCompartido({ searchParams }: Props) {
     );
   }
 
-  if (carrito.expirado) {
-    return (
-      <main className="mx-auto max-w-xl px-4 py-16 text-center sm:px-6 lg:px-8">
-        <h1 className="text-2xl font-semibold tracking-tight text-ink">Este carrito compartido ya expiró</h1>
-        <p className="mt-2 text-sm text-ink-soft">
-          Los links de carrito duran 24 horas. Pídele a quien te lo compartió que lo vuelva a compartir.
-        </p>
-      </main>
-    );
-  }
-
+  const esPropio = carrito.origen === "checkout";
   const solicitados = carrito.items;
 
   const resueltos = await Promise.all(
@@ -56,9 +45,11 @@ export default async function CarritoCompartido({ searchParams }: Props) {
 
   return (
     <main className="mx-auto max-w-xl px-4 py-10 sm:px-6 lg:px-8">
-      <h1 className="text-2xl font-semibold tracking-tight text-ink">Carrito compartido</h1>
+      <h1 className="text-2xl font-semibold tracking-tight text-ink">{esPropio ? "Retoma tu compra" : "Carrito compartido"}</h1>
       <p className="mt-1 text-sm text-ink-soft">
-        Alguien te compartió estos productos — revísalos y agrégalos a tu propio carrito.
+        {esPropio
+          ? "Guardamos los productos que dejaste en el carrito. Revísalos y sigue donde quedaste."
+          : "Alguien te compartió estos productos — revísalos y agrégalos a tu propio carrito."}
       </p>
 
       {disponibles.length > 0 && (
@@ -97,6 +88,7 @@ export default async function CarritoCompartido({ searchParams }: Props) {
 
       {disponibles.length > 0 ? (
         <AgregarCarritoCompartido
+          esPropio={esPropio}
           items={disponibles.map(({ producto, solicitado }) => ({
             producto: producto!,
             cantidad: Math.min(solicitado.cantidad, producto!.stock_web),

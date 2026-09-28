@@ -15,7 +15,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: '*',
       allow: '/',
-      disallow: ['/carrito', '/carrito-compartido', '/checkout', '/cuenta/', '/pedido/', '/api/'],
+      disallow: ['/carrito', '/carrito-compartido', '/checkout', '/cuenta/', '/pedido/', '/api/', '/baja-recordatorio'],
     },
     sitemap: `${SITE_URL}/sitemap.xml`,
   };

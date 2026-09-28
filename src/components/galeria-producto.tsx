@@ -143,9 +143,8 @@ export function GaleriaProducto({
         </div>
       )}
 
-      {/* Visor ampliado: mismo patrón de modal que el resto del sitio
-          (ver el aviso de "link dura 24 horas" en /carrito) — fondo
-          oscuro con blur, tarjeta centrada, sale con fade+scale.
+      {/* Visor ampliado: mismo patrón de modal que el resto del sitio —
+          fondo oscuro con blur, tarjeta centrada, sale con fade+scale.
 
           POR QUÉ VA EN UN PORTAL (16-09-2026, bug real visto en producción):
           el div que envuelve esta galería en la ficha de producto tiene

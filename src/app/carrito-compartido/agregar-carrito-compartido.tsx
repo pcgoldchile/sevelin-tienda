@@ -7,18 +7,22 @@ import type { ProductoWeb } from "@/lib/tipos";
 
 export function AgregarCarritoCompartido({
   items,
+  esPropio = false,
 }: {
   items: { producto: ProductoWeb; cantidad: number }[];
+  // Carrito del mismo cliente (link del recordatorio): si ya lo tiene en este
+  // navegador, se deja la cantidad guardada en vez de sumarla encima.
+  esPropio?: boolean;
 }) {
-  const { agregarItem } = useCarrito();
+  const { items: enCarrito, agregarItem, cambiarCantidad } = useCarrito();
   const [agregado, setAgregado] = useState(false);
   const router = useRouter();
 
   function agregarTodo() {
-    // Mismo orden en que venían en el link — agregarItem() ya hace merge si
-    // el producto ya estaba en el carrito del navegador.
     for (const { producto, cantidad } of items) {
-      agregarItem(producto, cantidad);
+      const yaEsta = enCarrito.some((item) => item.sku === producto.sku);
+      if (esPropio && yaEsta) cambiarCantidad(producto.sku, cantidad);
+      else agregarItem(producto, cantidad);
     }
     setAgregado(true);
     router.push("/carrito");
@@ -31,7 +35,7 @@ export function AgregarCarritoCompartido({
       disabled={agregado}
       className="mt-6 w-full rounded-full bg-accent px-5 py-3 text-sm font-semibold text-white shadow-glow-accent transition-colors hover:bg-accent-deep disabled:cursor-not-allowed disabled:opacity-70"
     >
-      {agregado ? "✓ Agregado a tu carrito" : "Agregar todo a mi carrito"}
+      {agregado ? "✓ Agregado a tu carrito" : esPropio ? "Seguir con mi compra" : "Agregar todo a mi carrito"}
     </button>
   );
 }

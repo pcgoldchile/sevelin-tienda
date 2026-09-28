@@ -3,7 +3,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
 import { Minus, Plus, Trash2 } from "lucide-react";
 import { formatoCLP } from "@/lib/formato";
 import { HAY_RECARGO, recargoTotal } from "@/lib/precios-medio-pago";
@@ -24,8 +23,7 @@ export default function CarritoPage() {
   } = useCarrito();
   const [compartiendo, setCompartiendo] = useState(false);
   const [copiado, setCopiado] = useState(false);
-  const [mostrarAvisoDuracion, setMostrarAvisoDuracion] = useState(false);
-  // Link ya generado (token vigente 24h) — una vez que existe, se ofrece un
+  // Link ya generado (no vence) — una vez que existe, se ofrece un
   // botón "Copiar link" aparte del de compartir: en mobile navigator.share()
   // abre el panel nativo del sistema y no deja nada copiado en el
   // portapapeles, así que sin este botón no había forma de copiarlo a mano
@@ -49,7 +47,6 @@ export default function CarritoPage() {
 
       const url = `${window.location.origin}/carrito-compartido?t=${data.token}`;
       setLinkCompartido(url);
-      setMostrarAvisoDuracion(true);
 
       // En mobile, el share nativo (WhatsApp, etc.) es lo que la gente espera;
       // en desktop no siempre existe, ahí se cae a copiar al portapapeles.
@@ -276,42 +273,6 @@ export default function CarritoPage() {
           </div>
         </aside>
       </div>
-
-      <AnimatePresence>
-        {mostrarAvisoDuracion && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-            <motion.button
-              type="button"
-              aria-label="Cerrar aviso"
-              onClick={() => setMostrarAvisoDuracion(false)}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-surface-sunken/70 backdrop-blur-sm"
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 8 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 8 }}
-              transition={{ duration: 0.2 }}
-              className="relative w-full max-w-sm rounded-2xl bg-surface p-5 shadow-elevated-lg"
-            >
-              <h3 className="font-display text-base font-semibold text-ink">Este link dura 24 horas ⏳</h3>
-              <p className="mt-2 text-sm text-ink-soft">
-                Pasado ese tiempo deja de funcionar. Si lo necesitas para más adelante, te recomendamos tomar una
-                captura de pantalla del carrito ahora.
-              </p>
-              <button
-                type="button"
-                onClick={() => setMostrarAvisoDuracion(false)}
-                className="mt-4 w-full rounded-full bg-accent px-4 py-2.5 text-sm font-semibold text-white shadow-glow-accent transition-colors hover:bg-accent-deep"
-              >
-                Entendido
-              </button>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
 
       <ModalCotizar
         items={itemsSeleccionados}

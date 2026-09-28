@@ -4,7 +4,7 @@ import { obtenerProductoPorSku } from '@/lib/catalogo';
 import { enviarCorreo } from '@/lib/resend';
 import { correoCarritoAbandonado } from '@/lib/correo-pedido';
 import { verificarSecretoSync } from '@/lib/verificar-secreto';
-import type { ItemCarritoWeb } from '@/lib/carritos-web';
+import { correoDadoDeBaja, urlBajaRecordatorios, urlCarrito, type ItemCarritoWeb } from '@/lib/carritos-web';
 
 /**
  * El dueño reenvía a mano el recordatorio de UN carrito puntual desde el
@@ -31,11 +31,14 @@ export async function POST(req: NextRequest) {
 
   const { data: carrito, error } = await supabaseWeb
     .from('carritos_web')
-    .select('id, items, correo')
+    .select('id, token, items, correo')
     .eq('id', carritoId)
     .maybeSingle();
   if (error || !carrito) return NextResponse.json({ error: 'Carrito no encontrado' }, { status: 404 });
   if (!carrito.correo) return NextResponse.json({ error: 'Ese carrito no tiene correo guardado' }, { status: 400 });
+  if (await correoDadoDeBaja(carrito.correo)) {
+    return NextResponse.json({ error: 'Ese cliente pidió no recibir más recordatorios por correo' }, { status: 409 });
+  }
 
   const items = (carrito.items as ItemCarritoWeb[]) || [];
   const resueltos = await Promise.all(items.map(async (it) => ({ it, producto: await obtenerProductoPorSku(it.sku) })));
@@ -50,7 +53,8 @@ export async function POST(req: NextRequest) {
       cantidad: it.cantidad,
       precio_web: producto!.precio_web,
       imagen_url: producto!.imagen_urls?.[0],
-    }))
+    })),
+    { retomar: urlCarrito(carrito.token), baja: urlBajaRecordatorios(carrito.token) }
   );
   const enviado = await enviarCorreo({ to: carrito.correo, subject, html });
   if (enviado) {
