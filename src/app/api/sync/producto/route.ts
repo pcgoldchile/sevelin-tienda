@@ -50,6 +50,25 @@ function slugDeRespaldo(nombre: string, productoPosId: number): string {
   return `${base || 'producto'}-${productoPosId}`;
 }
 
+/** Oferta del POS (precio_oferta_web, oferta_desde, oferta_hasta) → columnas de
+ * productos_web. Todo o nada, con la misma regla que el CHECK de supabase/37. */
+function ofertaDesdePos(producto: ProductoPOS): {
+  precio_oferta: number | null;
+  oferta_desde: string | null;
+  oferta_hasta: string | null;
+} {
+  const sin = { precio_oferta: null, oferta_desde: null, oferta_hasta: null };
+  const precio = Number(producto.precio_oferta_web);
+  const desde = producto.oferta_desde ? Date.parse(producto.oferta_desde) : NaN;
+  const hasta = producto.oferta_hasta ? Date.parse(producto.oferta_hasta) : NaN;
+  if (!(precio > 0) || !Number.isFinite(desde) || !Number.isFinite(hasta) || hasta <= desde) return sin;
+  return {
+    precio_oferta: precio,
+    oferta_desde: new Date(desde).toISOString(),
+    oferta_hasta: new Date(hasta).toISOString(),
+  };
+}
+
 export async function POST(req: NextRequest) {
   if (!verificarSecretoSync(req)) {
     return NextResponse.json({ error: 'Secreto de sincronización inválido' }, { status: 401 });
@@ -122,6 +141,12 @@ export async function POST(req: NextRequest) {
     // Marca del fabricante (supabase/23-marca.sql). NULL en los genéricos:
     // la ficha y el JSON-LD la omiten en vez de inventar una.
     marca: producto.marca || null,
+    /* Oferta con fechas (sql/71 del POS → supabase/37). Van los tres o
+       ninguno: un dato a medias (ej. un POS que todavía no tiene las
+       columnas) queda como "sin oferta" en vez de romper el guardado por
+       el CHECK de la tabla. Si está vigente o no lo decide la tienda al
+       leer (src/lib/oferta.ts). */
+    ...ofertaDesdePos(producto),
     sincronizado_en: new Date().toISOString()
   };
 

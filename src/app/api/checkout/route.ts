@@ -28,7 +28,10 @@ interface CuerpoCheckout {
      frena la compra. */
   retiroFecha?: string | null;
   retiroBloque?: string | null;
-  items?: { sku?: string; cantidad?: number }[];
+  /** precio_esperado: el precio que el cliente VIO en su carrito. Si no
+   *  calza con el vigente (una oferta empezó o terminó), no se cobra: se
+   *  responde 409 con precios_cambiaron para que el carrito se ponga al día. */
+  items?: { sku?: string; cantidad?: number; precio_esperado?: number }[];
   // 'RETIRO' es válido en cualquier región/comuna de envío (pensado para
   // quien compra de otra ciudad pero un familiar en Arica retira); 'LOCAL'
   // solo aplica dentro de la comuna de la tienda — ver src/lib/envio.ts.
@@ -159,6 +162,25 @@ export async function POST(req: NextRequest) {
     if (hayEncargo && hayNormal) {
       throw new Error(
         'Los productos de Pedidos por Encargo se compran por separado del resto del carrito.'
+      );
+    }
+
+    /* Precio que el cliente vio vs. precio vigente (ofertas con fecha,
+       supabase/37). Se cobra SIEMPRE el vigente; si difiere de lo que vio,
+       se detiene antes de crear el pedido para que lo vea primero. Nunca se
+       cobra distinto a lo que el cliente tenía en pantalla. Un carrito
+       antiguo que no manda precio_esperado sigue funcionando como antes. */
+    const distintos = resueltos
+      .map((r, i) => ({ r, esperado: itemsSolicitados[i]?.precio_esperado }))
+      .filter(({ r, esperado }) => esperado !== undefined && esperado !== null && Number(esperado) !== r.item.precio_web);
+    if (distintos.length) {
+      const nombres = distintos.map(({ r }) => `"${r.item.nombre}"`).join(', ');
+      return NextResponse.json(
+        {
+          error: `Cambió el precio de ${nombres}. Actualizamos tu carrito: revisa el total y vuelve a pagar.`,
+          precios_cambiaron: true,
+        },
+        { status: 409 }
       );
     }
 

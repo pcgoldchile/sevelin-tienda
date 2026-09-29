@@ -4,7 +4,32 @@
 > arquitectura completo (todas las fases) vive en `README-ECOMMERCE-SEVELIN.md`, en el repo del POS
 > (`sevelin-pos-oficial`) — este documento es el estado de ESTE repo (`sevelin-tienda`) nada más.
 
-**Fecha:** 29-09-2026 · **El carrusel de la portada muestra fotos de productos reales.**
+**Fecha:** 29-09-2026 · **Precio de oferta con fechas (para el Cyber y cualquier promoción).**
+
+- **Migración `supabase/37-precio-oferta.sql` (aplicada con la CLI el 29-09-2026):** `productos_web`
+  suma `precio_oferta`, `oferta_desde`, `oferta_hasta`, con un CHECK de "los tres o ninguno". Viene
+  del POS (sql/71: `precio_oferta_web`) por el webhook de siempre (`ofertaDesdePos` en el receptor).
+- **`precio_web` sigue siendo el precio NORMAL en la base.** `src/lib/oferta.ts::aplicarOferta` se
+  aplica en TODA lectura de `catalogo.ts` y `encargos.ts`: con oferta vigente devuelve
+  `precio_web` = oferta y `precio_antes` = normal. Así tarjetas, ficha, carrito, **checkout (que
+  cobra)**, correos, cotización PDF y valor declarado del envío usan el precio vigente sin tocarlos.
+  "Vigente" = hora actual entre inicio (incluido) y fin (excluido): empieza y termina sola, sin cron.
+  ⚠️ **Regla nueva: nunca leer `productos_web` sin pasar por `aplicarOferta`.**
+- **Carrito al día:** `POST /api/carrito/precios` (misma función que el checkout) corrige al abrir el
+  carrito los precios guardados en el navegador. **Seguro de cobro:** el formulario manda
+  `precio_esperado` y el checkout responde 409 `precios_cambiaron` si no calza, antes de crear nada.
+  Nunca se cobra distinto a lo que el cliente vio.
+- Pantallas: tarjeta (badge OFERTA automático si no tiene etiqueta), ficha (tachado, −%, "Oferta válida
+  hasta el…" en hora de Chile, `priceValidUntil` con fecha de Chile), carrito. El orden por precio del
+  catálogo sigue al precio vigente. Componente `PrecioAntes` (precio-oferta.tsx).
+- **Probado:** lógica (10 casos, bordes de inicio/fin), y en local con una oferta forzada solo en la
+  prueba (parche quitado antes del commit): ficha, tarjeta en celular, carrito que pasó solo de
+  $7.000 a $5.990, y el checkout devolviendo 409 con precio viejo (sin crear pedido).
+- El plan de rebajas sigue **pendiente** en `docs/PLAN-CYBER-OCTUBRE-2026.md`.
+
+---
+
+**29-09-2026 (antes)** · **El carrusel de la portada muestra fotos de productos reales.**
 
 - Opción A del dueño: cada lámina lleva a la derecha (debajo en celular) la foto de un producto real,
   en tarjeta blanca redondeada, que lleva a su ficha. "Tecnología" = el más vendido; "Pedidos por

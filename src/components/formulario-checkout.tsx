@@ -33,7 +33,7 @@ export function FormularioCheckout({
   // Editar cantidades/quitar ítems ya vive en /carrito (estilo MercadoLibre)
   // — acá solo se paga lo que llegó seleccionado, "Tu pedido" es de solo
   // lectura.
-  const { itemsSeleccionados, subtotalSeleccionado, quitarSeleccionados } = useCarrito();
+  const { itemsSeleccionados, subtotalSeleccionado, quitarSeleccionados, actualizarPrecios } = useCarrito();
   // Con sesión, se precargan nombre/apellido/email/teléfono desde el perfil
   // (siguen siendo editables) — sin sesión, el checkout de invitado sigue
   // funcionando exactamente igual que siempre. `cargando` alterna la `key`
@@ -468,7 +468,9 @@ export function FormularioCheckout({
             // que el pago use las mismas coordenadas exactas.
             placeId: placeIdElegido,
           },
-          items: itemsSeleccionados.map((item) => ({ sku: item.sku, cantidad: item.cantidad })),
+          // precio_esperado: si una oferta empezó o terminó mientras tanto,
+          // el servidor detiene el pago en vez de cobrar otro monto.
+          items: itemsSeleccionados.map((item) => ({ sku: item.sku, cantidad: item.cantidad, precio_esperado: item.precio_web })),
           metodoEnvio: metodoElegido,
           // Solo tienen sentido con retiro en tienda; el servidor los ignora
           // en cualquier otro método.
@@ -494,6 +496,9 @@ export function FormularioCheckout({
       });
 
       const data = await respuesta.json();
+      // Una oferta empezó o terminó: se ponen al día los precios del carrito
+      // (el resumen de arriba cambia solo) y el cliente decide si paga.
+      if (respuesta.status === 409 && data.precios_cambiaron) await actualizarPrecios();
       if (!respuesta.ok) throw new Error(data.error || "No se pudo iniciar el pago");
 
       quitarSeleccionados();

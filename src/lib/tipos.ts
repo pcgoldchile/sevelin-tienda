@@ -55,6 +55,15 @@ export interface ProductoWeb {
    *  Se sincroniza desde productos.marca del POS — ver supabase/23-marca.sql. */
   marca: string | null;
   sincronizado_en: string;
+  /* Oferta con fechas (supabase/37). Así viene de la base; quien lee un
+     producto lo pasa por aplicarOferta() (src/lib/oferta.ts), que deja en
+     precio_web el precio VIGENTE y en precio_antes el normal. */
+  precio_oferta?: number | null;
+  oferta_desde?: string | null;
+  oferta_hasta?: string | null;
+  /** Solo con oferta vigente: el precio normal, para mostrarlo tachado.
+   *  null/undefined = sin oferta, precio_web es el de siempre. */
+  precio_antes?: number | null;
 }
 
 /** Etiqueta destacada de producto — el dueño marca como mucho una por
@@ -298,6 +307,10 @@ export interface ProductoPOS {
   es_pedido_encargo: boolean;
   // Ver sevelin-pos-oficial/sql/45-precio-a-consultar.sql.
   precio_a_consultar?: boolean;
+  // Oferta web con fechas — ver sevelin-pos-oficial/sql/71-precio-oferta-web.sql.
+  precio_oferta_web?: number | null;
+  oferta_desde?: string | null;
+  oferta_hasta?: string | null;
   // SEO con IA — ver sevelin-pos-oficial/sql/33-seo-ia.sql.
   meta_titulo_web: string | null;
   meta_descripcion_web: string | null;

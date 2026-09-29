@@ -1,5 +1,7 @@
 import { supabaseWeb } from './supabase-web';
 import type { ProductoWeb } from './tipos';
+// Oferta con fechas (supabase/37): TODA lectura de productos pasa por aplicarOferta.
+import { aplicarOferta } from './oferta';
 
 /**
  * Catálogo público: SIEMPRE filtra por publicado_web=true y stock_web>0
@@ -18,7 +20,7 @@ export async function listarCatalogo(): Promise<ProductoWeb[]> {
     .order('nombre', { ascending: true });
 
   if (error) throw new Error(error.message);
-  return data || [];
+  return (data || []).map((p) => aplicarOferta(p));
 }
 
 /**
@@ -48,7 +50,7 @@ export async function obtenerProductoPorSku(sku: string): Promise<ProductoWeb | 
     .maybeSingle();
 
   if (error) throw new Error(error.message);
-  return data;
+  return data ? aplicarOferta(data) : data;
 }
 
 /**
@@ -80,7 +82,7 @@ export async function obtenerProductoPublicado(sku: string): Promise<ProductoWeb
     .maybeSingle();
 
   if (error) throw new Error(error.message);
-  return data;
+  return data ? aplicarOferta(data) : data;
 }
 
 /**
@@ -97,7 +99,7 @@ export async function listarPublicados(): Promise<ProductoWeb[]> {
     .order('nombre', { ascending: true });
 
   if (error) throw new Error(error.message);
-  return data || [];
+  return (data || []).map((p) => aplicarOferta(p));
 }
 
 /**
@@ -118,7 +120,7 @@ export async function obtenerProductosPorSku(skus: string[]): Promise<Record<str
 
   if (error) throw new Error(error.message);
   const porSku: Record<string, ProductoWeb> = {};
-  for (const producto of data || []) porSku[producto.sku] = producto;
+  for (const producto of data || []) porSku[producto.sku] = aplicarOferta(producto);
   return porSku;
 }
 
@@ -267,7 +269,7 @@ export async function listarMasVendidos(limite = 8): Promise<ProductoWeb[]> {
     .limit(limite);
 
   if (error) throw new Error(error.message);
-  return data || [];
+  return (data || []).map((p) => aplicarOferta(p));
 }
 
 /**
@@ -318,8 +320,10 @@ export async function productoMasBaratoPorCategoria(
       // muestra sin foto ni precio, como ya hacía antes.
       if (error || !data || data.length === 0) return null;
 
-      const precioMinimo = data[0].precio_web;
-      const empatados = data.filter((p) => p.precio_web === precioMinimo);
+      // Con oferta, el "Desde $X" es el precio vigente: se reordena después de aplicarla.
+      const vigentes = data.map((p) => aplicarOferta(p)).sort((a, b) => a.precio_web - b.precio_web);
+      const precioMinimo = vigentes[0].precio_web;
+      const empatados = vigentes.filter((p) => p.precio_web === precioMinimo);
       const preferido = preferidos[categoria];
       const elegido =
         (preferido && empatados.find((p) => p.sku === preferido)) ?? empatados[0];
@@ -377,7 +381,7 @@ export async function productosRelacionados(
     if (!error && data) resultado = [...resultado, ...data];
   }
 
-  return resultado;
+  return resultado.map((p) => aplicarOferta(p));
 }
 
 /** Catálogo publicado filtrado por categoría y/o texto libre, para /productos. */
@@ -414,5 +418,9 @@ export async function buscarCatalogo(filtros: {
 
   const { data, error } = await query;
   if (error) throw new Error(error.message);
-  return data || [];
+  const productos = (data || []).map((p) => aplicarOferta(p));
+  // La base ordena por el precio NORMAL; con ofertas, el orden por precio
+  // tiene que seguir al precio que se muestra.
+  if (columna === 'precio_web') productos.sort((x, y) => (ascending ? 1 : -1) * (x.precio_web - y.precio_web));
+  return productos;
 }

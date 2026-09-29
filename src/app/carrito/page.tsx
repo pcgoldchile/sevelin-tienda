@@ -9,6 +9,7 @@ import { HAY_RECARGO, recargoTotal } from "@/lib/precios-medio-pago";
 import { useCarrito } from "@/context/carrito-context";
 import { AvisoPagoTarjeta } from "@/components/aviso-pago-tarjeta";
 import { ModalCotizar } from "@/components/modal-cotizar";
+import { PrecioAntes } from "@/components/precio-oferta";
 
 export default function CarritoPage() {
   const {
@@ -134,7 +135,10 @@ export default function CarritoPage() {
                 </div>
                 <div className="flex flex-1 flex-col gap-1.5">
                   <span className="text-sm text-ink">{item.nombre}</span>
-                  <span className="precio-gamer text-base text-ink">{formatoCLP.format(item.precio_web)}</span>
+                  <span className="flex flex-wrap items-baseline gap-2">
+                    <span className="precio-gamer text-base text-ink">{formatoCLP.format(item.precio_web)}</span>
+                    <PrecioAntes precioAntes={item.precio_antes} precio={item.precio_web} />
+                  </span>
                   <div className="mt-1 flex items-center justify-between gap-2">
                     {/* Altura fija (h-9) en los 3 elementos — no relleno
                         (padding): así los tres miden exactamente lo mismo

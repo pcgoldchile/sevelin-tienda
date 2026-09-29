@@ -1,5 +1,7 @@
 import { supabaseWeb } from './supabase-web';
 import type { ProductoWeb } from './tipos';
+// Oferta con fechas (supabase/37): toda lectura de productos pasa por aplicarOferta.
+import { aplicarOferta } from './oferta';
 
 /**
  * Catálogo de "Pedidos por Encargo" (dropshipping/retiro en tienda) —
@@ -17,7 +19,7 @@ export async function listarEncargos(): Promise<ProductoWeb[]> {
     .order('nombre', { ascending: true });
 
   if (error) throw new Error(error.message);
-  return data || [];
+  return (data || []).map((p) => aplicarOferta(p));
 }
 
 /**
@@ -35,7 +37,7 @@ export async function obtenerEncargoPorSku(sku: string): Promise<ProductoWeb | n
     .maybeSingle();
 
   if (error) throw new Error(error.message);
-  return data;
+  return data ? aplicarOferta(data) : data;
 }
 
 /**
@@ -62,5 +64,5 @@ export async function listarPorLlegar(): Promise<ProductoWeb[]> {
     .order('nombre', { ascending: true });
 
   if (error) throw new Error(error.message);
-  return data || [];
+  return (data || []).map((p) => aplicarOferta(p));
 }

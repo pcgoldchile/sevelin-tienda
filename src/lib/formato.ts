@@ -21,3 +21,18 @@ export function formatoStock(stock: number, umbral: number | null): string {
   if (stock <= 0) return "Sin stock";
   return stock === 1 ? "Última unidad disponible" : `Últimas ${stock} unidades disponibles`;
 }
+
+/** "lunes 5 de octubre, 23:59" en hora de Chile, para decir hasta cuándo
+ *  vale una oferta (supabase/37). Se fija la zona horaria a propósito: la
+ *  página se arma en el servidor (UTC) y sin esto mostraría otra hora. */
+export function fechaHoraOferta(iso: string): string {
+  return new Intl.DateTimeFormat("es-CL", {
+    timeZone: "America/Santiago",
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(new Date(iso));
+}

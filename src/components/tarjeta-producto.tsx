@@ -11,6 +11,7 @@ import { HAY_RECARGO, precioConRecargo } from "@/lib/precios-medio-pago";
 import { useCarrito } from "@/context/carrito-context";
 import { useToast } from "@/context/toast-context";
 import { EtiquetaProductoBadge } from "@/components/etiqueta-producto-badge";
+import { PrecioAntes } from "@/components/precio-oferta";
 import { avisoUrgenciaStock } from "@/lib/urgencia-stock";
 import { rutaDeSku } from "@/lib/sku-url";
 import type { ProductoWeb } from "@/lib/tipos";
@@ -99,7 +100,11 @@ export function TarjetaProducto({ producto }: { producto: ProductoWeb }) {
           <div className="flex h-full w-full items-center justify-center text-xs text-ink-faint">Sin foto</div>
         )}
         <div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-t from-surface-sunken/70 via-transparent to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
-        <EtiquetaProductoBadge etiqueta={producto.etiqueta_web} className="absolute left-2 top-2" />
+        {/* Con oferta vigente y sin etiqueta propia, se marca OFERTA sola. */}
+        <EtiquetaProductoBadge
+          etiqueta={producto.etiqueta_web ?? (producto.precio_antes ? "OFERTA" : null)}
+          className="absolute left-2 top-2"
+        />
         {ultimaUnidad && (
           <span className="absolute right-2 top-2 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-paper shadow-elevated-md">
             Última unidad
@@ -127,6 +132,7 @@ export function TarjetaProducto({ producto }: { producto: ProductoWeb }) {
           {producto.precio_a_consultar && <span className="mr-1 text-sm text-ink-soft">Desde</span>}
           {formatoCLP.format(producto.precio_web)}
         </span>
+        <PrecioAntes precioAntes={producto.precio_antes} precio={producto.precio_web} />
         {/* Segundo precio en una línea chica: el precio destacado sigue
             siendo el bajo (es el que va al feed de Google/Meta, decisión D3),
             pero el de tarjeta tiene que estar visible desde el catálogo —

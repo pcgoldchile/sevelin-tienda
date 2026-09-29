@@ -33,6 +33,9 @@ export interface ItemCarrito {
    *  Opcional: los carritos guardados antes no lo traen, y el servidor lo
    *  confirma igual al cotizar. */
   es_servicio?: boolean;
+  /** Precio normal si el producto está en oferta (supabase/37), para
+   *  mostrarlo tachado. Lo mantiene al día actualizarPrecios(). */
+  precio_antes?: number | null;
 }
 
 interface CarritoContextValor {
@@ -55,6 +58,9 @@ interface CarritoContextValor {
   // no lo que quedó sin marcar — igual que MercadoLibre, lo que no se
   // compró sigue esperando en el carrito.
   quitarSeleccionados: () => void;
+  /** Pone al día precios y stock contra el servidor (ofertas que empezaron o
+   *  terminaron). Devuelve los nombres de los productos cuyo precio cambió. */
+  actualizarPrecios: () => Promise<string[]>;
 }
 
 const CarritoContext = createContext<CarritoContextValor | null>(null);
@@ -173,6 +179,7 @@ export function CarritoProvider({ children }: { children: ReactNode }) {
           sku: producto.sku,
           nombre: producto.nombre,
           precio_web: producto.precio_web,
+          precio_antes: producto.precio_antes ?? null,
           imagen: producto.imagen_urls?.[0] ?? null,
           stock_web: producto.stock_web,
           cantidad: Math.min(cantidad, tope),
@@ -211,6 +218,57 @@ export function CarritoProvider({ children }: { children: ReactNode }) {
   const quitarSeleccionados = useCallback(() => {
     setItems((prev) => prev.filter((item) => !item.seleccionado));
   }, []);
+  /* PRECIOS AL DÍA (29-09-2026). El carrito guarda el precio del momento en
+     que se agregó cada producto; una oferta que empieza o termina después lo
+     deja viejo. Se pregunta al servidor —la misma función que usa el
+     checkout para cobrar— y se corrige lo que haya cambiado. Mejor esfuerzo:
+     si falla, el checkout igual detiene un pago con precio distinto al que
+     el cliente vio (ver precio_esperado en POST /api/checkout). */
+  const itemsRef = useRef(items);
+  useEffect(() => {
+    itemsRef.current = items;
+  }, [items]);
+  const actualizarPrecios = useCallback(async (): Promise<string[]> => {
+    const actuales = itemsRef.current;
+    if (!actuales.length) return [];
+    try {
+      const respuesta = await fetch("/api/carrito/precios", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ skus: actuales.map((i) => i.sku) }),
+      });
+      if (!respuesta.ok) return [];
+      const { precios } = (await respuesta.json()) as {
+        precios: Record<string, { precio_web: number; precio_antes: number | null; stock_web: number }>;
+      };
+      // Se calcula con lo que había al preguntar (no dentro de setItems, que
+      // React ejecuta después y dejaría la lista vacía al devolverla).
+      const cambiados = actuales
+        .filter((item) => precios[item.sku] && precios[item.sku].precio_web !== item.precio_web)
+        .map((item) => item.nombre);
+      setItems((prev) =>
+        prev.map((item) => {
+          const p = precios[item.sku];
+          if (!p) return item; // agotado o despublicado: lo informa el checkout, no se borra acá
+          if (p.precio_web === item.precio_web && (p.precio_antes ?? null) === (item.precio_antes ?? null) && p.stock_web === item.stock_web) {
+            return item;
+          }
+          return { ...item, precio_web: p.precio_web, precio_antes: p.precio_antes, stock_web: p.stock_web };
+        })
+      );
+      return cambiados;
+    } catch {
+      return [];
+    }
+  }, []);
+
+  // Una vez al cargar el carrito (y cuando cambian los productos que tiene).
+  const clavesSku = items.map((i) => i.sku).sort().join("|");
+  useEffect(() => {
+    if (!cargado || !clavesSku) return;
+    actualizarPrecios();
+  }, [cargado, clavesSku, actualizarPrecios]);
+
   const abrirCarrito = useCallback(() => setAbierto(true), []);
   const cerrarCarrito = useCallback(() => setAbierto(false), []);
 
@@ -242,6 +300,7 @@ export function CarritoProvider({ children }: { children: ReactNode }) {
     seleccionarTodos,
     vaciarCarrito,
     quitarSeleccionados,
+    actualizarPrecios,
   };
 
   return <CarritoContext.Provider value={valor}>{children}</CarritoContext.Provider>;

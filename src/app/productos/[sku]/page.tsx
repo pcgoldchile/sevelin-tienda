@@ -21,6 +21,8 @@ import { AvisoPorLlegar } from "@/components/aviso-por-llegar";
 import { AvisameProducto } from "@/components/avisame-producto";
 import { CotizarWhatsapp } from "@/components/cotizar-whatsapp";
 import { esServicioTecnico } from "@/lib/servicios";
+import { PrecioAntes } from "@/components/precio-oferta";
+import { fechaHoraOferta } from "@/lib/formato";
 
 export const revalidate = 60;
 
@@ -130,6 +132,13 @@ export default async function FichaProducto({ params }: PropsPagina) {
       url: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://sevelin.cl'}/productos/${rutaDeSku(producto.sku)}`,
       priceCurrency: 'CLP',
       price: producto.precio_web,
+      // Con oferta vigente, Google necesita saber hasta cuándo vale ese precio.
+      ...(producto.precio_antes && producto.oferta_hasta
+        ? {
+            // Fecha de Chile, no UTC: una oferta hasta las 23:59 del 5 terminaría "el 6" en UTC.
+            priceValidUntil: new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Santiago' }).format(new Date(producto.oferta_hasta)),
+          }
+        : {}),
       availability: producto.stock_web > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
     },
   };
@@ -276,6 +285,12 @@ export default async function FichaProducto({ params }: PropsPagina) {
               {producto.precio_a_consultar && <span className="mr-2 text-lg text-ink-soft">Desde</span>}
               {formatoCLP.format(producto.precio_web)}
             </span>
+            {producto.precio_antes && producto.oferta_hasta && (
+              <span className="flex flex-wrap items-center gap-2">
+                <PrecioAntes precioAntes={producto.precio_antes} precio={producto.precio_web} className="text-sm" />
+                <span className="text-xs text-ink-faint">Oferta válida hasta el {fechaHoraOferta(producto.oferta_hasta)}</span>
+              </span>
+            )}
             {/* Con el recargo apagado el precio es uno solo y no hace falta
                 explicar nada. Si se reactivara, los dos precios van juntos y
                 explícitos, nunca uno escondido hasta el último paso: es la
