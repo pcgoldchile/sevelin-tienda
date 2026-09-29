@@ -4,7 +4,22 @@
 > arquitectura completo (todas las fases) vive en `README-ECOMMERCE-SEVELIN.md`, en el repo del POS
 > (`sevelin-pos-oficial`) — este documento es el estado de ESTE repo (`sevelin-tienda`) nada más.
 
-**Fecha:** 28-09-2026 · **Meta Pixel con aviso de cookies: se carga solo si la persona acepta.**
+**Fecha:** 29-09-2026 · **El carrusel de la portada muestra fotos de productos reales.**
+
+- Opción A del dueño: cada lámina lleva a la derecha (debajo en celular) la foto de un producto real,
+  en tarjeta blanca redondeada, que lleva a su ficha. "Tecnología" = el más vendido; "Pedidos por
+  encargo" = un encargo; el resto, los siguientes más vendidos, sin repetir. Se eligen en el servidor
+  (`fotosDelHero` en `page.tsx`); si Supabase falla, el carrusel queda solo con texto.
+- **"Viene en camino" se oculta sola cuando no hay nada por llegar.** Al 29-09 no había ningún producto
+  por llegar y su botón llevaba a una página vacía (pasaba desde antes de este cambio).
+- `hero-carrusel.tsx` tiene un error de lint **anterior** a este cambio (`setPrefiereQuieto` dentro de
+  un efecto). No se tocó.
+- **Plan Cyber (05-10-2026) en `docs/PLAN-CYBER-OCTUBRE-2026.md`: pendiente, no aplicado** (faltan
+  productos por cargar y el precio de oferta todavía no existe).
+
+---
+
+**28-09-2026** · **Meta Pixel con aviso de cookies: se carga solo si la persona acepta.**
 
 El Pixel (`NEXT_PUBLIC_FACEBOOK_PIXEL_ID`, en Vercel desde el 09-09) ya viajaba en el código, pero la
 CSP lo bloqueaba (script-src sin `connect.facebook.net`), así que **nunca midió nada**. Y la política

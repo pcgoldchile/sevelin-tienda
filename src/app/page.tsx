@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { listarMasVendidos } from "@/lib/catalogo";
-import { HeroCarrusel } from "@/components/hero-carrusel";
+import { HeroCarrusel, type FotoHero } from "@/components/hero-carrusel";
+import { listarEncargos, listarPorLlegar } from "@/lib/encargos";
+import { rutaDeSku } from "@/lib/sku-url";
+import type { ProductoWeb } from "@/lib/tipos";
 import { BannersCategoria } from "@/components/banners-categoria";
 import { FranjaConfianza } from "@/components/franja-confianza";
 import { TarjetaProducto } from "@/components/tarjeta-producto";
@@ -13,6 +16,47 @@ import { AvisoPagoTarjeta } from "@/components/aviso-pago-tarjeta";
 export const revalidate = 60;
 
 const CANTIDAD_DESTACADOS = 8;
+
+/* Fotos del carrusel (opción A del dueño, 29-09-2026): cada lámina muestra un
+   producto REAL que calza con su tema. "Viene en camino" usa algo por llegar
+   y "Pedidos por encargo" un encargo; si no hay, se usa el siguiente más
+   vendido. Nunca se repite un producto entre láminas. Si todo falla, el
+   carrusel sigue solo con texto, como antes. */
+function fotosDelHero(
+  masVendidos: ProductoWeb[],
+  porLlegar: ProductoWeb[],
+  encargos: ProductoWeb[],
+): Record<string, FotoHero | undefined> {
+  const usados = new Set<number>();
+  const aFoto = (p: ProductoWeb, esEncargo = false): FotoHero => {
+    usados.add(p.producto_pos_id);
+    return {
+      src: p.imagen_urls[0],
+      nombre: p.nombre,
+      href: `${esEncargo ? "/pedidos-por-encargo" : "/productos"}/${rutaDeSku(p.sku)}`,
+    };
+  };
+  const conFoto = (p: ProductoWeb) => !!p.imagen_urls?.[0] && !!p.sku && !usados.has(p.producto_pos_id);
+  const siguienteVendido = () => {
+    const p = masVendidos.find(conFoto);
+    return p ? aFoto(p) : undefined;
+  };
+  const deLista = (lista: ProductoWeb[], esEncargo = false) => {
+    const p = lista.find(conFoto);
+    return p ? aFoto(p, esEncargo) : siguienteVendido();
+  };
+
+  const fotos: Record<string, FotoHero | undefined> = {};
+  fotos.tecnologia = siguienteVendido();
+  // Sin nada por llegar, la lámina se oculta (ver `ocultar` en Home): no se le pone foto de otro producto.
+  const conFotoPorLlegar = porLlegar.filter((p) => !p.es_pedido_encargo).find(conFoto);
+  fotos["por-llegar"] = conFotoPorLlegar ? aFoto(conFotoPorLlegar) : undefined;
+  fotos.encargos = deLista(encargos, true);
+  fotos.despacho = siguienteVendido();
+  fotos.whatsapp = siguienteVendido();
+  fotos.fiestas = siguienteVendido();
+  return fotos;
+}
 
 export default async function Home() {
   /* "Destacados" = los más vendidos según el POS (`unidades_vendidas`, que
@@ -31,9 +75,16 @@ export default async function Home() {
     errorCatalogo = true;
   }
 
+  // Las fotos son adorno: si Supabase falla acá, el hero queda solo con texto.
+  const [porLlegar, encargos] = await Promise.all([
+    listarPorLlegar().catch(() => []),
+    listarEncargos().catch(() => []),
+  ]);
+  const fotosHero = fotosDelHero(destacados, porLlegar, encargos);
+
   return (
     <main className="flex flex-col">
-      <HeroCarrusel />
+      <HeroCarrusel fotos={fotosHero} ocultar={porLlegar.length ? [] : ["por-llegar"]} />
       <BannersCategoria />
 
       {/* Arriba de Destacados, no en el pie: quien quiere pagar con

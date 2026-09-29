@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -13,32 +14,38 @@ import { FIESTAS_PATRIAS_ACTIVO } from "@/lib/tema-estacional";
 // Cada slide lleva su propio destino: antes el botón mandaba siempre a
 // /productos, así que las franjas que hablan de otra sección prometían una
 // cosa y llevaban a otra.
+// `id` elige la foto de cada lámina (ver FotoHero y fotosDelHero en page.tsx).
 const SLIDES_BASE = [
   {
+    id: "tecnologia",
     titulo: "Tecnología para tu hogar y oficina",
     texto: "Encuentra los mejores productos de electrónica al mejor precio en Arica.",
     href: "/productos",
     cta: "Ver catálogo",
   },
   {
+    id: "por-llegar",
     titulo: "Viene en camino",
     texto: "Resérvalo ahora y queda apartado a tu nombre. Te avisamos apenas llegue, y si no llega te devolvemos el 100%.",
     href: "/por-llegar",
     cta: "Ver lo que llega",
   },
   {
+    id: "encargos",
     titulo: "Pedidos por encargo",
     texto: "¿No lo ves en el catálogo? Lo traemos para ti, con la misma garantía de 6 meses.",
     href: "/pedidos-por-encargo",
     cta: "Ver encargos",
   },
   {
+    id: "despacho",
     titulo: "Despacho a todo Arica y Chile",
     texto: "Recibe tu compra donde estés, con garantía en todos los productos.",
     href: "/productos",
     cta: "Ver catálogo",
   },
   {
+    id: "whatsapp",
     titulo: "Atención directa por WhatsApp",
     texto: "¿Dudas sobre un producto? Escríbenos y te ayudamos a elegir.",
     href: "/productos",
@@ -50,15 +57,26 @@ const SLIDES_BASE = [
 // FIESTAS_PATRIAS_ACTIVO esté prendido (ver src/lib/tema-estacional.ts) y
 // desaparece del carrusel sola el día que se apague, sin tocar nada acá.
 const SLIDE_FIESTAS_PATRIAS = {
+  id: "fiestas",
   titulo: "¡Viva Chile! Fiestas Patrias",
   texto: "Sevelin también se pone la camiseta el 18 — seguimos despachando y atendiendo con la misma garantía de siempre.",
   href: "/productos",
   cta: "Ver catálogo",
 };
 
-const SLIDES = FIESTAS_PATRIAS_ACTIVO ? [...SLIDES_BASE, SLIDE_FIESTAS_PATRIAS] : SLIDES_BASE;
+const SLIDES_TODAS = FIESTAS_PATRIAS_ACTIVO ? [...SLIDES_BASE, SLIDE_FIESTAS_PATRIAS] : SLIDES_BASE;
 
-export function HeroCarrusel() {
+/** Foto de un producto real para una lámina (opción A del dueño, 29-09-2026):
+ * sale del catálogo, no de un diseño aparte, así nunca muestra algo que ya
+ * no se vende. Las elige el servidor (page.tsx). */
+export type FotoHero = { src: string; nombre: string; href: string };
+
+export function HeroCarrusel({ fotos = {}, ocultar = [] }: { fotos?: Record<string, FotoHero | undefined>; ocultar?: string[] }) {
+  /* Láminas que hoy no tienen nada detrás (ej. "Viene en camino" sin ningún
+     producto por llegar: su botón llevaba a una página vacía). Las decide el
+     servidor con los datos reales. */
+  const SLIDES = SLIDES_TODAS.filter((s) => !ocultar.includes(s.id));
+  const totalSlides = SLIDES.length;
   const [indice, setIndice] = useState(0);
   /* Pausa manual: la decide el visitante con el botón y se respeta hasta
      que él la levante. Separada de `enfocado` a propósito — pasar el
@@ -83,12 +101,13 @@ export function HeroCarrusel() {
   useEffect(() => {
     if (detenido) return;
     const intervalo = setInterval(() => {
-      setIndice((i) => (i + 1) % SLIDES.length);
+      setIndice((i) => (i + 1) % totalSlides);
     }, 5000);
     return () => clearInterval(intervalo);
-  }, [detenido]);
+  }, [detenido, totalSlides]);
 
   const slide = SLIDES[indice];
+  const foto = fotos[slide.id];
   const irA = (i: number) => setIndice((i + SLIDES.length) % SLIDES.length);
 
   return (
@@ -105,7 +124,8 @@ export function HeroCarrusel() {
       aria-roledescription="carrusel"
       aria-label="Destacados de Sevelin"
     >
-      <div className="relative mx-auto flex min-h-[380px] max-w-6xl flex-col justify-center gap-4 px-4 py-20 sm:px-6 lg:px-8">
+      <div className="relative mx-auto grid min-h-[380px] max-w-6xl items-center gap-8 px-4 py-14 sm:px-6 sm:py-20 md:grid-cols-[1fr_auto] lg:px-8">
+        <div className="flex flex-col justify-center gap-4">
         {/* Antes decía "Sevelin // sistema en línea", en jerga de HUD. No
             le dice nada a un cliente que entra a comprar un cable; ahora
             dice dónde está y qué encuentra. */}
@@ -139,6 +159,44 @@ export function HeroCarrusel() {
               </motion.span>
             </Link>
           </motion.div>
+        </AnimatePresence>
+        </div>
+
+        {/* Foto del producto: tarjeta blanca redondeada, porque las fotos del
+            catálogo son de fondo blanco y sobre el negro quedarían con un
+            recorte duro. Lleva a la ficha del producto. En celular va más
+            chica, debajo del texto. */}
+        <AnimatePresence mode="wait">
+          {foto && (
+            <motion.div
+              key={`foto-${indice}`}
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.96 }}
+              transition={{ duration: 0.5, ease: EASE_OUT }}
+              className="justify-self-center md:justify-self-end"
+            >
+              <Link
+                href={foto.href}
+                className="group block w-52 rounded-2xl bg-white p-3 shadow-2xl ring-1 ring-white/10 transition-transform hover:-translate-y-1 sm:w-64 md:w-72 lg:w-80"
+                aria-label={`Ver ${foto.nombre}`}
+              >
+                <span className="relative block aspect-square w-full">
+                  <Image
+                    src={foto.src}
+                    alt={foto.nombre}
+                    fill
+                    sizes="(min-width: 1024px) 320px, (min-width: 768px) 288px, 208px"
+                    className="object-contain"
+                    priority={indice === 0}
+                  />
+                </span>
+                <span className="mt-2 block truncate px-1 text-center text-xs font-medium text-neutral-600 group-hover:text-neutral-900">
+                  {foto.nombre}
+                </span>
+              </Link>
+            </motion.div>
+          )}
         </AnimatePresence>
       </div>
 
