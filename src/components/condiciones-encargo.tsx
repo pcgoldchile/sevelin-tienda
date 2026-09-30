@@ -5,10 +5,12 @@
  * Un encargo no se comporta como una compra normal: el producto no está
  * en bodega, el plazo depende de la logística del proveedor y la
  * devolución obliga a devolverlo primero. Enterarse de eso DESPUÉS de
- * pagar es la receta de un reclamo. Además, para excluir el derecho a
- * retracto de compras a distancia, la ley chilena exige que la condición
- * esté informada expresamente y de forma visible ANTES de comprar — un
- * párrafo enterrado en /terminos no cumple ese estándar.
+ * pagar es la receta de un reclamo.
+ *
+ * 30-09-2026: antes decía que el encargo no tenía retracto. Desde la Ley Pro
+ * Consumidor (21.398) el retracto en compras a distancia de productos es
+ * obligatorio y un encargo no es un producto "a medida": ahora se informa
+ * que no se cancela en camino, y que al recibirlo rige el retracto normal.
  *
  * Los plazos concretos NO se prometen acá a propósito: dependen del
  * proveedor y de la logística a Arica, y prometer un plazo que no se
@@ -39,13 +41,13 @@ export function CondicionesEncargo() {
           garantizar una fecha exacta. Te avisamos por correo apenas el producto esté disponible.
         </li>
         <li>
-          <strong className="text-ink">Una vez confirmado, el encargo no se cancela.</strong> Al
-          pagar, nosotros ya compramos el producto al proveedor a tu nombre.
+          <strong className="text-ink">No se cancela mientras viene en camino.</strong> Al pagar,
+          nosotros ya compramos el producto al proveedor a tu nombre.
         </li>
         <li>
-          <strong className="text-ink">Si quieres devolverlo,</strong> primero debemos retornar el
-          producto al proveedor. La devolución del dinero se realiza una vez que ese retorno se
-          completa, y toma días hábiles adicionales.
+          <strong className="text-ink">Cuando lo recibes,</strong> tienes 10 días para arrepentirte,
+          igual que en cualquier compra a distancia: sin daños, con sus accesorios y su caja en buen
+          estado, y el envío de vuelta es de tu cargo.
         </li>
         <li>
           <strong className="text-ink">La garantía es la misma:</strong> 6 meses por fallas de

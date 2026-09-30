@@ -4,7 +4,25 @@
 > arquitectura completo (todas las fases) vive en `README-ECOMMERCE-SEVELIN.md`, en el repo del POS
 > (`sevelin-pos-oficial`) — este documento es el estado de ESTE repo (`sevelin-tienda`) nada más.
 
-**Fecha:** 30-09-2026 · **Privacidad 1.5: las cookies explicadas en palabras simples.**
+**Fecha:** 30-09-2026 (tarde) · **Devoluciones y garantía según la ley vigente.**
+
+- **Hallazgo:** desde la Ley Pro Consumidor (21.398, 24-12-2021) el retracto de 10 días en compras a
+  distancia de PRODUCTOS es obligatorio; solo se exceptúan los hechos a medida, los de uso personal y los
+  que por su naturaleza no se devuelven. La FAQ decía "no hacemos devoluciones por arrepentimiento" sin
+  distinguir, y los encargos decían "sin retracto": las dos cosas se corrigieron.
+- `/terminos#devoluciones` (sección nueva, enlazable desde Merchant): 1) tienda física con el producto a
+  la vista → sin retracto; 2) a distancia → 10 días desde que se recibe, se puede abrir y probar (circular
+  SERNAC), embalaje "en buen estado", envío de vuelta del cliente, reembolso total en 10 días hábiles;
+  3) garantía: 6 meses, abrir la caja no la anula, lista de lo que no cubre, despacho ida y vuelta de
+  Sevelin si hay falla cubierta y del cliente si no. FAQ y recuadro de encargos al día.
+- Quién paga el envío de vuelta del retracto **no está en la ley**: se informa antes, como exige el
+  reglamento de comercio electrónico. No es asesoría legal.
+- Fuera de Arica: Chilexpress sí cotiza (verificado 30-09), pero **50 de 113 productos con stock no tienen
+  peso/medidas y no se pueden cotizar**. `envio.ts` ahora registra en Salud por qué falla un courier.
+
+---
+
+**30-09-2026** · **Privacidad 1.5: las cookies explicadas en palabras simples.**
 
 - `/privacidad#cookies` ya no pone `_fbp`/`_fbc` en el texto: explica qué es una cookie, cuáles son las
   necesarias y cuál es la de Meta, qué recibe Meta y qué no. Los nombres técnicos quedan en un recuadro

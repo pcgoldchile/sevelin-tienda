@@ -54,12 +54,17 @@ const PREGUNTAS: { pregunta: string; respuesta: string }[] = [
   {
     pregunta: "¿Qué garantía tienen los productos?",
     respuesta:
-      "Todos nuestros productos tienen 6 meses de garantía por fallas de fábrica, sean nuevos o reacondicionados. La garantía cubre fallas de funcionamiento del producto. No cubre daños provocados por mal uso, golpes, líquidos o manipulación posterior a la entrega.",
+      "Todos nuestros productos tienen 6 meses de garantía por fallas de fábrica, sean nuevos o reacondicionados. En los nuevos, si falla, tú eliges entre cambio, reparación o devolución del dinero. Abrir la caja no anula la garantía. No cubre daños por golpes, caídas, líquidos, sobretensión eléctrica, mal uso, reparaciones de terceros, ni equipos con el sello de garantía de Sevelin roto.",
+  },
+  {
+    pregunta: "Si mi producto falla, ¿quién paga el envío?",
+    respuesta:
+      "Si el producto tiene una falla cubierta por la garantía, nosotros pagamos el despacho de ida y vuelta: escríbenos antes de enviarlo y te decimos cómo. Si al revisarlo no tiene falla, o el daño no está cubierto, el despacho es de tu cargo. En Arica puedes traerlo directamente a la tienda.",
   },
   {
     pregunta: "¿Puedo cambiar o devolver un producto si no me gustó?",
     respuesta:
-      "No hacemos cambios ni devoluciones por arrepentimiento. Nuestra garantía cubre fallas de fábrica, que es un caso distinto: si el producto falla, respondemos dentro de los 6 meses. Si tienes cualquier duda sobre un producto antes de comprarlo, escríbenos por WhatsApp y te contamos todo lo que necesites saber — preferimos resolver las dudas antes de la compra.",
+      "Depende de cómo compraste. Si compraste en nuestra tienda y viste el producto, no hacemos cambios ni devoluciones por arrepentimiento. Si compraste en la página o a distancia (sin ver el producto), tienes 10 días desde que lo recibes para arrepentirte: puedes abrirlo y probarlo, pero tiene que volver sin daños, con todos sus accesorios y su caja en buen estado. El envío de vuelta es de tu cargo y te devolvemos todo lo que pagaste. No aplica a productos armados a tu pedido, de uso personal (como audífonos intraurales), licencias activadas ni servicios ya realizados. El detalle está en los Términos y Condiciones.",
   },
   /* Los encargos van justo después de cambios y devoluciones: son la
      excepción a esa respuesta, y quien llega con esa duda tiene que
@@ -77,7 +82,7 @@ const PREGUNTAS: { pregunta: string; respuesta: string }[] = [
   {
     pregunta: "¿Puedo cancelar o devolver un pedido por encargo?",
     respuesta:
-      "Una vez confirmado el pago no se puede cancelar, porque en ese momento ya compramos el producto al proveedor a tu nombre. Esta condición se informa en la ficha del producto antes de comprar. Si el producto llega con una falla o no corresponde a lo pedido, se aplica la garantía igual que en cualquier compra: primero retornamos el producto al proveedor y luego te devolvemos el dinero, lo que toma días hábiles adicionales.",
+      "Mientras viene en camino no se puede cancelar, porque al pagar ya compramos el producto al proveedor a tu nombre. Cuando lo recibes, tienes los mismos 10 días para arrepentirte que en cualquier compra a distancia, con las mismas condiciones. Si llega con una falla o no corresponde a lo pedido, se aplica la garantía igual que en cualquier compra.",
   },
   {
     pregunta: "¿Los pedidos por encargo tienen la misma garantía?",

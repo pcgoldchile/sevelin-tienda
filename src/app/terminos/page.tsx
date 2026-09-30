@@ -10,6 +10,7 @@ export default function Terminos() {
   return (
     <main className="mx-auto max-w-2xl px-4 py-10 sm:px-6 lg:px-8">
       <h1 className="text-3xl font-semibold tracking-tight text-ink">Términos y Condiciones</h1>
+      <p className="mt-1 text-xs text-ink-faint">Última actualización: 30 de septiembre de 2026</p>
 
       <div className="mt-6 flex flex-col gap-6 text-sm leading-relaxed text-ink-soft">
         <section>
@@ -81,11 +82,83 @@ export default function Terminos() {
           </p>
         </section>
 
+        {/* 30-09-2026: reescrita según la Ley 19.496 vigente. Desde la Ley Pro
+            Consumidor (21.398, 24-12-2021) el retracto en compras a distancia
+            de PRODUCTOS es obligatorio: ya no se puede excluir "informándolo",
+            solo quedan las excepciones del art. 3 bis (a medida, uso personal,
+            que por su naturaleza no se pueden devolver). SERNAC (circular
+            interpretativa): abrir o probar el producto no impide el retracto;
+            el embalaje debe volver "en buen estado", no intacto. Quién paga el
+            despacho de vuelta en el retracto no está en la ley: se informa
+            antes (aquí) que es del cliente. En garantía, sin costo para el
+            cliente si hay falla. Se enlaza desde Merchant Center (#devoluciones). */}
         <section>
-          <h2 className="mb-1.5 text-base font-semibold text-ink">Cambios y devoluciones</h2>
-          <p>
-            Si tu producto llega con un defecto o no corresponde a lo pedido, contáctanos por WhatsApp con
-            tu número de pedido para coordinar el cambio o la devolución.
+          <h2 id="devoluciones" className="mb-1.5 scroll-mt-24 text-base font-semibold text-ink">
+            Cambios, devoluciones y garantía
+          </h2>
+          <p>Hay tres situaciones distintas, y cada una tiene sus reglas:</p>
+
+          <h3 className="mt-3 font-semibold text-ink">1. Compraste en nuestra tienda y viste el producto</h3>
+          <p className="mt-1">
+            No hacemos cambios ni devoluciones por arrepentimiento: la ley no lo exige cuando tuviste el
+            producto a la vista antes de comprarlo. Si el producto falla, aplica la garantía (punto 3).
+          </p>
+
+          <h3 className="mt-3 font-semibold text-ink">2. Compraste a distancia: derecho a retracto</h3>
+          <p className="mt-1">
+            Si compraste en este sitio, o por WhatsApp o redes sociales sin ver el producto, tienes{" "}
+            <strong className="text-ink">10 días desde que lo recibes</strong> para arrepentirte (Ley 19.496,
+            artículo 3 bis). También vale si compraste en el sitio y lo retiraste en la tienda.
+          </p>
+          <ul className="mt-2 list-disc space-y-1.5 pl-5">
+            <li>
+              Puedes abrir la caja y probarlo. Para devolverlo, el producto tiene que estar sin daños ni desgaste
+              por mal uso, con todos sus accesorios y manuales, y con su embalaje original en buen estado. Si
+              falta algo, se descuenta el valor de reposición de lo que falte.
+            </li>
+            <li>Avísanos por WhatsApp, con tu número de pedido, dentro de esos 10 días.</li>
+            <li>
+              <strong className="text-ink">El envío de vuelta es de tu cargo</strong> (en Arica puedes traerlo a
+              la tienda). Si el producto llegó con falla o no es lo que pediste, lo pagamos nosotros.
+            </li>
+            <li>
+              Te devolvemos todo lo que pagaste, incluido el despacho original, dentro de 10 días hábiles
+              desde que recibimos el producto de vuelta.
+            </li>
+            <li>
+              No aplica a: productos armados o configurados a tu pedido (por ejemplo, un PC armado con las
+              piezas que elegiste), productos de uso personal (como audífonos intraurales), licencias o
+              software ya activados, ni servicios técnicos ya realizados.
+            </li>
+          </ul>
+
+          <h3 className="mt-3 font-semibold text-ink">3. El producto falla: garantía</h3>
+          <ul className="mt-1 list-disc space-y-1.5 pl-5">
+            <li>
+              <strong className="text-ink">Productos nuevos:</strong> 6 meses de garantía legal desde que lo
+              recibes. Si falla, tú eliges entre cambio, reparación o devolución del dinero. Necesitas tu
+              boleta o comprobante de compra.
+            </li>
+            <li>
+              <strong className="text-ink">Productos reacondicionados:</strong> siempre se informan como tales
+              antes de comprar. Sevelin les da la misma garantía de 6 meses por fallas de funcionamiento.
+            </li>
+            <li>
+              Abrir la caja o sacar el producto de su envoltorio <strong className="text-ink">no</strong> anula
+              la garantía. Sí quedan fuera los daños por golpes, caídas, líquidos, sobretensión eléctrica, mal
+              uso, reparaciones o intervenciones de terceros, y los equipos con el sello de garantía de Sevelin
+              roto o el número de serie alterado.
+            </li>
+            <li>
+              <strong className="text-ink">Envíos por garantía:</strong> si el producto tiene una falla
+              cubierta, el despacho de ida y vuelta corre por nuestra cuenta; escríbenos antes de enviarlo y te
+              decimos cómo. Si al revisarlo no tiene falla, o el daño no está cubierto, el despacho de ida y
+              vuelta es de tu cargo. En Arica, lo traes a la tienda.
+            </li>
+          </ul>
+          <p className="mt-2">
+            Para cualquiera de estos casos escríbenos por WhatsApp con tu número de pedido o boleta. Nada de lo
+            anterior limita los derechos que te da la Ley 19.496.
           </p>
         </section>
 
@@ -108,18 +181,15 @@ export default function Terminos() {
               exacta. Te informamos por correo apenas el producto esté disponible.
             </li>
             <li>
-              <strong className="text-ink">Sin cancelación una vez confirmado:</strong> al pagar,
-              adquirimos el producto al proveedor a tu nombre. Por esa razón, y conforme a lo permitido
-              por la Ley 19.496 sobre Protección de los Derechos de los Consumidores, en esta modalidad
-              no aplica el derecho de retracto. Esta condición se informa aquí y en la ficha de cada
-              producto por encargo, antes de que completes la compra.
+              <strong className="text-ink">No se cancela mientras viene en camino:</strong> al pagar,
+              compramos el producto al proveedor a tu nombre. Cuando lo recibes, tienes el mismo derecho a
+              retracto de 10 días que cualquier compra a distancia, con las mismas condiciones (ver{" "}
+              <a href="#devoluciones" className="text-accent hover:underline">Cambios, devoluciones y garantía</a>
+              ).
             </li>
             <li>
               <strong className="text-ink">Devoluciones:</strong> si el producto presenta una falla o no
-              corresponde a lo solicitado, se aplica la garantía legal y la garantía de 6 meses de
-              Sevelin. En una devolución, primero debemos retornar el producto al proveedor; la
-              devolución del dinero se realiza una vez completado ese retorno y toma días hábiles
-              adicionales.
+              corresponde a lo solicitado, se aplica la garantía, igual que en el resto del catálogo.
             </li>
             <li>
               <strong className="text-ink">Garantía:</strong> es la misma que el resto del catálogo — 6
