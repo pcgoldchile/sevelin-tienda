@@ -351,13 +351,16 @@ export async function cotizarOpcionesEnvio(
        funcionan (sobre todo el retiro, que no depende de nada externo). */
     try {
       opciones.push(await cotizarViaChilexpress(direccion, items));
-    } catch {
-      // Sin Chilexpress disponible: puede que quede Starken.
+    } catch (err) {
+      // Sin Chilexpress disponible: puede que quede Starken. Se registra (Salud del POS):
+      // tragarlo en silencio dejó la web sin envío fuera de Arica sin que nadie lo viera.
+      console.error('[envio] Chilexpress no cotizó:', err instanceof Error ? err.message : err);
     }
     try {
       opciones.push(await cotizarViaStarken(direccion, items));
-    } catch {
-      // Sin Starken disponible: puede que quede Chilexpress.
+    } catch (err) {
+      // Sin Starken disponible: puede que quede Chilexpress. Pausado a propósito no es un error.
+      if (starkenHabilitado()) console.error('[envio] Starken no cotizó:', err instanceof Error ? err.message : err);
     }
 
     return {
@@ -371,13 +374,15 @@ export async function cotizarOpcionesEnvio(
 
   try {
     opciones.push(await cotizarViaChilexpress(direccion, items));
-  } catch {
-    // Sin Chilexpress disponible fuera de Arica: puede que quede Starken.
+  } catch (err) {
+    // Sin Chilexpress disponible fuera de Arica: puede que quede Starken. Se registra (Salud del POS).
+    console.error('[envio] Chilexpress no cotizó:', err instanceof Error ? err.message : err);
   }
   try {
     opciones.push(await cotizarViaStarken(direccion, items));
-  } catch {
+  } catch (err) {
     // Sin Starken disponible fuera de Arica: puede que quede Chilexpress.
+    if (starkenHabilitado()) console.error('[envio] Starken no cotizó:', err instanceof Error ? err.message : err);
   }
 
   return { opciones };
