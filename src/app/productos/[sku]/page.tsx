@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { after } from "next/server";
-import { obtenerProductoPublicado, productosRelacionados } from "@/lib/catalogo";
+import { obtenerProductoPublicado, productosComplementarios, productosRelacionados } from "@/lib/catalogo";
+import { CarruselComplementarios } from "@/components/carrusel-complementarios";
+import { OpcionesAgotado } from "@/components/opciones-agotado";
 import { skuDesdeRuta, rutaDeSku } from "@/lib/sku-url";
 import { formatoCLP } from "@/lib/formato";
 import { HAY_RECARGO, precioConRecargo } from "@/lib/precios-medio-pago";
@@ -102,7 +104,13 @@ export default async function FichaProducto({ params }: PropsPagina) {
 
   // Relacionados: mismo criterio de resiliencia que el resto de la página
   // — si falla, la ficha se muestra igual, solo sin esa sección.
-  const relacionados = await productosRelacionados(producto).catch(() => []);
+  const [complementarios, parecidos] = await Promise.all([
+    productosComplementarios(producto).catch(() => []),
+    productosRelacionados(producto).catch(() => []),
+  ]);
+  // Un producto elegido como complemento no se repite abajo como "parecido".
+  const idsComplementarios = new Set(complementarios.map((p) => p.id));
+  const relacionados = parecidos.filter((p) => !idsComplementarios.has(p.id));
 
   // Se registra DESPUÉS de mandar la respuesta (after()), no retrasa la
   // ficha — el POS la lee para el panel "Más buscados / más vistos".
@@ -321,13 +329,10 @@ export default async function FichaProducto({ params }: PropsPagina) {
               que ya estaba escrito y nunca fue alcanzable. */}
           <div>
             {agotado ? (
-              <div className="rounded-2xl border border-border bg-surface-sunken p-4">
-                <p className="text-sm font-semibold text-ink">Agotado por ahora</p>
-                <p className="mt-1 text-sm text-ink-soft">
-                  Este producto no está disponible en este momento. Déjanos tu correo aquí abajo y
-                  te avisamos apenas vuelva a haber.
-                </p>
-              </div>
+              <OpcionesAgotado
+                nombre={producto.nombre}
+                url={`${process.env.NEXT_PUBLIC_SITE_URL || "https://sevelin.cl"}/productos/${rutaDeSku(producto.sku)}`}
+              />
             ) : producto.precio_a_consultar ? (
               <CotizarWhatsapp producto={producto} />
             ) : (
@@ -415,10 +420,13 @@ export default async function FichaProducto({ params }: PropsPagina) {
           enlazaba a otra — sin links internos, Google tiene que descubrir
           el resto del catálogo solo por el sitemap, más lento que
           seguir enlaces reales entre fichas relacionadas. */}
+      <CarruselComplementarios productos={complementarios} />
+
       {relacionados.length > 0 && (
         <section className="mt-16">
           <h2 className="font-display mb-5 text-xl font-bold uppercase tracking-tight text-ink">
-            También te puede interesar
+            {/* Agotado: los parecidos con stock SON la alternativa que busca. */}
+            {agotado ? "Alternativas disponibles" : "También te puede interesar"}
           </h2>
           <div className="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4">
             {relacionados.map((p) => (

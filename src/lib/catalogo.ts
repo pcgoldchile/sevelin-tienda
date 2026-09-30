@@ -384,6 +384,34 @@ export async function productosRelacionados(
   return resultado.map((p) => aplicarOferta(p));
 }
 
+/**
+ * "Complementa tu compra" (supabase/38): los productos que el dueño eligió en
+ * el POS para ESTE producto, en su orden. Solo los que se pueden comprar hoy:
+ * publicados, con stock y que no sean encargo. Si no eligió ninguno, la
+ * sección no aparece (no se inventan complementos automáticos).
+ */
+export async function productosComplementarios(
+  producto: Pick<ProductoWeb, 'id' | 'relacionados_pos_ids'>
+): Promise<ProductoWeb[]> {
+  const ids = (producto.relacionados_pos_ids || []).filter((n) => Number.isInteger(n) && n > 0);
+  if (ids.length === 0) return [];
+
+  const { data, error } = await supabaseWeb
+    .from('productos_web')
+    .select('*')
+    .in('producto_pos_id', ids)
+    .eq('publicado_web', true)
+    .eq('es_pedido_encargo', false)
+    .gt('stock_web', 0)
+    .neq('id', producto.id);
+  if (error || !data) return [];
+
+  const orden = new Map(ids.map((id, i) => [id, i]));
+  return data
+    .sort((a, b) => (orden.get(a.producto_pos_id) ?? 99) - (orden.get(b.producto_pos_id) ?? 99))
+    .map((p) => aplicarOferta(p));
+}
+
 /** Catálogo publicado filtrado por categoría y/o texto libre, para /productos. */
 export async function buscarCatalogo(filtros: {
   categoria?: string;

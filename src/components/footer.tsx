@@ -26,6 +26,9 @@ export function Footer() {
               <Link href="/productos" className="transition-colors hover:text-accent">Todos los productos</Link>
             </li>
             <li>
+              <Link href="/agotados" className="transition-colors hover:text-accent">Agotados: te los conseguimos</Link>
+            </li>
+            <li>
               <Link href="/preguntas-frecuentes" className="transition-colors hover:text-accent">Preguntas Frecuentes</Link>
             </li>
           </ul>

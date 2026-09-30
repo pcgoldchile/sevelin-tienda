@@ -61,6 +61,8 @@ export interface ProductoWeb {
   precio_oferta?: number | null;
   oferta_desde?: string | null;
   oferta_hasta?: string | null;
+  /** "Complementa tu compra" (supabase/38): ids del POS elegidos a mano, en orden. */
+  relacionados_pos_ids?: number[] | null;
   /** Solo con oferta vigente: el precio normal, para mostrarlo tachado.
    *  null/undefined = sin oferta, precio_web es el de siempre. */
   precio_antes?: number | null;
@@ -311,6 +313,8 @@ export interface ProductoPOS {
   precio_oferta_web?: number | null;
   oferta_desde?: string | null;
   oferta_hasta?: string | null;
+  // Complementarios elegidos en el POS — ver sevelin-pos-oficial/sql/75.
+  relacionados_ids?: number[] | null;
   // SEO con IA — ver sevelin-pos-oficial/sql/33-seo-ia.sql.
   meta_titulo_web: string | null;
   meta_descripcion_web: string | null;

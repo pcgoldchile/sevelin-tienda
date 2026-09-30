@@ -147,6 +147,11 @@ export async function POST(req: NextRequest) {
        el CHECK de la tabla. Si está vigente o no lo decide la tienda al
        leer (src/lib/oferta.ts). */
     ...ofertaDesdePos(producto),
+    /* "Complementa tu compra" (sql/75 del POS → supabase/38). Solo enteros:
+       un valor raro no debe romper el guardado del producto entero. */
+    relacionados_pos_ids: Array.isArray(producto.relacionados_ids)
+      ? producto.relacionados_ids.map(Number).filter((n) => Number.isInteger(n) && n > 0).slice(0, 12)
+      : [],
     sincronizado_en: new Date().toISOString()
   };
 
