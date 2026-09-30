@@ -56,9 +56,9 @@ export function AvisoCookies() {
     >
       <div className="mx-auto flex max-w-3xl flex-col gap-3 rounded-2xl border border-border-strong bg-surface p-4 text-sm text-ink-soft shadow-2xl sm:flex-row sm:items-center sm:gap-5">
         <p className="leading-relaxed">
-          ¿Nos dejas usar una cookie de <strong className="text-ink">Meta</strong> (Facebook e Instagram)
-          para medir nuestros anuncios y mostrárselos a quienes ya nos visitaron? Es opcional: si la rechazas,
-          la tienda funciona igual.{" "}
+          ¿Nos dejas usar una cookie de <strong className="text-ink">Meta</strong> (Facebook e Instagram)? Con
+          ella Meta ve qué miras en la tienda, y nosotros sabemos si nuestros anuncios funcionan y se los
+          mostramos a quienes ya nos visitaron. Es opcional: si la rechazas, compras igual.{" "}
           <Link href="/privacidad#cookies" className="text-accent-soft underline underline-offset-2 hover:text-ink">
             Más detalles
           </Link>

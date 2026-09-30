@@ -4,7 +4,23 @@
 > arquitectura completo (todas las fases) vive en `README-ECOMMERCE-SEVELIN.md`, en el repo del POS
 > (`sevelin-pos-oficial`) — este documento es el estado de ESTE repo (`sevelin-tienda`) nada más.
 
-**Fecha:** 29-09-2026 · **Precio de oferta con fechas (para el Cyber y cualquier promoción).**
+**Fecha:** 30-09-2026 · **Privacidad 1.5: las cookies explicadas en palabras simples.**
+
+- `/privacidad#cookies` ya no pone `_fbp`/`_fbc` en el texto: explica qué es una cookie, cuáles son las
+  necesarias y cuál es la de Meta, qué recibe Meta y qué no. Los nombres técnicos quedan en un recuadro
+  "Detalle técnico" al final. Se agregaron dos cosas que la 1.4 no declaraba: el contador anónimo de
+  visitas (`sevelin_sesion_visita`, sessionStorage, que sí viaja al servidor) y la marca de la
+  invitación a reseña (`resena-mostrada-…`).
+- El aviso de cookies ahora dice claro que con la cookie "Meta ve qué miras en la tienda".
+- `VERSION_POLITICA_PRIVACIDAD` = 1.5 (30 de septiembre de 2026). **No** se subió
+  `VERSION_CONSENTIMIENTO_COOKIES`: el proveedor y la finalidad son los mismos, así que no se vuelve a
+  preguntar a quien ya decidió.
+- Probado en local sin base (Supabase apuntando a un puerto muerto, Pixel falso): texto, aviso y sin
+  scroll horizontal a 375 px; `tsc` y `eslint` limpios.
+
+---
+
+**29-09-2026** · **Precio de oferta con fechas (para el Cyber y cualquier promoción).**
 
 - **Migración `supabase/37-precio-oferta.sql` (aplicada con la CLI el 29-09-2026):** `productos_web`
   suma `precio_oferta`, `oferta_desde`, `oferta_hasta`, con un CHECK de "los tres o ninguno". Viene

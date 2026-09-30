@@ -66,6 +66,11 @@ determinación corresponde a la Agencia (Art. 28) y a esta fecha no ha sido emit
   `fbq('consent','revoke')` y borra `_fbp`/`_fbc`. Transferencia internacional a EE.UU. declarada
   en `/privacidad`. Si se agrega otro proveedor o finalidad, subir `VERSION_CONSENTIMIENTO_COOKIES`
   (vuelve a preguntar) y `VERSION_POLITICA_PRIVACIDAD`.
+- **Política 1.5 (30-09-2026): "Cookies" reescrita en palabras simples.** Los nombres técnicos
+  quedan solo en el recuadro "Detalle técnico". Se declararon dos cosas que la 1.4 omitía:
+  `sevelin_sesion_visita` (sessionStorage, UUID al azar que SÍ se envía a `/api/visita-activa`
+  para "visitantes activos ahora"; la IP no se guarda) y `resena-mostrada-<pedido>` (localStorage).
+  Si se agrega algo que se guarde en el navegador, va en las dos listas de esa sección.
 - Fuera del Pixel no hay analítica ni cookies de terceros: la otra cookie es la de sesión de
   Supabase Auth. Las tipografías se auto-hospedan en el build (`next/font/google`), el navegador
   del cliente nunca llama a Google.

@@ -51,9 +51,9 @@ export default function Privacidad() {
               escribir, junto con los productos de tu carrito.
             </li>
             <li>
-              <strong>Solo si aceptas las cookies de publicidad</strong> (aviso al entrar al sitio): lo que registra
+              <strong>Solo si aceptas la cookie de publicidad</strong> (aviso al entrar al sitio): lo que registra
               el Pixel de Meta en tu navegador — qué páginas y productos ves, qué agregas al carrito, tu dirección
-              IP, tu navegador y un identificador en la cookie <code>_fbp</code>. Ver{" "}
+              IP, tu navegador y un código que identifica a ese navegador. Ver{" "}
               <a href="#cookies" className="text-accent hover:underline">Cookies</a>.
             </li>
           </ul>
@@ -168,25 +168,96 @@ export default function Privacidad() {
           </p>
         </section>
 
+        {/* 30-09-2026 (v1.5): reescrita en palabras simples a pedido del dueño —
+            los nombres técnicos quedan solo en "Detalle técnico", al final. Se
+            sumaron dos cosas que la 1.4 no decía: el contador anónimo de visitas
+            (sí viaja al servidor, aunque es un número al azar) y la marca de la
+            invitación a reseña. Si se agrega algo al navegador, va en las dos listas. */}
         <section>
-          <h2 id="cookies" className="mb-1.5 scroll-mt-24 text-base font-semibold text-ink">Cookies y sesión</h2>
+          <h2 id="cookies" className="mb-1.5 scroll-mt-24 text-base font-semibold text-ink">
+            Cookies y lo que guardamos en tu navegador
+          </h2>
           <p>
-            <strong>Funcionales (siempre activas):</strong> una cookie para mantener tu sesión iniciada (Supabase
-            Auth) si creas una cuenta. El carrito y tu decisión sobre las cookies de publicidad se guardan en tu
-            navegador (localStorage), no en una cookie, y no salen de tu equipo.
+            Una cookie es un dato pequeño que una página guarda en tu navegador para recordar algo la próxima vez
+            que entras. Usamos muy pocas, y te contamos cada una.
+          </p>
+
+          <h3 className="mt-3 font-semibold text-ink">Las necesarias (siempre activas)</h3>
+          <p className="mt-1">Sin estas la tienda no funciona bien. No sirven para publicidad ni para saber quién eres:</p>
+          <ul className="mt-2 list-disc pl-5">
+            <li>
+              <strong>Tu sesión</strong>, si creaste una cuenta: recuerda que ya entraste, para no pedirte la
+              contraseña en cada página. Se borra al cerrar sesión.
+            </li>
+            <li>
+              <strong>Tu carrito</strong>: guarda lo que agregaste aunque cierres la página. Nos llega solo para
+              mostrarte los precios al día y cuando haces el pedido.
+            </li>
+            <li>
+              <strong>Tu respuesta al aviso de cookies</strong>: para no preguntarte lo mismo en cada visita.
+            </li>
+            <li>
+              <strong>Un contador de visitas</strong>: un número al azar que nos dice cuántas personas están mirando
+              la tienda en este momento. No dice quién eres y se borra al cerrar la pestaña.
+            </li>
+            <li>
+              <strong>La invitación a dejar una reseña en Google</strong>, después de pagar: recuerda que ya te la
+              mostramos, para no repetirla.
+            </li>
+          </ul>
+
+          <h3 className="mt-4 font-semibold text-ink">La de publicidad (opcional, solo si la aceptas)</h3>
+          <p className="mt-1">
+            Es de <strong>Meta</strong>, la empresa dueña de Facebook e Instagram. Le permite a Meta reconocer que
+            tu navegador ya pasó por Sevelin. Con eso nosotros podemos:
+          </p>
+          <ul className="mt-2 list-disc pl-5">
+            <li>saber si nuestros anuncios en Facebook e Instagram traen visitas y ventas, y</li>
+            <li>mostrarles nuestros anuncios a personas que ya visitaron la tienda.</li>
+          </ul>
+          <p className="mt-2">
+            Para eso Meta recibe qué páginas y productos miras aquí, qué agregas al carrito, tu dirección IP y el
+            tipo de navegador que usas. <strong>No</strong> recibe tu nombre, correo, teléfono ni dirección. La
+            cookie dura 90 días.
           </p>
           <p className="mt-2">
-            <strong>De publicidad (opcionales, solo si las aceptas):</strong> el Pixel de Meta crea la cookie{" "}
-            <code>_fbp</code> en este sitio, que identifica a tu navegador y dura 90 días. Si llegas desde un
-            anuncio, también la cookie <code>_fbc</code>, que dura lo mismo. Sirven para medir nuestros anuncios en
-            Facebook e Instagram y mostrárselos a quienes ya visitaron la tienda.
+            Mientras no presiones &quot;Aceptar&quot;, no se carga nada de Meta. Si la rechazas, la tienda funciona
+            igual y puedes comprar sin problema. Puedes cambiar de opinión cuando quieras en &quot;Preferencias de
+            cookies&quot;, al pie de cada página: si la retiras, la borramos de tu navegador y Meta deja de recibir
+            datos desde aquí.
           </p>
-          <p className="mt-2">
-            Mientras no presiones &quot;Aceptar&quot;, el Pixel no se carga y esas cookies no se crean. Rechazarlas no
-            cambia nada de la tienda: puedes comprar igual. Para cambiar tu decisión usa &quot;Preferencias de
-            cookies&quot;, al pie de cada página. Si las retiras, borramos <code>_fbp</code> y <code>_fbc</code> de tu
-            navegador y el Pixel deja de enviar datos.
-          </p>
+
+          <div className="mt-4 rounded-xl border border-border bg-surface/50 p-3 text-xs text-ink-faint">
+            <p className="font-semibold text-ink-soft">Detalle técnico (para quien quiera revisarlo)</p>
+            <ul className="mt-1.5 flex flex-col gap-1">
+              <li>
+                <code>sb-…-auth-token</code> — cookie de sesión (Supabase Auth). Hasta que cierres sesión; máximo 400
+                días.
+              </li>
+              <li>
+                <code>sevelin-carrito</code> — almacenamiento local (localStorage). Hasta que compres o vacíes el
+                carrito.
+              </li>
+              <li>
+                <code>sevelin_consentimiento_cookies</code> — almacenamiento local. Hasta que cambies tu respuesta o
+                borres los datos del navegador.
+              </li>
+              <li>
+                <code>sevelin_sesion_visita</code> — almacenamiento de sesión (sessionStorage). Se borra al cerrar la
+                pestaña.
+              </li>
+              <li>
+                <code>resena-mostrada-…</code> — almacenamiento local. Hasta que borres los datos del navegador.
+              </li>
+              <li>
+                <code>_fbp</code> — cookie del Pixel de Meta, identifica a tu navegador. 90 días. Solo si aceptas.
+              </li>
+              <li>
+                <code>_fbc</code> — cookie del Pixel de Meta, solo si llegas desde un anuncio: recuerda de cuál
+                vienes. 90 días. Solo si aceptas.
+              </li>
+            </ul>
+          </div>
         </section>
 
         <section>
@@ -212,8 +283,8 @@ export default function Privacidad() {
             recordatorios, guardamos solo tu correo en esa lista, para respetarlo.
           </p>
           <p className="mt-2">
-            Las cookies del Pixel de Meta (<code>_fbp</code>, <code>_fbc</code>) duran 90 días en tu navegador. Lo que
-            Meta ya recibió lo conserva Meta según su propia política.
+            La cookie de Meta dura 90 días en tu navegador. Lo que Meta ya recibió lo conserva Meta según su propia
+            política.
           </p>
           <p className="mt-2">
             El registro de las solicitudes que nos hagas sobre tus datos se conserva junto con el correo
