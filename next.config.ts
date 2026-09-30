@@ -69,6 +69,14 @@ const nextConfig: NextConfig = {
     // esto las sirve tal cual salen de Supabase, sin depender del cupo.
     unoptimized: true,
   },
+  // Direcciones viejas (Tiendanube) que siguen enlazadas afuera: Merchant
+  // Center tuvo /politica-de-devolucion como URL de la política hasta el
+  // 30-09-2026, y respondía 404.
+  async redirects() {
+    return [
+      { source: '/politica-de-devolucion', destination: '/terminos#devoluciones', permanent: true },
+    ];
+  },
   async headers() {
     return [
       {
