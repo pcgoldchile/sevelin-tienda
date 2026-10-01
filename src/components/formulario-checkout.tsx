@@ -19,6 +19,7 @@ import { BLOQUES_RETIRO, DIAS_MAXIMOS_RETIRO } from "@/lib/retiro-agendado";
 import { AVISO_DOMINGO, HORARIO_LEGIBLE } from "@/lib/horarios";
 import { COMUNAS_POR_REGION } from "@/lib/comunas-chile";
 import type { OpcionEnvio } from "@/lib/envio";
+import { AvisoMayoristaCarrito } from "@/components/aviso-mayorista-carrito";
 
 const CAMPO =
   "rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm outline-none transition-colors focus:border-accent";
@@ -558,6 +559,7 @@ export function FormularioCheckout({
               <div className="flex flex-1 flex-col gap-0.5">
                 <span className="text-ink">{item.nombre}</span>
                 <span className="text-xs text-ink-faint">Cantidad: {item.cantidad}</span>
+                {item.es_precio_mayorista && <span className="text-xs font-medium text-success">🤝 Precio mayorista</span>}
               </div>
               <span className="shrink-0 tabular-nums">{formatoCLP.format(item.precio_web * item.cantidad)}</span>
             </li>
@@ -565,6 +567,7 @@ export function FormularioCheckout({
         </ul>
         </div>
         ))}
+        <AvisoMayoristaCarrito className="mt-3" />
         <div className="mt-3 flex flex-col gap-1.5 border-t border-border pt-3 text-sm">
           <div className="flex justify-between text-ink-soft">
             <span>Subtotal</span>

@@ -9,6 +9,8 @@ import { recargoTotal } from '@/lib/precios-medio-pago';
 import { confirmarEnvio } from '@/lib/envio';
 import { crearClienteServidor } from '@/lib/supabase-server';
 import { marcarCarritoConvertido } from '@/lib/carritos-web';
+import { contextoMayorista, preciosMayoristasDe } from '@/lib/mayorista';
+import { resolverPreciosMayoristas } from '@/lib/mayorista-precios';
 import type { DatosFactura, DireccionEnvio, ItemPedido } from '@/lib/tipos';
 
 interface CuerpoCheckout {
@@ -115,8 +117,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'El carrito está vacío' }, { status: 400 });
   }
 
+  // Sesión leída de la cookie, nunca de algo que mande el cliente en el
+  // body — mismo principio que precio/stock/envío de más abajo. Se lee acá
+  // arriba porque decide el precio de una cuenta mayorista (supabase/39).
+  // Un pedido de invitado (sin sesión) sigue funcionando exactamente igual.
+  const supabaseSesion = await crearClienteServidor();
+  const {
+    data: { user },
+  } = await supabaseSesion.auth.getUser();
+
   let items: ItemPedido[];
   let tipoPedido: 'NORMAL' | 'ENCARGO';
+  let esMayorista = false;
   let soloServicios = false;
   let hayServicios = false;
   try {
@@ -139,15 +151,16 @@ export async function POST(req: NextRequest) {
         if (!producto.es_pedido_encargo && cantidad > producto.stock_web) {
           throw new Error(`Sin stock suficiente de "${producto.nombre}" (quedan ${producto.stock_web})`);
         }
+        const item: ItemPedido = {
+          sku: producto.sku,
+          producto_pos_id: producto.producto_pos_id,
+          nombre: producto.nombre,
+          precio_web: producto.precio_web,
+          cantidad,
+          es_servicio: esServicioTecnico(producto),
+        };
         return {
-          item: {
-            sku: producto.sku,
-            producto_pos_id: producto.producto_pos_id,
-            nombre: producto.nombre,
-            precio_web: producto.precio_web,
-            cantidad,
-            es_servicio: esServicioTecnico(producto),
-          },
+          item,
           esEncargo: producto.es_pedido_encargo,
           esServicio: esServicioTecnico(producto),
         };
@@ -163,6 +176,32 @@ export async function POST(req: NextRequest) {
       throw new Error(
         'Los productos de Pedidos por Encargo se compran por separado del resto del carrito.'
       );
+    }
+
+    /* Venta mayorista (supabase/39): solo una cuenta APROBADA, y con la
+       misma función que usa el carrito para mostrar. Si el pedido (con
+       precios mayoristas, sin envío) no llega al pedido mínimo, todo va a
+       precio normal. Un encargo o un servicio nunca tiene precio mayorista. */
+    const mayorista = await contextoMayorista(user?.id);
+    if (mayorista) {
+      const precios = await preciosMayoristasDe(resueltos.map((r) => r.item.producto_pos_id));
+      const resolucion = resolverPreciosMayoristas(
+        resueltos.map((r, i) => ({
+          clave: String(i),
+          precio: r.item.precio_web,
+          cantidad: r.item.cantidad,
+          mayorista: r.esEncargo || r.esServicio ? null : precios.get(Number(r.item.producto_pos_id)) ?? null,
+        })),
+        mayorista.pedidoMinimo
+      );
+      resueltos.forEach((r, i) => {
+        const p = resolucion.precios[String(i)];
+        if (!p.mayorista) return;
+        r.item.precio_normal = r.item.precio_web;
+        r.item.precio_web = p.precio;
+        r.item.precio_tipo = 'MAYORISTA';
+      });
+      esMayorista = resolucion.activo;
     }
 
     /* Precio que el cliente vio vs. precio vigente (ofertas con fecha,
@@ -242,14 +281,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Elige qué día traes tu equipo al local (desde hoy y hasta 30 días).' }, { status: 400 });
   }
 
-  // Sesión leída de la cookie, nunca de algo que mande el cliente en el
-  // body — mismo principio que precio/stock/envío de más arriba. Un pedido
-  // de invitado (sin sesión) sigue funcionando exactamente igual que antes.
-  const supabaseSesion = await crearClienteServidor();
-  const {
-    data: { user },
-  } = await supabaseSesion.auth.getUser();
-
   /* El medio de pago se resuelve ANTES de crear el pedido porque decide el
      precio cuando el recargo está encendido (ver src/lib/precios-medio-pago.ts).
      Hoy Flow está apagado (FLOW_HABILITADO), así que todo va por Khipu. */
@@ -297,6 +328,7 @@ export async function POST(req: NextRequest) {
       recargoMedioPago,
       nota: cuerpo.nota?.trim() || null,
       factura,
+      esMayorista,
       clienteUserId: user?.id ?? null,
       consentimiento: true,
     });

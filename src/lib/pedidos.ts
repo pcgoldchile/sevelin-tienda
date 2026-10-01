@@ -55,6 +55,9 @@ export async function crearPedido(datos: {
   recargoMedioPago: number;
   nota: string | null;
   factura: DatosFactura | null;
+  /* Venta mayorista (supabase/39): alguna línea va a precio mayorista. Lo
+     decide POST /api/checkout con la sesión de la cookie. */
+  esMayorista?: boolean;
   /* Retiro agendado (supabase/30). Ya vienen validados por el llamador y
      solo llegan con método RETIRO. Es una orientación, no una cita: el
      cliente puede venir otro día sin que nada se rompa. */
@@ -106,6 +109,7 @@ export async function crearPedido(datos: {
       version_politica: VERSION_POLITICA_PRIVACIDAD,
       direccion_envio: datos.direccion,
       items: datos.items,
+      es_mayorista: !!datos.esMayorista,
       tipo_pedido: datos.tipoPedido,
       metodo_envio: datos.metodoEnvio,
       retiro_fecha: datos.retiroFecha ?? null,

@@ -10,6 +10,7 @@ import { useCarrito } from "@/context/carrito-context";
 import { AvisoPagoTarjeta } from "@/components/aviso-pago-tarjeta";
 import { ModalCotizar } from "@/components/modal-cotizar";
 import { PrecioAntes } from "@/components/precio-oferta";
+import { AvisoMayoristaCarrito, PistaMayoristaLinea } from "@/components/aviso-mayorista-carrito";
 
 export default function CarritoPage() {
   const {
@@ -139,6 +140,7 @@ export default function CarritoPage() {
                     <span className="precio-gamer text-base text-ink">{formatoCLP.format(item.precio_web)}</span>
                     <PrecioAntes precioAntes={item.precio_antes} precio={item.precio_web} />
                   </span>
+                  <PistaMayoristaLinea item={item} />
                   <div className="mt-1 flex items-center justify-between gap-2">
                     {/* Altura fija (h-9) en los 3 elementos — no relleno
                         (padding): así los tres miden exactamente lo mismo
@@ -212,6 +214,7 @@ export default function CarritoPage() {
               <span className="tabular-nums">{formatoCLP.format(subtotalSeleccionado)}</span>
             </div>
           </div>
+          <AvisoMayoristaCarrito className="mt-3" />
           <p className="mt-1 text-xs text-ink-faint">
             El envío se calcula en el siguiente paso.
             {HAY_RECARGO &&

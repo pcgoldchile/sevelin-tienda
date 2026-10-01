@@ -163,6 +163,26 @@ export async function POST(req: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
+  /* Venta mayorista (sql/76 del POS → supabase/39). En una tabla APARTE, no
+     en productos_web: el catálogo lee productos_web entero y lo manda al
+     navegador, y el precio mayorista no es público. Sin precio (o si la base
+     del POS lo desactivó porque subió el costo) se borra: nunca queda uno
+     viejo cobrando de menos. */
+  const precioMayorista = Math.round(Number(producto.precio_mayorista));
+  const mayoristaDesde = Math.round(Number(producto.mayorista_desde));
+  const errMayorista = precioMayorista > 0 && mayoristaDesde >= 2
+    ? (await supabaseWeb.from('precios_mayoristas').upsert({
+        producto_pos_id: producto.id,
+        precio_mayorista: precioMayorista,
+        desde_cantidad: mayoristaDesde,
+        actualizado_en: new Date().toISOString(),
+      }, { onConflict: 'producto_pos_id' })).error
+    : (await supabaseWeb.from('precios_mayoristas').delete().eq('producto_pos_id', producto.id)).error;
+  if (errMayorista) {
+    console.error(`[sync] producto ${producto.id}: no se pudo guardar el precio mayorista:`, errMayorista.message);
+    return NextResponse.json({ error: errMayorista.message }, { status: 500 });
+  }
+
   /* "Ya llegó": el dueño desmarcó "Por llegar" en el POS. Ese gesto —y no
      un cron adivinando por el stock— es lo único que significa que la caja
      se abrió y el producto está en el mostrador.

@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { crearClienteServidor } from "@/lib/supabase-server";
 import { CerrarSesionBoton } from "./cerrar-sesion-boton";
 import { EditarPerfilForm } from "./editar-perfil-form";
+import { SolicitudMayorista } from "./solicitud-mayorista";
+import { cuentaMayoristaDe } from "@/lib/mayorista";
 
 export default async function Cuenta() {
   const supabase = await crearClienteServidor();
@@ -12,7 +14,10 @@ export default async function Cuenta() {
 
   if (!user) redirect("/cuenta/ingresar");
 
-  const { data: perfil } = await supabase.from("perfiles_clientes").select("*").eq("id", user.id).maybeSingle();
+  const [{ data: perfil }, cuentaMayorista] = await Promise.all([
+    supabase.from("perfiles_clientes").select("*").eq("id", user.id).maybeSingle(),
+    cuentaMayoristaDe(user.id),
+  ]);
 
   return (
     <main className="mx-auto max-w-sm px-4 py-10 sm:px-6 lg:px-8">
@@ -22,6 +27,11 @@ export default async function Cuenta() {
       {/* Derecho de Acceso + Rectificación (Ley 21.719). */}
       <div className="mt-6">
         <EditarPerfilForm userId={user.id} email={user.email || ""} perfil={perfil} />
+      </div>
+
+      {/* Venta mayorista, Fase 1 (supabase/39): pedir la cuenta o ver su estado. */}
+      <div className="mt-4">
+        <SolicitudMayorista estado={cuentaMayorista?.estado ?? null} perfil={perfil} />
       </div>
 
       <div className="mt-4 flex flex-col gap-2">

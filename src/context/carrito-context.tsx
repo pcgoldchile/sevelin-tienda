@@ -14,6 +14,7 @@ import type { ProductoWeb } from "@/lib/tipos";
 import { useSesion } from "@/context/sesion-context";
 import { crearClienteNavegador } from "@/lib/supabase-browser";
 import { esServicioTecnico } from "@/lib/servicios";
+import { resolverPreciosMayoristas, type DatosMayorista } from "@/lib/mayorista-precios";
 
 const CLAVE_LOCALSTORAGE = "sevelin-carrito";
 
@@ -36,6 +37,22 @@ export interface ItemCarrito {
   /** Precio normal si el producto está en oferta (supabase/37), para
    *  mostrarlo tachado. Lo mantiene al día actualizarPrecios(). */
   precio_antes?: number | null;
+  /** Solo en la vista (nunca se guarda): la línea va a precio mayorista y
+   *  precio_web ya es ese precio (supabase/39). */
+  es_precio_mayorista?: boolean;
+}
+
+/** Cuenta mayorista aprobada con productos en el carrito (supabase/39). */
+export interface MayoristaCarrito {
+  pedidoMinimo: number;
+  /** Se están cobrando precios mayoristas. */
+  activo: boolean;
+  /** Alguna línea llega a su mínimo, aunque falte el pedido mínimo. */
+  hayLineasQueCalifican: boolean;
+  /** Cuánto falta para el pedido mínimo. */
+  faltante: number;
+  /** Precio mayorista de cada SKU del carrito que lo tiene. */
+  porSku: Record<string, DatosMayorista | null>;
 }
 
 interface CarritoContextValor {
@@ -61,6 +78,8 @@ interface CarritoContextValor {
   /** Pone al día precios y stock contra el servidor (ofertas que empezaron o
    *  terminaron). Devuelve los nombres de los productos cuyo precio cambió. */
   actualizarPrecios: () => Promise<string[]>;
+  /** null = no es una cuenta mayorista aprobada (o el carrito está vacío). */
+  mayorista: MayoristaCarrito | null;
 }
 
 const CarritoContext = createContext<CarritoContextValor | null>(null);
@@ -76,6 +95,14 @@ export function CarritoProvider({ children }: { children: ReactNode }) {
   // el guardado del servidor UNA VEZ por sesión de cuenta, recién ahí
   // empieza a guardar cambios.
   const carritoServidorCargadoPara = useRef<string | null>(null);
+  /* Venta mayorista (supabase/39): lo que dijo el servidor para ESTA sesión.
+     Vive aparte de `items` a propósito: `items` se guarda en el navegador y
+     en la cuenta, y un precio mayorista nunca debe quedar guardado ahí (en
+     un computador compartido lo vería la siguiente persona). */
+  const [mayoristaServidor, setMayoristaServidor] = useState<{
+    pedidoMinimo: number;
+    porSku: Record<string, DatosMayorista | null>;
+  } | null>(null);
 
   // Carga inicial desde localStorage DESPUÉS de montar (no en el lazy init de
   // useState): el servidor no tiene localStorage, así que el primer render en
@@ -238,9 +265,23 @@ export function CarritoProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify({ skus: actuales.map((i) => i.sku) }),
       });
       if (!respuesta.ok) return [];
-      const { precios } = (await respuesta.json()) as {
-        precios: Record<string, { precio_web: number; precio_antes: number | null; stock_web: number }>;
+      const { precios, mayorista } = (await respuesta.json()) as {
+        precios: Record<string, {
+          precio_web: number;
+          precio_antes: number | null;
+          stock_web: number;
+          mayorista?: DatosMayorista | null;
+        }>;
+        mayorista?: { pedido_minimo: number } | null;
       };
+      setMayoristaServidor(
+        mayorista
+          ? {
+              pedidoMinimo: Number(mayorista.pedido_minimo) || 0,
+              porSku: Object.fromEntries(Object.entries(precios).map(([sku, p]) => [sku, p.mayorista ?? null])),
+            }
+          : null
+      );
       // Se calcula con lo que había al preguntar (no dentro de setItems, que
       // React ejecuta después y dejaría la lista vacía al devolverla).
       const cambiados = actuales
@@ -262,29 +303,70 @@ export function CarritoProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Una vez al cargar el carrito (y cuando cambian los productos que tiene).
+  // Una vez al cargar el carrito, cuando cambian los productos que tiene, y
+  // al entrar o salir de la cuenta (una cuenta mayorista ve otros precios).
   const clavesSku = items.map((i) => i.sku).sort().join("|");
+  const usuarioId = usuario?.id ?? null;
   useEffect(() => {
-    if (!cargado || !clavesSku) return;
+    if (!cargado) return;
+    if (!clavesSku) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- carrito vacío: no queda nada que resolver
+      setMayoristaServidor(null);
+      return;
+    }
     actualizarPrecios();
-  }, [cargado, clavesSku, actualizarPrecios]);
+  }, [cargado, clavesSku, actualizarPrecios, usuarioId]);
+
+  /* PRECIO DE CADA LÍNEA PARA UNA CUENTA MAYORISTA. Misma función que usa
+     POST /api/checkout para cobrar (resolverPreciosMayoristas), sobre las
+     líneas seleccionadas. La vista reemplaza precio_web por el mayorista y
+     deja el normal en precio_antes (se ve tachado): lo que muestra el
+     carrito y lo que manda el checkout como precio_esperado es exactamente
+     lo que se cobra. `items` (lo guardado) sigue con el precio normal. */
+  const { itemsVista, mayorista } = useMemo(() => {
+    if (!mayoristaServidor) return { itemsVista: items, mayorista: null };
+    const resolucion = resolverPreciosMayoristas(
+      items
+        .filter((i) => i.seleccionado)
+        .map((i) => ({ clave: i.sku, precio: i.precio_web, cantidad: i.cantidad, mayorista: mayoristaServidor.porSku[i.sku] ?? null })),
+      mayoristaServidor.pedidoMinimo
+    );
+    const vista = resolucion.activo
+      ? items.map((i) => {
+          const p = i.seleccionado ? resolucion.precios[i.sku] : null;
+          return p?.mayorista
+            ? { ...i, precio_web: p.precio, precio_antes: i.precio_antes ?? i.precio_web, es_precio_mayorista: true }
+            : i;
+        })
+      : items;
+    return {
+      itemsVista: vista,
+      mayorista: {
+        pedidoMinimo: mayoristaServidor.pedidoMinimo,
+        activo: resolucion.activo,
+        hayLineasQueCalifican: resolucion.hayLineasQueCalifican,
+        faltante: resolucion.faltante,
+        porSku: mayoristaServidor.porSku,
+      },
+    };
+  }, [items, mayoristaServidor]);
 
   const abrirCarrito = useCallback(() => setAbierto(true), []);
   const cerrarCarrito = useCallback(() => setAbierto(false), []);
 
   const { cantidadTotal, subtotal, itemsSeleccionados, cantidadSeleccionada, subtotalSeleccionado } = useMemo(() => {
-    const seleccionados = items.filter((item) => item.seleccionado);
+    const seleccionados = itemsVista.filter((item) => item.seleccionado);
     return {
-      cantidadTotal: items.reduce((acc, item) => acc + item.cantidad, 0),
-      subtotal: items.reduce((acc, item) => acc + item.cantidad * item.precio_web, 0),
+      cantidadTotal: itemsVista.reduce((acc, item) => acc + item.cantidad, 0),
+      subtotal: itemsVista.reduce((acc, item) => acc + item.cantidad * item.precio_web, 0),
       itemsSeleccionados: seleccionados,
       cantidadSeleccionada: seleccionados.reduce((acc, item) => acc + item.cantidad, 0),
       subtotalSeleccionado: seleccionados.reduce((acc, item) => acc + item.cantidad * item.precio_web, 0),
     };
-  }, [items]);
+  }, [itemsVista]);
 
   const valor: CarritoContextValor = {
-    items,
+    items: itemsVista,
     itemsSeleccionados,
     abierto,
     cantidadTotal,
@@ -301,6 +383,7 @@ export function CarritoProvider({ children }: { children: ReactNode }) {
     vaciarCarrito,
     quitarSeleccionados,
     actualizarPrecios,
+    mayorista,
   };
 
   return <CarritoContext.Provider value={valor}>{children}</CarritoContext.Provider>;

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { obtenerProductoPorSku } from '@/lib/catalogo';
+import { crearClienteServidor } from '@/lib/supabase-server';
+import { contextoMayorista, preciosMayoristasDe } from '@/lib/mayorista';
 
 /**
  * POST /api/carrito/precios — el precio VIGENTE de lo que hay en el carrito.
@@ -12,7 +14,13 @@ import { obtenerProductoPorSku } from '@/lib/catalogo';
  * (obtenerProductoPorSku), así lo que se muestra es exactamente lo que se
  * va a cobrar.
  *
- * Solo lectura y datos públicos (los mismos de la ficha). Tope de 50 SKU.
+ * Venta mayorista (supabase/39): si la sesión (cookie, nunca el body) es de
+ * una cuenta mayorista APROBADA, cada producto trae además su precio
+ * mayorista y la respuesta el pedido mínimo. El carrito aplica la regla con
+ * resolverPreciosMayoristas(), la misma función con que cobra el checkout.
+ * Para cualquier otra persona la respuesta es igual que antes.
+ *
+ * Tope de 50 SKU.
  */
 export async function POST(req: NextRequest) {
   let cuerpo: { skus?: unknown };
@@ -24,15 +32,34 @@ export async function POST(req: NextRequest) {
   const skus = Array.isArray(cuerpo.skus)
     ? [...new Set(cuerpo.skus.map((s) => String(s || '').trim()).filter(Boolean))].slice(0, 50)
     : [];
-  if (!skus.length) return NextResponse.json({ precios: {} });
+  if (!skus.length) return NextResponse.json({ precios: {}, mayorista: null });
 
   try {
     const productos = await Promise.all(skus.map((sku) => obtenerProductoPorSku(sku)));
-    const precios: Record<string, { precio_web: number; precio_antes: number | null; stock_web: number }> = {};
+    const precios: Record<string, {
+      precio_web: number;
+      precio_antes: number | null;
+      stock_web: number;
+      mayorista?: { precio: number; desde: number } | null;
+    }> = {};
     productos.forEach((p) => {
       if (p) precios[p.sku] = { precio_web: p.precio_web, precio_antes: p.precio_antes ?? null, stock_web: p.stock_web };
     });
-    return NextResponse.json({ precios });
+
+    const supabaseSesion = await crearClienteServidor();
+    const { data: { user } } = await supabaseSesion.auth.getUser();
+    const contexto = await contextoMayorista(user?.id);
+    if (contexto) {
+      const vigentes = productos.filter((p): p is NonNullable<typeof p> => !!p && !p.es_pedido_encargo);
+      const mayoristas = await preciosMayoristasDe(vigentes.map((p) => p.producto_pos_id));
+      for (const p of vigentes) precios[p.sku].mayorista = mayoristas.get(Number(p.producto_pos_id)) ?? null;
+    }
+
+    return NextResponse.json(
+      { precios, mayorista: contexto ? { pedido_minimo: contexto.pedidoMinimo } : null },
+      // Depende de la sesión: que nada en el camino la guarde para otra persona.
+      { headers: { 'Cache-Control': 'private, no-store' } }
+    );
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : 'No se pudieron leer los precios' }, { status: 500 });
   }

@@ -1,5 +1,6 @@
 import { DIRECCION_TIENDA } from './distancia';
 import { formatoCLP } from './formato';
+import { escaparHtml } from './escapar-html';
 import { fechaRetiroLegible } from './retiro-agendado';
 import { URL_RESENA_GOOGLE } from './resena-google';
 import type { PedidoWeb } from './tipos';
@@ -439,5 +440,69 @@ export function correoQrRetiro(datos: {
   return {
     subject: `Tu código para retirar el equipo — orden ${datos.numeroOt}`,
     html: envoltorio('Tu equipo está en Sevelin', contenido),
+  };
+}
+
+/** Venta mayorista (supabase/39): al dueño, apenas alguien pide cuenta
+ * mayorista desde "Mi cuenta". Los datos los escribió el cliente: se
+ * escapan antes de entrar al HTML. */
+export function correoSolicitudMayorista(datos: {
+  nombre: string;
+  rut: string;
+  telefono: string;
+  email: string;
+  ciudad: string;
+  actividad: string;
+  declaraReventa: boolean;
+}): { subject: string; html: string } {
+  const fila = (etiqueta: string, valor: string) =>
+    `<p style="margin:0 0 6px;font-size:14px;color:${TEXTO};"><strong>${etiqueta}:</strong> ${escaparHtml(valor)}</p>`;
+  const contenido = `
+    <p style="margin:0 0 16px;font-size:14px;color:${TEXTO_SUAVE};">
+      Alguien pidió una cuenta mayorista en sevelin.cl. Antes de aprobarla, verifícalo por WhatsApp o llamada
+      y apruébala (o recházala) en el POS: Página Web → Mayoristas.
+    </p>
+    ${fila('Nombre o razón social', datos.nombre)}
+    ${fila('RUT', datos.rut)}
+    ${fila('WhatsApp', datos.telefono)}
+    ${fila('Correo', datos.email)}
+    ${fila('Ciudad', datos.ciudad)}
+    ${fila('A qué se dedica', datos.actividad)}
+    ${fila('Compra para revender o para su negocio', datos.declaraReventa ? 'Sí' : 'No lo marcó')}
+  `;
+  return {
+    subject: `🤝 Nueva solicitud mayorista: ${datos.nombre}`.slice(0, 150),
+    html: envoltorio('Nueva solicitud de cuenta mayorista', contenido),
+  };
+}
+
+/** Venta mayorista (supabase/39): al cliente, cuando el dueño aprueba su
+ * cuenta en el POS (POST /api/pos/notificar-mayorista, mismo patrón que la
+ * cancelación y la entrega: el POS no tiene Resend ni la plantilla). */
+export function correoMayoristaAprobado(datos: {
+  nombre: string;
+  pedidoMinimo: number;
+  urlSitio: string;
+}): { subject: string; html: string } {
+  const primerNombre = escaparHtml(String(datos.nombre || '').split(' ')[0] || '');
+  const contenido = `
+    <p style="margin:0 0 14px;font-size:14px;color:${TEXTO};">
+      Hola${primerNombre ? ` ${primerNombre}` : ''}, tu cuenta mayorista en Sevelin ya está activa.
+    </p>
+    <p style="margin:0 0 14px;font-size:14px;color:${TEXTO_SUAVE};">
+      Cuando inicies sesión con este correo vas a ver tus precios mayoristas. Cada producto tiene su propia
+      cantidad mínima, y el pedido tiene que sumar al menos <strong style="color:${TEXTO};">${formatoCLP.format(datos.pedidoMinimo)}</strong>
+      (sin contar el envío) para que se apliquen.
+    </p>
+    <p style="margin:20px 0;text-align:center;">
+      <a href="${datos.urlSitio}/mayorista" style="display:inline-block;background:${AZUL};color:#ffffff;text-decoration:none;padding:11px 22px;border-radius:999px;font-size:14px;font-weight:600;">Ver precios mayoristas</a>
+    </p>
+    <p style="margin:0;font-size:13px;color:${TEXTO_SUAVE};">
+      El pago es siempre por adelantado. Si tienes dudas, escríbenos por WhatsApp.
+    </p>
+  `;
+  return {
+    subject: 'Tu cuenta mayorista en Sevelin está activa',
+    html: envoltorio('Cuenta mayorista aprobada', contenido),
   };
 }

@@ -167,6 +167,11 @@ export interface ItemPedido {
      despacha). Separa los dos bloques del pedido mixto en el correo y en el
      POS. Ausente en pedidos anteriores al 12-09-2026 = producto. */
   es_servicio?: boolean;
+  /* Venta mayorista (supabase/39). Solo en líneas cobradas a precio
+     mayorista: precio_web es lo cobrado y precio_normal lo que habría
+     costado sin mayorista. Ausente = precio normal. */
+  precio_tipo?: 'NORMAL' | 'MAYORISTA';
+  precio_normal?: number;
 }
 
 export type EstadoPedido =
@@ -194,6 +199,8 @@ export type EstadoPedido =
 export interface PedidoWeb {
   id: number;
   numero_pedido: string;
+  /** Al menos una línea se cobró a precio mayorista (supabase/39). */
+  es_mayorista?: boolean;
   /* Llave de la página pública /pedido/<token>. El numero_pedido es
      correlativo, así que ponerlo en una URL dejaba enumerar los pedidos de
      otros clientes — ver supabase/26-token-publico-pedido.sql. El número
@@ -315,6 +322,10 @@ export interface ProductoPOS {
   oferta_hasta?: string | null;
   // Complementarios elegidos en el POS — ver sevelin-pos-oficial/sql/75.
   relacionados_ids?: number[] | null;
+  // Venta mayorista — ver sevelin-pos-oficial/sql/76. Va a precios_mayoristas
+  // (supabase/39), NUNCA a productos_web: no es público.
+  precio_mayorista?: number | null;
+  mayorista_desde?: number | null;
   // SEO con IA — ver sevelin-pos-oficial/sql/33-seo-ia.sql.
   meta_titulo_web: string | null;
   meta_descripcion_web: string | null;
