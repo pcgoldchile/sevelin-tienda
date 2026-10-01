@@ -19,7 +19,9 @@ import { createHmac } from 'crypto';
  * responden como se espera.
  */
 
-const KHIPU_API_BASE = 'https://payment-api.khipu.com';
+// KHIPU_API_BASE solo la define la maqueta local (scripts/maqueta-tienda.mjs),
+// para que un checkout de prueba no llame a Khipu. Sin ella, la API real.
+const KHIPU_API_BASE = process.env.KHIPU_API_BASE || 'https://payment-api.khipu.com';
 
 /** Igual que openFacturaHabilitada() (src/lib/openfactura.ts): permite que
  * el checkout no ofrezca Khipu como opción mientras no haya credenciales

@@ -4,8 +4,19 @@
     {
       "name": "sevelin-tienda-dev",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
       "port": 3000
+    },
+    {
+      "name": "tienda-maqueta",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "scripts/maqueta-tienda.mjs"
+      ],
+      "port": 3100
     }
   ]
 }

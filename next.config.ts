@@ -21,6 +21,14 @@ import type { NextConfig } from "next";
  * clickjacking, carga de recursos de orígenes ajenos y envío de formularios
  * a otro dominio.
  */
+/* MAQUETA LOCAL (scripts/maqueta-tienda.mjs): el Supabase simulado corre en
+   http://localhost:<puerto>. Solo en ese caso se permite ese origen y no se
+   fuerza https. En producción la URL es https://….supabase.co, esto queda en
+   null y la CSP es exactamente la de siempre. */
+const SUPABASE_MAQUETA = /^http:\/\/localhost:\d+$/.test(process.env.NEXT_PUBLIC_SUPABASE_WEB_URL || '')
+  ? process.env.NEXT_PUBLIC_SUPABASE_WEB_URL
+  : null;
+
 const CSP = [
   "default-src 'self'",
   // challenges.cloudflare.com: el widget de Turnstile (captcha de los
@@ -43,13 +51,13 @@ const CSP = [
   // se llama SIEMPRE desde el servidor (src/lib/distancia.ts, places.ts),
   // nunca desde el navegador, así que no hace falta whitelistear ningún
   // host de Google acá.
-  "connect-src 'self' https://*.supabase.co https://challenges.cloudflare.com https://www.facebook.com",
+  `connect-src 'self' https://*.supabase.co https://challenges.cloudflare.com https://www.facebook.com${SUPABASE_MAQUETA ? ` ${SUPABASE_MAQUETA}` : ''}`,
   "frame-src https://challenges.cloudflare.com",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",
   "object-src 'none'",
-  "upgrade-insecure-requests",
+  ...(SUPABASE_MAQUETA ? [] : ["upgrade-insecure-requests"]),
 ].join('; ');
 
 const nextConfig: NextConfig = {

@@ -4,10 +4,20 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronDown, Menu, Search, ShoppingCart, User, X } from "lucide-react";
+import { ChevronDown, Menu, Search, ShoppingCart, Truck, User, X } from "lucide-react";
 import { useCarrito } from "@/context/carrito-context";
 import { useSesion } from "@/context/sesion-context";
 import { EASE_OUT } from "@/lib/motion";
+import { IconoWhatsApp } from "@/components/iconos-redes";
+import { URL_WHATSAPP, whatsappLegible } from "@/lib/contacto";
+
+/* Enlace de la franja de categorías: una línea azul que crece al pasar el
+   mouse (antes solo cambiaba el color del texto) y sin partir el nombre en
+   dos líneas. Lo comparten los enlaces y los botones de desplegable. */
+const ENLACE_NAV =
+  "relative whitespace-nowrap rounded-md px-2.5 py-1.5 text-[13px] font-medium text-ink-soft transition-colors hover:text-white " +
+  "after:absolute after:inset-x-2.5 after:bottom-0 after:h-0.5 after:origin-left after:scale-x-0 after:rounded-full " +
+  "after:bg-primary after:transition-transform after:duration-200 hover:after:scale-x-100";
 
 // Categorías que se muestran siempre visibles en la franja de navegación
 // (estilo Sipo Online: los rubros principales a la vista, el resto queda
@@ -97,25 +107,49 @@ export function Header({
     cerrarMenus();
   }
 
+  const whatsapp = whatsappLegible();
+
   return (
-    <header className="sticky top-0 z-40 border-b border-primary/20 bg-surface/80 backdrop-blur-md">
-      <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3 sm:px-6 lg:px-8">
-        <Link href="/" className="group flex shrink-0 items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full bg-primary shadow-glow-primary transition-transform group-hover:scale-125" />
-          <span className="font-display texto-glow-primary text-lg font-bold uppercase tracking-tight text-primary">Sevelin</span>
+    <>
+      {/* Barra superior de color (dueño, 30-09-2026: "más diseño y más vida").
+          Va FUERA del <header> fijo: se va al bajar la página y no le quita
+          alto a la pantalla. Acá viven "Quiénes somos" y "Contáctanos". */}
+      <div className="bg-gradient-to-r from-primary-deep via-accent to-primary text-white">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-1.5 text-xs font-medium sm:px-6 lg:px-8">
+          <p className="flex items-center gap-1.5">
+            <Truck className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            <span>Entrega en Arica el mismo día <span className="hidden sm:inline">si compras antes de las 18:00</span> · Envíos a todo Chile</span>
+          </p>
+          <nav aria-label="Información" className="hidden shrink-0 items-center gap-4 md:flex">
+            <Link href="/quienes-somos" className="transition-opacity hover:opacity-80">Quiénes somos</Link>
+            <Link href="/contacto" className="transition-opacity hover:opacity-80">Contáctanos</Link>
+            {URL_WHATSAPP && whatsapp && (
+              <a href={URL_WHATSAPP} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 transition-opacity hover:opacity-80">
+                <IconoWhatsApp className="h-3.5 w-3.5" /> {whatsapp}
+              </a>
+            )}
+          </nav>
+        </div>
+      </div>
+
+    <header className="sticky top-0 z-40 bg-surface/90 backdrop-blur-md">
+      <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 sm:gap-4 sm:px-6 lg:px-8">
+        <Link href="/" className="group flex shrink-0 items-center gap-2">
+          <span className="h-2.5 w-2.5 rounded-full bg-primary shadow-glow-primary transition-transform group-hover:scale-125" />
+          <span className="font-display bg-gradient-to-r from-primary-soft via-primary to-accent bg-clip-text text-2xl font-bold uppercase tracking-tight text-transparent">Sevelin</span>
         </Link>
 
-        <form onSubmit={buscar} className="ml-auto hidden flex-1 max-w-sm md:flex">
+        <form onSubmit={buscar} className="ml-auto hidden max-w-md flex-1 md:flex">
           <input
             type="search"
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
-            placeholder="Buscar productos…"
-            className="w-full rounded-l-md border border-border bg-surface-sunken/60 px-4 py-1.5 text-sm outline-none transition-colors focus:border-primary focus:bg-surface"
+            placeholder="¿Qué estás buscando?"
+            className="w-full rounded-l-full border border-r-0 border-border-strong bg-surface-sunken/60 px-5 py-2 text-sm outline-none transition-colors placeholder:text-ink-faint focus:border-primary focus:bg-surface"
           />
           <button
             type="submit"
-            className="rounded-r-md border border-l-0 border-border px-3 text-ink-soft transition-colors hover:bg-surface-sunken hover:text-primary"
+            className="rounded-r-full bg-accent px-4 text-white transition-colors hover:bg-primary"
             aria-label="Buscar"
           >
             <Search className="h-4 w-4" aria-hidden />
@@ -135,7 +169,7 @@ export function Header({
         {!cargando && !usuario && (
           <Link
             href="/cuenta/registro"
-            className="hidden items-center rounded-md border border-border px-3 py-1.5 text-sm font-medium text-ink-soft transition-colors hover:border-primary hover:text-primary md:flex"
+            className="hidden items-center rounded-full border border-primary/50 bg-primary/10 px-4 py-1.5 text-sm font-semibold text-primary-soft transition-colors hover:bg-primary hover:text-white md:flex"
           >
             Registrarse
           </Link>
@@ -144,10 +178,11 @@ export function Header({
         <Link
           href="/carrito"
           onClick={cerrarMenus}
-          className="relative ml-auto flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-ink-soft transition-colors hover:bg-surface-sunken hover:text-primary md:ml-0"
+          className="relative ml-auto flex items-center gap-2 rounded-full bg-accent px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary md:ml-0"
           aria-label="Ver carrito"
         >
           <ShoppingCart className="h-4 w-4" aria-hidden />
+          <span className="hidden lg:inline">Carrito</span>
           <AnimatePresence>
             {cantidadTotal > 0 && (
               <motion.span
@@ -156,7 +191,7 @@ export function Header({
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.5, opacity: 0 }}
                 transition={{ type: "spring", stiffness: 400, damping: 20 }}
-                className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1 text-[11px] font-semibold text-white shadow-glow-accent"
+                className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-white px-1 text-[11px] font-bold text-accent-deep ring-2 ring-surface"
               >
                 {cantidadTotal}
               </motion.span>
@@ -177,13 +212,13 @@ export function Header({
       {/* Franja de categorías siempre visible (estilo Sipo Online): los
           rubros principales quedan a un click, sin esconderlos en un
           dropdown — el dropdown queda solo para el resto. */}
-      <nav className="hidden border-t border-border md:block">
-        <div className="mx-auto flex max-w-6xl items-center gap-1 px-4 py-1.5 sm:px-6 lg:px-8">
+      <nav aria-label="Categorías" className="hidden border-t border-border md:block">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-0.5 px-4 py-1 sm:px-6 lg:px-8">
           <Link
             href="/productos"
-            className="rounded-md px-3 py-1.5 text-sm font-medium text-ink-soft transition-colors hover:bg-surface-sunken hover:text-primary"
+            className={ENLACE_NAV}
           >
-            Todos los productos
+            Todos
           </Link>
           {categoriasPrincipales.map((categoria) => {
             const subcategorias = arbolCategorias[categoria] || [];
@@ -196,7 +231,7 @@ export function Header({
                 <Link
                   key={categoria}
                   href={`/productos?categoria=${encodeURIComponent(categoria)}`}
-                  className="rounded-md px-3 py-1.5 text-sm font-medium text-ink-soft transition-colors hover:bg-surface-sunken hover:text-primary"
+                  className={ENLACE_NAV}
                 >
                   {categoria}
                 </Link>
@@ -209,7 +244,7 @@ export function Header({
                   type="button"
                   onClick={() => setDesplegableAbierto((actual) => (actual === categoria ? null : categoria))}
                   onBlur={() => setTimeout(() => setDesplegableAbierto((actual) => (actual === categoria ? null : actual)), 150)}
-                  className="flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium text-ink-soft transition-colors hover:bg-surface-sunken hover:text-primary"
+                  className={`flex items-center gap-1 ${ENLACE_NAV}`}
                 >
                   {categoria}
                   <motion.span aria-hidden animate={{ rotate: abierto ? 180 : 0 }} transition={{ duration: 0.2 }}>
@@ -258,7 +293,7 @@ export function Header({
                 type="button"
                 onClick={() => setDesplegableAbierto((actual) => (actual === "__mas__" ? null : "__mas__"))}
                 onBlur={() => setTimeout(() => setDesplegableAbierto((actual) => (actual === "__mas__" ? null : actual)), 150)}
-                className="flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium text-ink-soft transition-colors hover:bg-surface-sunken hover:text-primary"
+                className={`flex items-center gap-1 ${ENLACE_NAV}`}
               >
                 Más categorías
                 <motion.span aria-hidden animate={{ rotate: desplegableAbierto === "__mas__" ? 180 : 0 }} transition={{ duration: 0.2 }}>
@@ -338,13 +373,13 @@ export function Header({
               se lee primero. */}
           <Link
             href="/por-llegar"
-            className="rounded-md px-3 py-1.5 text-sm font-medium text-ink-soft transition-colors hover:bg-surface-sunken hover:text-primary"
+            className={ENLACE_NAV}
           >
             Por llegar
           </Link>
           <Link
             href="/pedidos-por-encargo"
-            className="rounded-md px-3 py-1.5 text-sm font-medium text-ink-soft transition-colors hover:bg-surface-sunken hover:text-primary"
+            className={ENLACE_NAV}
           >
             Encargos
           </Link>
@@ -456,6 +491,11 @@ export function Header({
                 Encargos
               </Link>
 
+              <div className="mt-2 flex gap-4 border-t border-border pt-3 text-sm font-medium text-primary-soft">
+                <Link href="/quienes-somos" onClick={() => setMenuMovilAbierto(false)}>Quiénes somos</Link>
+                <Link href="/contacto" onClick={() => setMenuMovilAbierto(false)}>Contáctanos</Link>
+              </div>
+
               {/* Cerrar al final de la lista: con todas las categorías
                   desplegadas hay que hacer scroll hasta arriba para
                   encontrar el botón de hamburguesa. Este queda justo
@@ -471,6 +511,8 @@ export function Header({
           </motion.div>
         )}
       </AnimatePresence>
+      <div aria-hidden className="h-0.5 w-full bg-gradient-to-r from-primary-deep via-primary to-primary-soft" />
     </header>
+    </>
   );
 }

@@ -6,6 +6,7 @@ import { rutaDeSku } from "@/lib/sku-url";
 import type { ProductoWeb } from "@/lib/tipos";
 import { BannersCategoria } from "@/components/banners-categoria";
 import { FranjaConfianza } from "@/components/franja-confianza";
+import { TarjetasConfianza } from "@/components/tarjetas-confianza";
 import { TarjetaProducto } from "@/components/tarjeta-producto";
 import { ScrollReveal } from "@/components/fx/scroll-reveal";
 import { AvisoPagoTarjeta } from "@/components/aviso-pago-tarjeta";
@@ -126,6 +127,7 @@ export default async function Home() {
         )}
       </section>
 
+      <TarjetasConfianza />
       <FranjaConfianza />
     </main>
   );
