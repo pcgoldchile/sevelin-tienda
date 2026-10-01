@@ -4,6 +4,27 @@
 > arquitectura completo (todas las fases) vive en `README-ECOMMERCE-SEVELIN.md`, en el repo del POS
 > (`sevelin-pos-oficial`) — este documento es el estado de ESTE repo (`sevelin-tienda`) nada más.
 
+**Fecha:** 01-10-2026 (noche) · **`/ofertas` con su franja, y las ofertas del Cyber cargadas.**
+
+- **`/ofertas`** (ISR 60 s, en el sitemap y el pie): lista lo que tiene oferta vigente, ordenado por
+  descuento. Antes de que empiecen anuncia la fecha y los productos **al precio de hoy** (el precio de oferta
+  no se muestra por adelantado). `src/lib/ofertas.ts` (`listarOfertas`, `estadoOfertas`).
+- **Franja** (`franja-ofertas.tsx`, antes del `<Header>`): se enciende y se apaga sola con las fechas de las
+  ofertas. Estado inicial desde el layout + una consulta a `GET /api/ofertas/estado` (60 s en la CDN), porque
+  una página en caché no se entera sola de que una oferta empezó o terminó. Dice "Cyber Sevelin" hasta el
+  07-10 (constante `CAMPANA` en `lib/ofertas.ts`); después, "Ofertas". "Cyber Monday" es marca de la CCS.
+- **20 ofertas cargadas desde el POS** del lunes 05-10 00:00 al miércoles 07-10 23:59 (Chile). Verificado en
+  producción: `/api/ofertas/estado` responde "Empieza el lunes 5 de octubre", `/ofertas` lista los 20 a precio
+  normal y ningún producto tiene `precio_antes` todavía. ⚠️ **Falta ver el lunes** que la franja pase a
+  "N productos en oferta", que las tarjetas muestren el tachado y que el checkout cobre el precio de oferta.
+- **Todo el catálogo en 990** desde el POS (108 de 151 productos visibles; el resto son servicios).
+- **Guía de mayoristas:** "Por ahora, solo boleta". ⚠️ El checkout sigue ofreciendo "Solicitar factura" y el
+  dueño todavía no puede emitirla: falta decidir si se oculta.
+- ⚠️ En `next dev`, después de un cambio de código, la franja puede quedar con datos viejos (caché de HMR).
+  Recargando se arregla; en producción no pasa.
+
+---
+
 **Fecha:** 01-10-2026 (tarde) · **Guía pública de venta mayorista, precios mayoristas cargados y botón de Facebook.**
 
 - **`/venta-mayorista` (pública, ISR 5 min, en el sitemap):** cómo crear la cuenta, cómo se aprueba y las
