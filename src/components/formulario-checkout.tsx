@@ -241,7 +241,7 @@ export function FormularioCheckout({
       /* Aviso general del servidor: hoy se usa cuando la dirección no se
          pudo ubicar en el mapa y por eso no hay despacho a domicilio en la
          lista. Va como error visible (no silencioso) para que el cliente
-         entienda por qué solo ve retiro y courier. */
+         entienda por qué no ve el despacho a domicilio. */
       setErrorEnvio(data.aviso || null);
       // Nunca se preselecciona sola, ni con una sola opción disponible — la
       // elección del método de envío es siempre manual (pedido explícito

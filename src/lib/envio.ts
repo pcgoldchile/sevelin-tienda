@@ -300,13 +300,25 @@ function opcionRetiro(): OpcionEnvio {
 }
 
 /**
+ * COURIER DENTRO DE ARICA: apagado (dueño, 01-10-2026).
+ *
+ * Antes se ofrecía también Chilexpress/Starken dentro de la comuna, y en el
+ * primer pedido web con despacho (WEB-000012) Chilexpress salía más barato
+ * que el despacho propio. Para el dueño llevar un paquete a la sucursal es
+ * más trabajo y más lento que entregarlo él mismo en la misma ciudad: "los
+ * envíos dentro del radio de la ciudad son solo responsabilidad mía,
+ * mientras". Dentro de Arica quedan retiro y despacho propio; si la
+ * dirección no se puede ubicar, se coordina por WhatsApp. De paso no se
+ * gastan cotizaciones del courier para direcciones de Arica.
+ * Fuera de Arica no cambia nada. Para volver a ofrecerlo: true.
+ */
+const COURIER_DENTRO_DE_ARICA = false;
+
+/**
  * Vista previa: qué opciones de envío mostrarle al cliente antes de pagar.
  *
- * Dentro de Arica se ofrecen hasta TRES opciones: retiro, despacho propio
- * (tarificado por distancia real) y courier tradicional. El courier se
- * mantiene disponible también dentro de la comuna —a pedido del dueño—
- * porque es la salida cuando el domicilio no se puede ubicar en el mapa o
- * el cliente prefiere Starken/Blue Express.
+ * Dentro de Arica: retiro y despacho propio (tarificado por distancia
+ * real). El courier dentro de la comuna depende de COURIER_DENTRO_DE_ARICA.
  */
 /**
  * Servicio técnico: no hay nada que despachar, el cliente trae su equipo.
@@ -345,22 +357,24 @@ export async function cotizarOpcionesEnvio(
     const local = await tarifaLocalPorDistancia(direccion);
     if (local) opciones.push(local);
 
-    /* Cada courier se agrega en modo "mejor esfuerzo", cada uno por
-       separado: si Chilexpress falla no debe tumbar a Starken (ni
-       viceversa), y si fallan los dos no deben tumbar las opciones que sí
-       funcionan (sobre todo el retiro, que no depende de nada externo). */
-    try {
-      opciones.push(await cotizarViaChilexpress(direccion, items));
-    } catch (err) {
-      // Sin Chilexpress disponible: puede que quede Starken. Se registra (Salud del POS):
-      // tragarlo en silencio dejó la web sin envío fuera de Arica sin que nadie lo viera.
-      console.error('[envio] Chilexpress no cotizó:', err instanceof Error ? err.message : err);
-    }
-    try {
-      opciones.push(await cotizarViaStarken(direccion, items));
-    } catch (err) {
-      // Sin Starken disponible: puede que quede Chilexpress. Pausado a propósito no es un error.
-      if (starkenHabilitado()) console.error('[envio] Starken no cotizó:', err instanceof Error ? err.message : err);
+    if (COURIER_DENTRO_DE_ARICA) {
+      /* Cada courier se agrega en modo "mejor esfuerzo", cada uno por
+         separado: si Chilexpress falla no debe tumbar a Starken (ni
+         viceversa), y si fallan los dos no deben tumbar las opciones que sí
+         funcionan (sobre todo el retiro, que no depende de nada externo). */
+      try {
+        opciones.push(await cotizarViaChilexpress(direccion, items));
+      } catch (err) {
+        // Sin Chilexpress disponible: puede que quede Starken. Se registra (Salud del POS):
+        // tragarlo en silencio dejó la web sin envío fuera de Arica sin que nadie lo viera.
+        console.error('[envio] Chilexpress no cotizó:', err instanceof Error ? err.message : err);
+      }
+      try {
+        opciones.push(await cotizarViaStarken(direccion, items));
+      } catch (err) {
+        // Sin Starken disponible: puede que quede Chilexpress. Pausado a propósito no es un error.
+        if (starkenHabilitado()) console.error('[envio] Starken no cotizó:', err instanceof Error ? err.message : err);
+      }
     }
 
     return {
@@ -368,7 +382,9 @@ export async function cotizarOpcionesEnvio(
       aviso: local
         ? undefined
         : 'No pudimos ubicar esa dirección en el mapa para calcular el despacho a domicilio. ' +
-          'Puedes retirar en tienda, usar courier, o escribirnos por WhatsApp y coordinamos el envío.',
+          (COURIER_DENTRO_DE_ARICA
+            ? 'Puedes retirar en tienda, usar courier, o escribirnos por WhatsApp y coordinamos el envío.'
+            : 'Puedes retirar en tienda, o escribirnos por WhatsApp y coordinamos la entrega.'),
     };
   }
 
@@ -424,16 +440,26 @@ export async function confirmarEnvio(
       if (!local) {
         throw new Error(
           'No pudimos ubicar esa dirección para calcular el despacho a domicilio. ' +
-            'Elige retiro en tienda o envío por courier, o escríbenos por WhatsApp para coordinarlo.'
+            (COURIER_DENTRO_DE_ARICA
+              ? 'Elige retiro en tienda o envío por courier, o escríbenos por WhatsApp para coordinarlo.'
+              : 'Elige retiro en tienda, o escríbenos por WhatsApp para coordinar la entrega.')
         );
       }
       return local;
     }
 
-    if (metodoElegido === 'CHILEXPRESS') return cotizarViaChilexpress(direccion, items);
-    if (metodoElegido === 'STARKEN') return cotizarViaStarken(direccion, items);
-
-    throw new Error('Elige una forma de envío: retiro en tienda, despacho a domicilio o courier.');
+    /* Autoridad real del interruptor: aunque el navegador mande CHILEXPRESS
+       (una pestaña abierta antes del cambio), dentro de Arica no se cobra
+       un courier que el dueño no va a usar. */
+    if (COURIER_DENTRO_DE_ARICA) {
+      if (metodoElegido === 'CHILEXPRESS') return cotizarViaChilexpress(direccion, items);
+      if (metodoElegido === 'STARKEN') return cotizarViaStarken(direccion, items);
+      throw new Error('Elige una forma de envío: retiro en tienda, despacho a domicilio o courier.');
+    }
+    if (metodoElegido === 'CHILEXPRESS' || metodoElegido === 'STARKEN') {
+      throw new Error('Dentro de Arica la entrega la hacemos nosotros: elige despacho a domicilio o retiro en tienda.');
+    }
+    throw new Error('Elige una forma de envío: retiro en tienda o despacho a domicilio.');
   }
 
   if (metodoElegido === 'CHILEXPRESS') return cotizarViaChilexpress(direccion, items);

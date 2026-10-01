@@ -140,7 +140,7 @@ const PREGUNTAS: { pregunta: string; respuesta: string }[] = [
   {
     pregunta: "¿Hacen envíos a todo Chile?",
     respuesta:
-      "Sí, despachamos a todo Chile por courier. Dentro de la ciudad de Arica además tenemos despacho propio, que puede salir el mismo día si compras antes de las 18:00, y siempre está disponible el retiro en tienda. Por ahora el despacho propio no cubre los valles de Azapa y Lluta; si estás por allá, escríbenos y lo coordinamos.",
+      "Sí, despachamos a todo Chile por courier. Dentro de la ciudad de Arica la entrega la hacemos nosotros mismos, y puede salir el mismo día si compras antes de las 18:00. Siempre está disponible el retiro en tienda. Por ahora el despacho propio no cubre los valles de Azapa y Lluta; si estás por allá, escríbenos y lo coordinamos.",
   },
   {
     pregunta: "¿Puedo retirar mi pedido en la tienda?",
