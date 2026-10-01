@@ -60,6 +60,7 @@ export async function registrarVentaWebEnPos(pedido: {
   metodo_envio: string | null;
   metodo_pago: string | null;
   total: number;
+  costo_envio?: number | null;
   direccion_envio: { calle?: string; numero?: string; comuna?: string } | null;
 }): Promise<void> {
   const urlStock = process.env.POS_INTERNAL_API_URL;
@@ -92,6 +93,12 @@ export async function registrarVentaWebEnPos(pedido: {
         metodo_pago: 'Transferencia',
         tipo_entrega: esRetiro ? 'retiro' : 'despacho',
         direccion_envio: esRetiro || !dir ? null : [dir.calle, dir.numero, dir.comuna].filter(Boolean).join(' '),
+        /* Lo que el cliente pagó por el despacho (sql/77 del POS). Sin esto
+           la venta quedaba en el POS solo con los productos y el despacho
+           cobrado no aparecía en el Detalle de Venta ni en Finanzas
+           (WEB-000012, 01-10-2026: $4.500 que no se veían). El POS lo guarda
+           aparte del total, para no mezclarlo con el margen de lo vendido. */
+        envio_cobrado: esRetiro ? 0 : Math.max(0, Math.round(Number(pedido.costo_envio) || 0)),
         comision_pasarela:
           pedido.metodo_pago === 'KHIPU' ? Math.round(pedido.total * COMISION_KHIPU) : 0,
       }),
