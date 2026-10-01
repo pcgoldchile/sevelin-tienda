@@ -29,6 +29,7 @@ export function Footer() {
           <h3 className={TITULO}>Tienda</h3>
           <ul className="mt-3 flex flex-col gap-2 text-sm">
             <li><Link href="/productos" className={ENLACE}>Todos los productos</Link></li>
+            <li><Link href="/ofertas" className={ENLACE}>Ofertas</Link></li>
             <li><Link href="/productos?categoria=Servicios%20T%C3%A9cnicos" className={ENLACE}>Servicios técnicos</Link></li>
             <li><Link href="/pedidos-por-encargo" className={ENLACE}>Pedidos por encargo</Link></li>
             <li><Link href="/agotados" className={ENLACE}>Agotados: te los conseguimos</Link></li>

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { BadgeCheck, Boxes, CreditCard, MessagesSquare, ShieldCheck, Truck, UserPlus } from "lucide-react";
+import { BadgeCheck, Boxes, CreditCard, MessagesSquare, ReceiptText, ShieldCheck, Truck, UserPlus } from "lucide-react";
 import { IconoWhatsApp } from "@/components/iconos-redes";
 import { URL_WHATSAPP } from "@/lib/contacto";
 import { formatoCLP } from "@/lib/formato";
@@ -74,6 +74,10 @@ export default async function VentaMayorista() {
       texto: "Retiras en la tienda en Arica, te lo llevamos dentro de la ciudad o lo despachamos por courier al resto de Chile." },
     { Icono: ShieldCheck, titulo: "La misma garantía",
       texto: "6 meses por fallas de fábrica, igual que en cualquier compra." },
+    /* Dueño, 02-10-2026: la factura no está habilitada (falta la verificación
+       de actividades en el SII). Cuando la tenga, cambiar este texto. */
+    { Icono: ReceiptText, titulo: "Por ahora, solo boleta",
+      texto: "Cada compra va con su boleta. Todavía no emitimos factura." },
   ];
 
   return (

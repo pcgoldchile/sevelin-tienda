@@ -9,6 +9,8 @@ import { SesionProvider } from "@/context/sesion-context";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { BannerFiestasPatrias } from "@/components/banner-fiestas-patrias";
+import { FranjaOfertas } from "@/components/franja-ofertas";
+import { estadoOfertas, type EstadoOfertas } from "@/lib/ofertas";
 import { WhatsappFlotante } from "@/components/whatsapp-flotante";
 import { FondoCinematico } from "@/components/fx/fondo-cinematico";
 import { VisitTracker } from "@/components/visit-tracker";
@@ -67,6 +69,15 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     console.error("[RootLayout] No se pudieron cargar las categorías:", err instanceof Error ? err.message : err);
   }
 
+  // Franja de ofertas: el estado inicial sale del servidor para que no salte
+  // al cargar; el navegador lo confirma después (ver franja-ofertas.tsx).
+  let ofertas: EstadoOfertas | null = null;
+  try {
+    ofertas = await estadoOfertas();
+  } catch (err) {
+    console.error("[RootLayout] No se pudo leer el estado de las ofertas:", err instanceof Error ? err.message : err);
+  }
+
   return (
     <html
       lang="es"
@@ -99,6 +110,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
                     desplaza fuera de vista con el primer scroll en vez de
                     competir por espacio fijo arriba de la pantalla. */}
                 <BannerFiestasPatrias />
+                <FranjaOfertas inicial={ofertas} />
                 <Header categorias={categorias} arbolCategorias={arbolCategorias} />
                 <div id="contenido">{children}</div>
                 <Footer />
