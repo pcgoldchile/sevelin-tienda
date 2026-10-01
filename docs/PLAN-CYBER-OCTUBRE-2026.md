@@ -1,5 +1,10 @@
 # Plan Cyber (lunes 05-10-2026) — PENDIENTE, no aplicado
 
+> ⚠️ **01-10-2026: los números de este plan quedaron viejos.** La propuesta vigente (con los precios en 990,
+> los mayoristas cargados y el costo recalculado) está en el repo del POS:
+> `docs/estudios-precios/2026-10-01-terminacion-990-y-cyber.md`, sección 6. El precio de oferta con fechas ya
+> existe (v100); lo que sigue sin construir es el modo Cyber (franja y `/ofertas`).
+
 > Recomendación de Claude del 29-09-2026, con datos reales del POS (costo, precio, stock y ventas de
 > los últimos 90 días). **El dueño decidió no aplicar nada todavía**: le faltan productos por cargar.
 > Antes de aplicar, volver a correr los números: los costos y el stock pueden haber cambiado.

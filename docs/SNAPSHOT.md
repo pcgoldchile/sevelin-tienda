@@ -4,6 +4,28 @@
 > arquitectura completo (todas las fases) vive en `README-ECOMMERCE-SEVELIN.md`, en el repo del POS
 > (`sevelin-pos-oficial`) — este documento es el estado de ESTE repo (`sevelin-tienda`) nada más.
 
+**Fecha:** 01-10-2026 (tarde) · **Guía pública de venta mayorista, precios mayoristas cargados y botón de Facebook.**
+
+- **`/venta-mayorista` (pública, ISR 5 min, en el sitemap):** cómo crear la cuenta, cómo se aprueba y las
+  condiciones (cantidad mínima por producto, pedido mínimo leído de `ajustes_mayorista`, pago por
+  adelantado). Lista los productos con precio por cantidad **solo con nombre, foto y "desde N unidades"**.
+  ⚠️ **Regla: en esa página nunca se pinta un precio mayorista**; el precio se queda en el servidor y se ve
+  solo en `/mayorista` con cuenta APROBADA. Enlaces: barra superior de color, menú del celular y columna
+  Tienda del pie; "Cómo funciona" en Mi cuenta y en `/mayorista` para quien no está aprobado.
+- **Arreglo:** en `/mayorista` el enlace de cada producto iba a `/<sku>` (404); ahora va a `/productos/<sku>`.
+- **16 precios mayoristas cargados desde el POS** (pendiente #38 del POS). Verificado: `precios_mayoristas`
+  tiene 16 filas y con la llave pública devuelve `[]`; un cliente con sesión pero sin aprobar no ve precios.
+- **Facebook:** `NEXT_PUBLIC_FACEBOOK_URL = https://www.facebook.com/61583379425025/` en Vercel (producción).
+  Ese enlace corto redirige a la página "Sevelin Arica - Tienda de Tecnología" y no depende del nombre.
+- **Cyber (05 al 07-10):** la propuesta nueva está en el repo del POS,
+  `docs/estudios-precios/2026-10-01-terminacion-990-y-cyber.md`, y reemplaza los números de
+  `docs/PLAN-CYBER-OCTUBRE-2026.md`. Sin aplicar. Faltaría construir `/ofertas` + franja y el despacho gratis
+  por monto, si el dueño lo aprueba.
+- **No se dice nada de factura en la guía:** el checkout ofrece "Solicitar factura", pero el dueño todavía no
+  puede emitirla. Queda por decidir qué se le dice a una empresa.
+
+---
+
 **Fecha:** 01-10-2026 · **Venta mayorista (Fase 1), encabezado y pie nuevos, y sin courier dentro de Arica.**
 
 - **Venta mayorista** (`supabase/39-mayoristas.sql`, aplicada; detalle en `docs/CHANGELOG-V103.md` del POS).
