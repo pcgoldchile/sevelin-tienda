@@ -61,6 +61,13 @@ verificado, producción pendiente), `CHILEXPRESS_*` (sin configurar todavía, ch
 - Categorías reales del catálogo (12, ver `src/components/header.tsx`), sincronizadas desde
   `producto_categorias` del POS vía `categoria_web`.
 
+## Cómo probar sin tocar la base real
+`node scripts/maqueta-tienda.mjs` (config `tienda-maqueta`, http://localhost:3100): levanta un Supabase
+simulado en el puerto 54399 con 40 productos reales de muestra y corre `next dev` apuntando a él. Sesiones
+de prueba: `http://localhost:54399/maqueta/entrar?quien=mayorista` (también `pendiente`, `cliente`, `salir`).
+Lo que la tienda guardó se ve en `http://localhost:54399/maqueta/tabla/pedidos_web`. Correos, Google,
+couriers y pagos quedan apagados (Khipu apunta a uno falso).
+
 ## Convenciones
 - Todo el código, comentarios y mensajes al usuario en español (igual que el POS).
 - `productos_web.precio_web` es `NOT NULL`: siempre un número concreto (el POS puede tener

@@ -4,6 +4,27 @@
 > arquitectura completo (todas las fases) vive en `README-ECOMMERCE-SEVELIN.md`, en el repo del POS
 > (`sevelin-pos-oficial`) — este documento es el estado de ESTE repo (`sevelin-tienda`) nada más.
 
+**Fecha:** 01-10-2026 · **Venta mayorista (Fase 1), encabezado y pie nuevos, y sin courier dentro de Arica.**
+
+- **Venta mayorista** (`supabase/39-mayoristas.sql`, aplicada; detalle en `docs/CHANGELOG-V103.md` del POS).
+  Mi cuenta → pedir precios mayoristas; `/mayorista` privada; carrito y checkout cobran con UNA función
+  (`src/lib/mayorista-precios.ts`). ⚠️ **Reglas:** el precio mayorista vive en `precios_mayoristas`, nunca en
+  `productos_web`; la aprobación vive en `cuentas_mayoristas`, nunca en `perfiles_clientes`; lo que el
+  carrito guarda en el navegador nunca lleva precios mayoristas.
+- **Despacho cobrado:** la tienda manda `envio_cobrado` al POS al registrar la venta (sql/77 del POS).
+- **Sin courier dentro de Arica** (`COURIER_DENTRO_DE_ARICA = false` en `src/lib/envio.ts`): solo retiro y
+  despacho propio; fuera de Arica igual que antes. Los valles siguen apagados (`VALLES_HABILITADOS`).
+- **Diseño:** barra superior de color con Quiénes somos / Contáctanos, pie con botones de redes
+  (`src/lib/contacto.ts` centraliza los enlaces; Facebook aparece al definir `NEXT_PUBLIC_FACEBOOK_URL`),
+  tarjetas de reseñas/dudas/garantía en la portada, páginas `/quienes-somos` y `/contacto`.
+  El texto de Quiénes somos es un borrador de Claude: lo revisa el dueño.
+- **Maqueta local nueva:** `node scripts/maqueta-tienda.mjs` (config `tienda-maqueta`, puerto 3100). Levanta
+  un Supabase simulado con 40 productos reales, sesiones de prueba (`/maqueta/entrar?quien=mayorista`) y un
+  Khipu falso. No toca la base real ni manda correos. Para eso `next.config.ts` permite el origen
+  `http://localhost` solo cuando la URL de Supabase es local, y `KHIPU_API_BASE` es opcional.
+
+---
+
 **Fecha:** 30-09-2026 (tarde) · **Devoluciones y garantía según la ley vigente.**
 
 - **Hallazgo:** desde la Ley Pro Consumidor (21.398, 24-12-2021) el retracto de 10 días en compras a
