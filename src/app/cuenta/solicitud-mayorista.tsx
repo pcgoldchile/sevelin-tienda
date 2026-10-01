@@ -106,6 +106,9 @@ export function SolicitudMayorista({
         >
           Pedir precios mayoristas
         </button>
+        <Link href="/venta-mayorista" className="ml-3 text-sm font-medium text-primary hover:underline">
+          Cómo funciona
+        </Link>
       </div>
     );
   }

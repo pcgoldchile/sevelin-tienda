@@ -113,7 +113,8 @@ export function Header({
     <>
       {/* Barra superior de color (dueño, 30-09-2026: "más diseño y más vida").
           Va FUERA del <header> fijo: se va al bajar la página y no le quita
-          alto a la pantalla. Acá viven "Quiénes somos" y "Contáctanos". */}
+          alto a la pantalla. Acá viven "Venta mayorista", "Quiénes somos" y
+          "Contáctanos". */}
       <div className="bg-gradient-to-r from-primary-deep via-accent to-primary text-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-1.5 text-xs font-medium sm:px-6 lg:px-8">
           <p className="flex items-center gap-1.5">
@@ -121,6 +122,7 @@ export function Header({
             <span>Entrega en Arica el mismo día <span className="hidden sm:inline">si compras antes de las 18:00</span> · Envíos a todo Chile</span>
           </p>
           <nav aria-label="Información" className="hidden shrink-0 items-center gap-4 md:flex">
+            <Link href="/venta-mayorista" className="font-semibold transition-opacity hover:opacity-80">Venta mayorista</Link>
             <Link href="/quienes-somos" className="transition-opacity hover:opacity-80">Quiénes somos</Link>
             <Link href="/contacto" className="transition-opacity hover:opacity-80">Contáctanos</Link>
             {URL_WHATSAPP && whatsapp && (
@@ -491,7 +493,8 @@ export function Header({
                 Encargos
               </Link>
 
-              <div className="mt-2 flex gap-4 border-t border-border pt-3 text-sm font-medium text-primary-soft">
+              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2 border-t border-border pt-3 text-sm font-medium text-primary-soft">
+                <Link href="/venta-mayorista" onClick={() => setMenuMovilAbierto(false)}>Venta mayorista</Link>
                 <Link href="/quienes-somos" onClick={() => setMenuMovilAbierto(false)}>Quiénes somos</Link>
                 <Link href="/contacto" onClick={() => setMenuMovilAbierto(false)}>Contáctanos</Link>
               </div>

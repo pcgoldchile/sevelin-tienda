@@ -32,6 +32,7 @@ export function Footer() {
             <li><Link href="/productos?categoria=Servicios%20T%C3%A9cnicos" className={ENLACE}>Servicios técnicos</Link></li>
             <li><Link href="/pedidos-por-encargo" className={ENLACE}>Pedidos por encargo</Link></li>
             <li><Link href="/agotados" className={ENLACE}>Agotados: te los conseguimos</Link></li>
+            <li><Link href="/venta-mayorista" className={ENLACE}>Venta mayorista (empresas y técnicos)</Link></li>
           </ul>
         </div>
 

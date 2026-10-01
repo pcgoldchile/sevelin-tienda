@@ -35,9 +35,14 @@ export default async function Mayorista() {
             ? "Tu solicitud está en revisión. Te vamos a escribir por WhatsApp y, apenas la aprobemos, te llega un correo."
             : "Esta lista es para cuentas mayoristas aprobadas. Puedes pedir la tuya desde Mi cuenta."}
         </p>
-        <Link href="/cuenta" className="mt-5 inline-block rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accent-deep">
-          Ir a Mi cuenta
-        </Link>
+        <div className="mt-5 flex flex-wrap items-center gap-4">
+          <Link href="/cuenta" className="inline-block rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accent-deep">
+            Ir a Mi cuenta
+          </Link>
+          <Link href="/venta-mayorista" className="text-sm font-medium text-primary hover:underline">
+            Cómo funciona la venta mayorista
+          </Link>
+        </div>
       </main>
     );
   }
@@ -64,7 +69,7 @@ export default async function Mayorista() {
             const ahorro = Math.round(((producto.precio_web - mayorista.precio) / producto.precio_web) * 100);
             return (
               <li key={producto.sku} className="flex gap-4 py-5">
-                <Link href={rutaDeSku(producto.sku)} className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-white">
+                <Link href={`/productos/${rutaDeSku(producto.sku)}`} className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-white">
                   {producto.imagen_urls?.[0] ? (
                     <Image src={producto.imagen_urls[0]} alt={producto.nombre} fill className="object-contain" sizes="80px" />
                   ) : (
@@ -72,7 +77,7 @@ export default async function Mayorista() {
                   )}
                 </Link>
                 <div className="flex min-w-0 flex-1 flex-col gap-2">
-                  <Link href={rutaDeSku(producto.sku)} className="text-sm font-medium text-ink hover:text-primary">
+                  <Link href={`/productos/${rutaDeSku(producto.sku)}`} className="text-sm font-medium text-ink hover:text-primary">
                     {producto.nombre}
                   </Link>
                   <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
