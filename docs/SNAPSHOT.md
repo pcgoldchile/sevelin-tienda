@@ -4,6 +4,26 @@
 > arquitectura completo (todas las fases) vive en `README-ECOMMERCE-SEVELIN.md`, en el repo del POS
 > (`sevelin-pos-oficial`) — este documento es el estado de ESTE repo (`sevelin-tienda`) nada más.
 
+**Fecha:** 02-10-2026 · **Chilexpress cotiza a todas las comunas, y `max-image-preview:large`.**
+
+- **Chilexpress no cotizaba a 89 de las 346 comunas del checkout (26%)** (pendiente #24 del POS): todas las
+  que llevan tilde, diéresis o ñ (Concepción, Valparaíso, Viña del Mar, Ñuñoa, Maipú, Copiapó, Chillán…).
+  Chilexpress escribe sus coberturas en mayúsculas y sin tildes y `buscarCountyCodePorComuna` comparaba el
+  nombre exacto. Ahora `elegirCobertura` (`src/lib/chilexpress.ts`) compara sin tildes, como ya hacía
+  Starken, y las 10 comunas que Chilexpress llama distinto (Santiago = "SANTIAGO CENTRO", Tiltil = "TIL TIL",
+  Aysén = "PUERTO AYSEN"…) van en la tabla `NOMBRE_CHILEXPRESS`.
+- **`scripts/auditar-comunas-chilexpress.mts`** (`npx tsx …`): revisa las 346 comunas contra la API real de
+  coberturas, solo lectura. 257 calzaban antes, 346 ahora. Correrlo si un cliente dice que no puede cotizar.
+- Verificado en producción con `POST /api/cotizar-envio`: Concepción, Viña del Mar, Ñuñoa, Chillán y Santiago
+  $6.152; Iquique $5.093. Sigue igual: un producto sin peso o medidas no se cotiza.
+- **`max-image-preview:large`** en el `robots` del layout (pendiente #14 del POS). Las páginas privadas
+  definen su propio `robots` (noindex) y lo reemplazan entero. La imagen Open Graph de la ficha ya no declara
+  1000×1000: el POS guarda las fotos nuevas de 1000 a 1600 px.
+- ⚠️ Sin decidir (dueño): ocultar "Solicitar factura" del checkout mientras no pueda emitir factura.
+- ⚠️ Falta el lunes 05-10: comprobar que las ofertas del Cyber se encendieron (pendiente #49 del POS).
+
+---
+
 **Fecha:** 01-10-2026 (noche) · **`/ofertas` con su franja, y las ofertas del Cyber cargadas.**
 
 - **`/ofertas`** (ISR 60 s, en el sitemap y el pie): lista lo que tiene oferta vigente, ordenado por
