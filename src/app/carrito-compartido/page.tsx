@@ -40,7 +40,10 @@ export default async function CarritoCompartido({ searchParams }: Props) {
     }))
   );
 
-  const disponibles = resueltos.filter((r) => r.producto !== null);
+  /* Un encargo no se agrega al carrito (02-10-2026): su precio es referencial
+     y se cotiza por WhatsApp desde su ficha. Se lista aparte, con su enlace. */
+  const encargos = resueltos.filter((r) => r.producto?.es_pedido_encargo);
+  const disponibles = resueltos.filter((r) => r.producto !== null && !r.producto.es_pedido_encargo);
   const noDisponibles = resueltos.filter((r) => r.producto === null);
 
   return (
@@ -58,11 +61,7 @@ export default async function CarritoCompartido({ searchParams }: Props) {
             <li key={solicitado.sku} className="flex items-center gap-3 rounded-xl bg-surface p-3 shadow-elevated-md">
               <MiniaturaAmpliable imagenes={producto!.imagen_urls ?? []} nombre={producto!.nombre} />
               <Link
-                href={
-                  producto!.es_pedido_encargo
-                    ? `/pedidos-por-encargo/${rutaDeSku(producto!.sku)}`
-                    : `/productos/${rutaDeSku(producto!.sku)}`
-                }
+                href={`/productos/${rutaDeSku(producto!.sku)}`}
                 className="min-w-0 flex-1 text-sm font-medium text-ink hover:text-accent hover:underline"
               >
                 {producto!.nombre} × {Math.min(solicitado.cantidad, producto!.stock_web)}
@@ -76,6 +75,29 @@ export default async function CarritoCompartido({ searchParams }: Props) {
             </li>
           ))}
         </ul>
+      )}
+
+      {encargos.length > 0 && (
+        <div className="mt-4 rounded-xl border border-accent/40 bg-accent/5 p-3 text-sm text-ink-soft">
+          <p>
+            <strong className="font-semibold text-ink">
+              {encargos.length === 1 ? "Un producto de este carrito es por encargo" : `${encargos.length} productos de este carrito son por encargo`}
+            </strong>{" "}
+            y no se paga en línea: su precio es referencial y se cotiza por WhatsApp desde su ficha.
+          </p>
+          <ul className="mt-2 flex flex-col gap-1">
+            {encargos.map(({ producto }) => (
+              <li key={producto!.sku}>
+                <Link
+                  href={`/pedidos-por-encargo/${rutaDeSku(producto!.sku)}`}
+                  className="font-medium text-accent underline-offset-2 hover:underline"
+                >
+                  {producto!.nombre}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
       {noDisponibles.length > 0 && (
@@ -94,9 +116,9 @@ export default async function CarritoCompartido({ searchParams }: Props) {
             cantidad: Math.min(solicitado.cantidad, producto!.stock_web),
           }))}
         />
-      ) : (
+      ) : encargos.length === 0 ? (
         <p className="mt-6 text-sm text-ink-faint">Ninguno de estos productos está disponible ahora mismo.</p>
-      )}
+      ) : null}
     </main>
   );
 }

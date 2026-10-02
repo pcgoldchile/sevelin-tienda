@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Share2, Check } from "lucide-react";
+import { Share2, Check, MessageCircle } from "lucide-react";
 import { useCarrito } from "@/context/carrito-context";
 import { useToast } from "@/context/toast-context";
 import { formatoStock } from "@/lib/formato";
 import { trackearEventoPixel } from "@/lib/meta-pixel";
+import { AVISO_ENCARGO, urlCotizarEncargo } from "@/lib/encargo-cotizar";
 import type { ProductoWeb } from "@/lib/tipos";
 
 export function AccionesProducto({ producto }: { producto: ProductoWeb }) {
@@ -48,23 +49,25 @@ export function AccionesProducto({ producto }: { producto: ProductoWeb }) {
      "reservar" lo haría dudar de algo que ya puede tener. */
   const esReserva = producto.por_llegar && producto.stock_web <= 0;
 
-  /* Un Pedido por Encargo no tiene stock propio nunca: se pide al
-     proveedor al confirmarse la compra, así que no hay tope real.
-
-     "Por llegar" SÍ tiene tope, y ahí estaba el bug: antes daba 99 aunque
+  /* "Por llegar" tiene tope, y ahí estaba el bug: antes daba 99 aunque
      en la tienda quedara una sola unidad, y el pago se cobraba igual para
      después fallar al descontar el stock, dejando el pedido en
      ERROR_STOCK_SIN_DESPACHO y al dueño con plata de mercadería que no
      tiene. La regla es que solo se puede comprar lo que existe: si hay
      unidades disponibles ese es el límite, y si no queda ninguna se
      reserva hasta lo que el dueño declaró que viene, nunca más. */
-  const topeCantidad = producto.es_pedido_encargo
-    ? 99
-    : producto.stock_web > 0
-      ? producto.stock_web
-      : producto.por_llegar
-        ? Math.max(0, producto.stock_por_llegar ?? 0)
-        : 0;
+  const topeCantidad = producto.stock_web > 0
+    ? producto.stock_web
+    : producto.por_llegar
+      ? Math.max(0, producto.stock_por_llegar ?? 0)
+      : 0;
+
+  /* Pedido por encargo (dueño, 02-10-2026): no se agrega al carrito ni se
+     paga en línea. No está en la tienda y su precio es referencial hasta
+     confirmar con el proveedor, así que la acción es cotizarlo por WhatsApp. */
+  const whatsappEncargo = producto.es_pedido_encargo
+    ? urlCotizarEncargo(process.env.NEXT_PUBLIC_WHATSAPP_NUMBER, producto.nombre, producto.sku)
+    : null;
 
   // Una vez por ficha vista, no por cada render — mismo criterio que
   // registrarVistaProducto (analítica propia) en la página del producto.
@@ -85,6 +88,26 @@ export function AccionesProducto({ producto }: { producto: ProductoWeb }) {
     // precio y la descripción — mismo motivo por el que ahora va antes de
     // la descripción (ver src/app/productos/[sku]/page.tsx).
     <div className="flex flex-col gap-3 rounded-2xl border border-primary/25 bg-surface p-4 shadow-elevated-sm">
+      {producto.es_pedido_encargo ? (
+        <>
+          <p className="text-sm leading-relaxed text-ink-soft">
+            <strong className="font-semibold text-ink">No se paga en línea.</strong> {AVISO_ENCARGO}
+          </p>
+          {whatsappEncargo ? (
+            <a
+              href={whatsappEncargo}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex w-full items-center justify-center gap-2 rounded-full bg-accent px-6 py-3 text-sm font-semibold text-white shadow-glow-accent transition-colors hover:bg-accent-deep"
+            >
+              <MessageCircle className="h-4 w-4" aria-hidden /> Cotizar por encargo por WhatsApp
+            </a>
+          ) : (
+            <p className="text-sm text-ink">Escríbenos por nuestros canales para cotizar este producto.</p>
+          )}
+        </>
+      ) : (
+      <>
       <div className="flex items-center gap-3">
         <div className="flex items-center rounded-full border border-border">
           <button
@@ -106,9 +129,7 @@ export function AccionesProducto({ producto }: { producto: ProductoWeb }) {
           </button>
         </div>
         <span className="text-sm text-ink-faint">
-          {producto.es_pedido_encargo
-            ? "Se pide al proveedor al confirmarse el pedido"
-            : formatoStock(producto.stock_web, producto.stock_umbral_web)}
+          {formatoStock(producto.stock_web, producto.stock_umbral_web)}
         </span>
       </div>
 
@@ -140,6 +161,8 @@ export function AccionesProducto({ producto }: { producto: ProductoWeb }) {
       >
         {agregado ? "¡Agregado! ✓" : esReserva ? "Reservar — pago 100%" : "Agregar al carrito"}
       </motion.button>
+      </>
+      )}
 
       <button
         type="button"

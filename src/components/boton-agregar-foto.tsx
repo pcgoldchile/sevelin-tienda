@@ -24,10 +24,10 @@ export function BotonAgregarFoto({ producto }: { producto: ProductoWeb }) {
   const { mostrarToast } = useToast();
   const [agregado, setAgregado] = useState(false);
 
-  const disponible = producto.es_pedido_encargo
-    || producto.stock_web > 0
+  const disponible = producto.stock_web > 0
     || (producto.por_llegar && (producto.stock_por_llegar ?? 0) > 0);
-  if (producto.precio_a_consultar || !disponible) return null;
+  // Un encargo tampoco: se cotiza por WhatsApp (ver src/lib/encargo-cotizar.ts).
+  if (producto.precio_a_consultar || producto.es_pedido_encargo || !disponible) return null;
 
   const esReserva = producto.por_llegar && producto.stock_web <= 0;
 

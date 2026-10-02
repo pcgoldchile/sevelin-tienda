@@ -40,6 +40,10 @@ export interface ItemCarrito {
   /** Solo en la vista (nunca se guarda): la línea va a precio mayorista y
    *  precio_web ya es ese precio (supabase/39). */
   es_precio_mayorista?: boolean;
+  /** Pedido por encargo que quedó en un carrito de antes (02-10-2026): ya no
+   *  se paga en línea. Lo marca actualizarPrecios(); queda sin seleccionar y
+   *  el carrito ofrece cotizarlo por WhatsApp. */
+  es_pedido_encargo?: boolean;
 }
 
 /** Cuenta mayorista aprobada con productos en el carrito (supabase/39). */
@@ -189,8 +193,9 @@ export function CarritoProvider({ children }: { children: ReactNode }) {
   const agregarItem = useCallback((producto: ProductoWeb, cantidad = 1) => {
     // Precio a consultar (supabase/31): no se vende en línea. La ficha y la
     // tarjeta ya no muestran "Agregar"; esto cubre cualquier otro llamador.
-    // La barrera real está en POST /api/checkout.
-    if (producto.precio_a_consultar) return;
+    // La barrera real está en POST /api/checkout. Lo mismo un pedido por
+    // encargo: precio referencial, se cotiza por WhatsApp (02-10-2026).
+    if (producto.precio_a_consultar || producto.es_pedido_encargo) return;
     setItems((prev) => {
       const existente = prev.find((item) => item.sku === producto.sku);
       const tope = producto.stock_web;
@@ -233,12 +238,17 @@ export function CarritoProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
+  // Un encargo nunca entra a la compra: no se puede seleccionar.
   const alternarSeleccion = useCallback((sku: string) => {
-    setItems((prev) => prev.map((item) => (item.sku === sku ? { ...item, seleccionado: !item.seleccionado } : item)));
+    setItems((prev) =>
+      prev.map((item) =>
+        item.sku === sku && !item.es_pedido_encargo ? { ...item, seleccionado: !item.seleccionado } : item
+      )
+    );
   }, []);
 
   const seleccionarTodos = useCallback((seleccionado: boolean) => {
-    setItems((prev) => prev.map((item) => ({ ...item, seleccionado })));
+    setItems((prev) => prev.map((item) => ({ ...item, seleccionado: seleccionado && !item.es_pedido_encargo })));
   }, []);
 
   const vaciarCarrito = useCallback(() => setItems([]), []);
@@ -270,6 +280,7 @@ export function CarritoProvider({ children }: { children: ReactNode }) {
           precio_web: number;
           precio_antes: number | null;
           stock_web: number;
+          es_pedido_encargo?: boolean;
           mayorista?: DatosMayorista | null;
         }>;
         mayorista?: { pedido_minimo: number } | null;
@@ -291,10 +302,18 @@ export function CarritoProvider({ children }: { children: ReactNode }) {
         prev.map((item) => {
           const p = precios[item.sku];
           if (!p) return item; // agotado o despublicado: lo informa el checkout, no se borra acá
-          if (p.precio_web === item.precio_web && (p.precio_antes ?? null) === (item.precio_antes ?? null) && p.stock_web === item.stock_web) {
+          /* Encargo que quedó de antes: se saca de la compra (el checkout lo
+             rechazaría igual) y el carrito ofrece cotizarlo por WhatsApp. */
+          if (p.es_pedido_encargo) {
+            return item.es_pedido_encargo && !item.seleccionado && p.precio_web === item.precio_web
+              ? item
+              : { ...item, precio_web: p.precio_web, precio_antes: null, es_pedido_encargo: true, seleccionado: false };
+          }
+          if (p.precio_web === item.precio_web && (p.precio_antes ?? null) === (item.precio_antes ?? null) && p.stock_web === item.stock_web && !item.es_pedido_encargo) {
             return item;
           }
-          return { ...item, precio_web: p.precio_web, precio_antes: p.precio_antes, stock_web: p.stock_web };
+          // es_pedido_encargo en false: si el dueño lo pasó a stock propio, vuelve a poder comprarse.
+          return { ...item, precio_web: p.precio_web, precio_antes: p.precio_antes, stock_web: p.stock_web, es_pedido_encargo: false };
         })
       );
       return cambiados;

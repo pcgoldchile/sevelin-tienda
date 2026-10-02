@@ -1,15 +1,16 @@
 import { listarEncargos } from "@/lib/encargos";
 import { EncargosNavegables } from "@/components/encargos-navegables";
-import { AvisoPagoTarjeta } from "@/components/aviso-pago-tarjeta";
 
 export const revalidate = 60;
 
 /**
  * Sección aparte del catálogo normal (ver /productos): productos que el
- * dueño no mantiene en bodega — se piden al proveedor recién cuando se
- * confirma el pedido y se despachan a domicilio o se retiran en tienda.
- * Por eso listarEncargos() no filtra por stock_web, a diferencia de
+ * dueño no mantiene en bodega — se piden al proveedor a pedido. Por eso
+ * listarEncargos() no filtra por stock_web, a diferencia de
  * buscarCatalogo() (ver src/lib/encargos.ts).
+ *
+ * Desde el 02-10-2026 no se pagan en línea: el precio es referencial y se
+ * cotizan por WhatsApp desde la ficha (ver src/lib/encargo-cotizar.ts).
  */
 export default async function PedidosPorEncargo() {
   const whatsapp = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER;
@@ -29,9 +30,10 @@ export default async function PedidosPorEncargo() {
         📦 Pedidos por Encargo
       </h1>
       <p className="mt-2 max-w-2xl text-sm text-ink-soft">
-        Traemos tus productos favoritos a pedido en cuanto confirmas tu compra. Elige retiro en
-        tienda o despacho a domicilio al finalizar tu pago y te avisaremos por correo apenas esté
-        disponible.
+        Productos que no tenemos en la tienda y traemos a pedido desde nuestro proveedor.{" "}
+        <strong className="font-semibold text-ink">Los precios de esta sección son referenciales</strong>{" "}
+        y no se pagan en línea: entra al producto y cotízalo por WhatsApp. Te confirmamos si está
+        disponible y su precio final antes de que pagues.
       </p>
       <p className="mt-2 max-w-2xl text-sm text-ink-soft">
         ¿Buscas algo que no ves en el catálogo? Pídelo o cotízalo directamente por nuestro{" "}
@@ -52,10 +54,6 @@ export default async function PedidosPorEncargo() {
       <p className="mt-3 text-sm text-ink-soft">
         {productos.length} producto{productos.length === 1 ? "" : "s"} disponible{productos.length === 1 ? "" : "s"} por encargo
       </p>
-
-      <div className="mt-6">
-        <AvisoPagoTarjeta />
-      </div>
 
       {error ? (
         <p className="mt-10 text-ink-soft">Esta sección no está disponible en este momento.</p>

@@ -173,15 +173,21 @@ export default function Terminos() {
           <p>
             Los productos de la sección{" "}
             <a href="/pedidos-por-encargo" className="text-accent hover:underline">Pedidos por Encargo</a>{" "}
-            no se mantienen en bodega: los solicitamos a nuestro proveedor una vez que tu compra queda
+            no están en la tienda: los solicitamos a nuestro proveedor una vez que tu compra queda
             confirmada y pagada. Por eso funcionan con condiciones propias, distintas del resto del
             catálogo:
           </p>
           <ul className="mt-2 list-disc space-y-1.5 pl-5">
             <li>
+              <strong className="text-ink">Precio referencial y cotización:</strong> el precio publicado
+              de un producto por encargo es referencial. No se paga en línea: se cotiza por WhatsApp, y
+              antes de que pagues confirmamos con el proveedor si el producto está disponible y cuál es
+              su precio final. La compra queda confirmada cuando aceptas ese precio y pagas.
+            </li>
+            <li>
               <strong className="text-ink">Plazo de entrega:</strong> depende de la disponibilidad del
               proveedor y de la logística de despacho hasta Arica, por lo que no comprometemos una fecha
-              exacta. Te informamos por correo apenas el producto esté disponible.
+              exacta. Te informamos apenas el producto esté disponible.
             </li>
             <li>
               <strong className="text-ink">No se cancela mientras viene en camino:</strong> al pagar,

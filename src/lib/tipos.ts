@@ -38,8 +38,9 @@ export interface ProductoWeb {
    *  es 0; con stock disponible manda el stock real. */
   stock_por_llegar: number;
   // Pedidos por Encargo (dropshipping/retiro en tienda) — marcado desde el
-  // POS. Un producto con esto en true vive solo en /pedidos-por-encargo y
-  // se puede comprar sin importar stock_web (ver src/lib/encargos.ts).
+  // POS. Un producto con esto en true vive solo en /pedidos-por-encargo, se
+  // muestra sin importar stock_web (ver src/lib/encargos.ts) y NO se paga en
+  // línea: precio referencial, se cotiza por WhatsApp (src/lib/encargo-cotizar.ts).
   es_pedido_encargo: boolean;
   /** Precio base que depende del equipo: se muestra con "Desde" y no se
    *  puede comprar en línea, solo cotizar por WhatsApp. Ver

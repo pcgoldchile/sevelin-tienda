@@ -129,7 +129,6 @@ export async function POST(req: NextRequest) {
   } = await supabaseSesion.auth.getUser();
 
   let items: ItemPedido[];
-  let tipoPedido: 'NORMAL' | 'ENCARGO';
   let esMayorista = false;
   let soloServicios = false;
   let hayServicios = false;
@@ -147,10 +146,14 @@ export async function POST(req: NextRequest) {
         if (producto.precio_a_consultar) {
           throw new Error(`"${producto.nombre}" se cotiza según tu equipo y no se puede pagar en línea. Quítalo del carrito y escríbenos por WhatsApp.`);
         }
-        // Un producto de Pedidos por Encargo no tiene stock propio — se pide
-        // al proveedor recién al confirmarse el pedido, así que stock_web=0
-        // es normal y NO bloquea la compra (ver src/lib/encargos.ts).
-        if (!producto.es_pedido_encargo && cantidad > producto.stock_web) {
+        /* Pedido por encargo (dueño, 02-10-2026): no está en la tienda y su
+           precio es referencial hasta confirmar con el proveedor. La ficha y
+           el carrito ya no dejan agregarlo, pero puede venir en un carrito
+           guardado o compartido de antes: acá es donde de verdad no se cobra. */
+        if (producto.es_pedido_encargo) {
+          throw new Error(`"${producto.nombre}" es un producto por encargo: su precio es referencial y no se paga en línea. Quítalo del carrito y cotízalo por WhatsApp desde su ficha.`);
+        }
+        if (cantidad > producto.stock_web) {
           throw new Error(`Sin stock suficiente de "${producto.nombre}" (quedan ${producto.stock_web})`);
         }
         const item: ItemPedido = {
@@ -163,27 +166,15 @@ export async function POST(req: NextRequest) {
         };
         return {
           item,
-          esEncargo: producto.es_pedido_encargo,
           esServicio: esServicioTecnico(producto),
         };
       })
     );
 
-    // El fulfillment de un Encargo (se pide al proveedor) y el de un
-    // producto normal (stock propio) son procesos distintos — no se
-    // permite mezclarlos en un mismo pedido/pago.
-    const hayEncargo = resueltos.some((r) => r.esEncargo);
-    const hayNormal = resueltos.some((r) => !r.esEncargo);
-    if (hayEncargo && hayNormal) {
-      throw new Error(
-        'Los productos de Pedidos por Encargo se compran por separado del resto del carrito.'
-      );
-    }
-
     /* Venta mayorista (supabase/39): solo una cuenta APROBADA, y con la
        misma función que usa el carrito para mostrar. Si el pedido (con
        precios mayoristas, sin envío) no llega al pedido mínimo, todo va a
-       precio normal. Un encargo o un servicio nunca tiene precio mayorista. */
+       precio normal. Un servicio nunca tiene precio mayorista. */
     const mayorista = await contextoMayorista(user?.id);
     if (mayorista) {
       const precios = await preciosMayoristasDe(resueltos.map((r) => r.item.producto_pos_id));
@@ -192,7 +183,7 @@ export async function POST(req: NextRequest) {
           clave: String(i),
           precio: r.item.precio_web,
           cantidad: r.item.cantidad,
-          mayorista: r.esEncargo || r.esServicio ? null : precios.get(Number(r.item.producto_pos_id)) ?? null,
+          mayorista: r.esServicio ? null : precios.get(Number(r.item.producto_pos_id)) ?? null,
         })),
         mayorista.pedidoMinimo
       );
@@ -228,7 +219,6 @@ export async function POST(req: NextRequest) {
     items = resueltos.map((r) => r.item);
     soloServicios = resueltos.every((r) => r.esServicio);
     hayServicios = resueltos.some((r) => r.esServicio);
-    tipoPedido = hayEncargo ? 'ENCARGO' : 'NORMAL';
   } catch (err) {
     const mensaje = err instanceof Error ? err.message : 'No se pudo validar el carrito';
     return NextResponse.json({ error: mensaje }, { status: 409 });
@@ -313,7 +303,8 @@ export async function POST(req: NextRequest) {
       cliente: { nombre, apellido, email, telefono, rut: cuerpo.cliente?.rut?.trim() || null },
       direccion: direccionCompleta,
       items,
-      tipoPedido,
+      // Un encargo ya no llega hasta acá (se rechaza arriba): siempre NORMAL.
+      tipoPedido: 'NORMAL',
       /* Agenda de retiro: solo con método RETIRO, y validada acá aunque
          el formulario ya limite las opciones — el cuerpo de la petición
          no es de fiar. Si viene mal escrita se guarda en null y la compra

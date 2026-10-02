@@ -3,8 +3,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { Minus, Plus, Trash2 } from "lucide-react";
+import { MessageCircle, Minus, Plus, Trash2 } from "lucide-react";
 import { formatoCLP } from "@/lib/formato";
+import { AVISO_ENCARGO, urlCotizarEncargo } from "@/lib/encargo-cotizar";
 import { HAY_RECARGO, recargoTotal } from "@/lib/precios-medio-pago";
 import { useCarrito } from "@/context/carrito-context";
 import { AvisoPagoTarjeta } from "@/components/aviso-pago-tarjeta";
@@ -34,7 +35,10 @@ export default function CarritoPage() {
   // Cotización (supabase/35): el cliente se genera su propio documento
   const [cotizando, setCotizando] = useState(false);
 
-  const todosSeleccionados = items.length > 0 && items.every((item) => item.seleccionado);
+  /* Un encargo que quedó en un carrito de antes no se paga en línea
+     (02-10-2026): queda en la lista, sin seleccionar, con su salida a WhatsApp. */
+  const comprables = items.filter((item) => !item.es_pedido_encargo);
+  const todosSeleccionados = comprables.length > 0 && comprables.every((item) => item.seleccionado);
 
   async function compartirCarrito() {
     setCompartiendo(true);
@@ -114,7 +118,7 @@ export default function CarritoPage() {
               onChange={(e) => seleccionarTodos(e.target.checked)}
               className="h-4 w-4 accent-accent"
             />
-            Seleccionar todos ({items.length})
+            Seleccionar todos ({comprables.length})
           </label>
 
           <ul className="flex flex-col divide-y divide-border">
@@ -123,8 +127,9 @@ export default function CarritoPage() {
                 <input
                   type="checkbox"
                   checked={item.seleccionado}
+                  disabled={item.es_pedido_encargo}
                   onChange={() => alternarSeleccion(item.sku)}
-                  className="mt-1 h-4 w-4 shrink-0 accent-accent"
+                  className="mt-1 h-4 w-4 shrink-0 accent-accent disabled:opacity-40"
                   aria-label={`Incluir ${item.nombre} en la compra`}
                 />
                 <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-surface-sunken">
@@ -141,6 +146,9 @@ export default function CarritoPage() {
                     <PrecioAntes precioAntes={item.precio_antes} precio={item.precio_web} />
                   </span>
                   <PistaMayoristaLinea item={item} />
+                  {item.es_pedido_encargo ? (
+                    <EncargoEnCarrito nombre={item.nombre} sku={item.sku} onQuitar={() => quitarItem(item.sku)} />
+                  ) : (
                   <div className="mt-1 flex items-center justify-between gap-2">
                     {/* Altura fija (h-9) en los 3 elementos — no relleno
                         (padding): así los tres miden exactamente lo mismo
@@ -186,10 +194,13 @@ export default function CarritoPage() {
                       <Trash2 className="h-3.5 w-3.5" aria-hidden /> Quitar
                     </button>
                   </div>
+                  )}
                 </div>
-                <span className="shrink-0 text-sm tabular-nums text-ink-soft">
-                  {formatoCLP.format(item.precio_web * item.cantidad)}
-                </span>
+                {!item.es_pedido_encargo && (
+                  <span className="shrink-0 text-sm tabular-nums text-ink-soft">
+                    {formatoCLP.format(item.precio_web * item.cantidad)}
+                  </span>
+                )}
               </li>
             ))}
           </ul>
@@ -287,5 +298,37 @@ export default function CarritoPage() {
         onCerrar={() => setCotizando(false)}
       />
     </main>
+  );
+}
+
+/** Línea de un encargo que quedó en un carrito de antes: en vez de cantidad y
+ *  total, el aviso de que no se paga en línea y la salida a WhatsApp. */
+function EncargoEnCarrito({ nombre, sku, onQuitar }: { nombre: string; sku: string; onQuitar: () => void }) {
+  const whatsapp = urlCotizarEncargo(process.env.NEXT_PUBLIC_WHATSAPP_NUMBER, nombre, sku);
+  return (
+    <div className="mt-1 flex flex-col items-start gap-2">
+      <p className="text-xs leading-relaxed text-ink-soft">
+        <strong className="font-semibold text-ink">No se paga en línea.</strong> {AVISO_ENCARGO}
+      </p>
+      <div className="flex flex-wrap items-center gap-3">
+        {whatsapp && (
+          <a
+            href={whatsapp}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 rounded-full border border-accent/50 px-3 py-1.5 text-xs font-semibold text-accent transition-colors hover:bg-accent hover:text-white"
+          >
+            <MessageCircle className="h-3.5 w-3.5" aria-hidden /> Cotizar por WhatsApp
+          </a>
+        )}
+        <button
+          type="button"
+          onClick={onQuitar}
+          className="flex items-center gap-1 text-xs text-ink-faint underline transition-colors hover:text-accent"
+        >
+          <Trash2 className="h-3.5 w-3.5" aria-hidden /> Quitar
+        </button>
+      </div>
+    </div>
   );
 }

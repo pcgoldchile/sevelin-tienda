@@ -40,10 +40,14 @@ export async function POST(req: NextRequest) {
       precio_web: number;
       precio_antes: number | null;
       stock_web: number;
+      /** Encargo: no se paga en línea, el carrito lo saca de la compra. */
+      es_pedido_encargo?: boolean;
       mayorista?: { precio: number; desde: number } | null;
     }> = {};
     productos.forEach((p) => {
-      if (p) precios[p.sku] = { precio_web: p.precio_web, precio_antes: p.precio_antes ?? null, stock_web: p.stock_web };
+      if (!p) return;
+      precios[p.sku] = { precio_web: p.precio_web, precio_antes: p.precio_antes ?? null, stock_web: p.stock_web };
+      if (p.es_pedido_encargo) precios[p.sku].es_pedido_encargo = true;
     });
 
     const supabaseSesion = await crearClienteServidor();

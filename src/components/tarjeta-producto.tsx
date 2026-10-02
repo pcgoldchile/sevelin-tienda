@@ -45,9 +45,11 @@ export function TarjetaProducto({ producto }: { producto: ProductoWeb }) {
   const [avisoStock, setAvisoStock] = useState<string | null>(null);
 
   // Un producto de Pedidos por Encargo no tiene stock propio a propósito
-  // (se pide al proveedor recién al confirmarse el pedido) — nunca se
-  // trata como "sin stock" acá, ver supabase/18-pedidos-por-encargo.sql.
+  // (se pide al proveedor) — nunca se trata como "sin stock" acá, ver
+  // supabase/18-pedidos-por-encargo.sql. Tampoco se agrega al carrito: se
+  // cotiza por WhatsApp desde su ficha (ver src/lib/encargo-cotizar.ts).
   const sinStock = !producto.es_pedido_encargo && producto.stock_web <= 0;
+  const soloCotizar = producto.precio_a_consultar || producto.es_pedido_encargo;
   /* En la grilla solo se marca el caso fuerte (última unidad). Poner
      "quedan 3" en cada tarjeta llenaría el catálogo de carteles y el
      ojo dejaría de verlos justo cuando importa. El detalle completo
@@ -65,7 +67,7 @@ export function TarjetaProducto({ producto }: { producto: ProductoWeb }) {
   const rutaFicha = producto.es_pedido_encargo
     ? `/pedidos-por-encargo/${rutaDeSku(producto.sku)}`
     : `/productos/${rutaDeSku(producto.sku)}`;
-  const topeCantidad = producto.es_pedido_encargo ? 99 : producto.stock_web;
+  const topeCantidad = producto.stock_web;
 
   function cantidadEscrita() {
     return Math.max(1, parseInt(cantidadTexto, 10) || 1);
@@ -133,6 +135,10 @@ export function TarjetaProducto({ producto }: { producto: ProductoWeb }) {
           {formatoCLP.format(producto.precio_web)}
         </span>
         <PrecioAntes precioAntes={producto.precio_antes} precio={producto.precio_web} />
+        {/* Encargo: el precio se confirma con el proveedor antes de pagar. */}
+        {producto.es_pedido_encargo && (
+          <span className="text-[11px] leading-4 text-ink-faint">Precio referencial</span>
+        )}
         {/* Segundo precio en una línea chica: el precio destacado sigue
             siendo el bajo (es el que va al feed de Google/Meta, decisión D3),
             pero el de tarjeta tiene que estar visible desde el catálogo —
@@ -159,10 +165,10 @@ export function TarjetaProducto({ producto }: { producto: ProductoWeb }) {
               Apilar también hace el botón full-width, que en pantalla
               táctil es un blanco mucho más cómodo. Desde `lg` (4
               columnas, tarjetas anchas) vuelven a caber lado a lado. */}
-          {/* Precio a consultar: sin cantidad ni "Agregar" — no se vende en
-              línea. Lleva a la ficha, donde está el "Cotizar por WhatsApp"
-              con el nombre del servicio ya escrito. */}
-          {producto.precio_a_consultar ? (
+          {/* Precio a consultar o encargo: sin cantidad ni "Agregar" — no se
+              vende en línea. Lleva a la ficha, donde está el "Cotizar por
+              WhatsApp" con el nombre ya escrito. */}
+          {soloCotizar ? (
             <Link
               href={rutaFicha}
               className="flex w-full items-center justify-center rounded-md border border-primary/40 px-3 py-2 text-sm font-semibold uppercase tracking-wide text-primary transition-colors hover:bg-primary/10 lg:py-1.5"

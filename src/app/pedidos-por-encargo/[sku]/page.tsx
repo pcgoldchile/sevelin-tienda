@@ -11,7 +11,6 @@ import { AccionesProducto } from "@/components/acciones-producto";
 import { EtiquetaProductoBadge } from "@/components/etiqueta-producto-badge";
 import { InfoEnvioProducto } from "@/components/info-envio-producto";
 import { CondicionesEncargo } from "@/components/condiciones-encargo";
-import { AvisoPagoTarjeta } from "@/components/aviso-pago-tarjeta";
 
 export const revalidate = 60;
 
@@ -21,8 +20,9 @@ interface PropsPagina {
 
 /** Ficha de un producto de Pedidos por Encargo — mismo layout que
  * /productos/[sku], solo cambia la fuente de datos (sin filtro de stock,
- * ver src/lib/encargos.ts) y el aviso de "se pide al proveedor" que ya
- * muestra AccionesProducto cuando producto.es_pedido_encargo es true. */
+ * ver src/lib/encargos.ts) y la acción: no se compra en línea, se cotiza
+ * por WhatsApp (AccionesProducto cuando producto.es_pedido_encargo es true,
+ * ver src/lib/encargo-cotizar.ts). */
 export default async function FichaEncargo({ params }: PropsPagina) {
   const { sku } = await params;
 
@@ -59,20 +59,23 @@ export default async function FichaEncargo({ params }: PropsPagina) {
         <div className="flex flex-col gap-4">
           <EtiquetaProductoBadge etiqueta={producto.etiqueta_web} />
           <h1 className="text-3xl font-semibold tracking-tight text-ink">{producto.nombre}</h1>
-          <span className="precio-gamer text-3xl text-ink">{formatoCLP.format(producto.precio_web)}</span>
+          {/* El precio de un encargo es REFERENCIAL (dueño, 02-10-2026): se
+              confirma con el proveedor antes de pagar. Decirlo pegado al
+              número, no solo más abajo: sin la etiqueta sería anunciar un
+              precio que después puede no respetarse. */}
+          <div className="flex flex-col gap-0.5">
+            <span className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">Precio referencial</span>
+            <span className="precio-gamer text-3xl text-ink">{formatoCLP.format(producto.precio_web)}</span>
+          </div>
 
           <div className="lg:sticky lg:top-24 lg:z-10">
             <AccionesProducto producto={producto} />
           </div>
 
           {/* Antes de la descripción, no al final: las condiciones de un
-              encargo (plazo incierto, sin cancelación, devolución con
-              retorno previo) tienen que leerse ANTES de decidir comprar. */}
+              encargo (precio referencial, plazo incierto, sin cancelación)
+              tienen que leerse ANTES de decidir encargarlo. */}
           <CondicionesEncargo />
-
-          {/* Mismo lugar que en la ficha del catálogo normal: bajo el
-              botón de compra, cuando el cliente decide con qué paga. */}
-          <AvisoPagoTarjeta />
 
           {producto.descripcion_web && (
             <div className="descripcion-producto rounded-2xl border border-border bg-surface/60 p-5 sm:p-6">

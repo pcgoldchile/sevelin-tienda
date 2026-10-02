@@ -170,6 +170,12 @@ export async function resolverLineasCotizacion(
         throw new Error(`"${producto.nombre}" se cotiza según tu equipo. Quítalo y escríbenos por WhatsApp para ese en particular.`);
       }
 
+      /* Pedido por encargo (02-10-2026): el precio publicado es referencial
+         hasta confirmar con el proveedor. Mismo motivo: no va a un documento. */
+      if (producto.es_pedido_encargo) {
+        throw new Error(`"${producto.nombre}" es por encargo y su precio es referencial. Quítalo y cotízalo por WhatsApp desde su ficha.`);
+      }
+
       return { producto, cantidad };
     })
   );
@@ -178,8 +184,8 @@ export async function resolverLineasCotizacion(
      normal, aunque el carrito de una cuenta aprobada mostrara el mayorista:
      el cliente cotizaba un precio y veía otro (02-10-2026). Se resuelve con
      la MISMA función del carrito y del checkout, con sus mismas reglas
-     (cantidad mínima por producto y pedido mínimo); un encargo o un servicio
-     nunca tiene precio mayorista. */
+     (cantidad mínima por producto y pedido mínimo); un servicio nunca tiene
+     precio mayorista. */
   const preciosMayoristas = mayorista
     ? await preciosMayoristasDe(resueltos.map((r) => r.producto.producto_pos_id))
     : null;
@@ -189,7 +195,7 @@ export async function resolverLineasCotizacion(
           clave: String(i),
           precio: Number(r.producto.precio_web) || 0,
           cantidad: r.cantidad,
-          mayorista: r.producto.es_pedido_encargo || esServicioTecnico(r.producto)
+          mayorista: esServicioTecnico(r.producto)
             ? null
             : preciosMayoristas.get(Number(r.producto.producto_pos_id)) ?? null,
         })),

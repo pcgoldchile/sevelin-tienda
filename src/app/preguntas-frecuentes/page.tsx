@@ -73,12 +73,17 @@ const PREGUNTAS: { pregunta: string; respuesta: string }[] = [
   {
     pregunta: "¿Qué es un pedido por encargo?",
     respuesta:
-      "Es un producto que no mantenemos en bodega: lo pedimos a nuestro proveedor una vez que confirmas y pagas tu compra. Por eso podemos ofrecerte más variedad y mejor precio que si tuviéramos que tenerlo en stock. Los encontrarás en la sección Pedidos por Encargo, siempre identificados como tales.",
+      "Es un producto que no tenemos en la tienda: lo traemos a pedido desde nuestro proveedor, y por eso podemos ofrecerte más variedad. El precio publicado es referencial: antes de que pagues, confirmamos con el proveedor si está disponible y cuál es su precio final. Los encontrarás en la sección Pedidos por Encargo, siempre identificados como tales.",
+  },
+  {
+    pregunta: "¿Cómo compro un producto por encargo?",
+    respuesta:
+      "No se paga en línea. En la ficha del producto está el botón para cotizarlo por WhatsApp: nos escribes, confirmamos con el proveedor el precio y la disponibilidad, y recién entonces coordinamos el pago contigo. Así nunca pagas por algo que no se puede traer o que cambió de precio.",
   },
   {
     pregunta: "¿Cuánto demora un pedido por encargo?",
     respuesta:
-      "Depende de la disponibilidad del proveedor y de la logística de despacho hasta Arica, así que no comprometemos una fecha exacta — preferimos no prometer un plazo que no dependa de nosotros. Te avisamos por correo apenas el producto esté disponible, y si quieres una estimación para un producto puntual, escríbenos antes de comprar y te contamos qué esperar.",
+      "Depende de la disponibilidad del proveedor y de la logística de despacho hasta Arica, así que no comprometemos una fecha exacta — preferimos no prometer un plazo que no dependa de nosotros. Te avisamos apenas el producto esté disponible, y al cotizarlo te contamos qué esperar para ese producto en particular.",
   },
   {
     pregunta: "¿Puedo cancelar o devolver un pedido por encargo?",
