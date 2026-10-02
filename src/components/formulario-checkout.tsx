@@ -20,6 +20,7 @@ import { AVISO_DOMINGO, HORARIO_LEGIBLE } from "@/lib/horarios";
 import { COMUNAS_POR_REGION } from "@/lib/comunas-chile";
 import type { OpcionEnvio } from "@/lib/envio";
 import { AvisoMayoristaCarrito } from "@/components/aviso-mayorista-carrito";
+import { FACTURA_HABILITADA } from "@/lib/factura";
 
 const CAMPO =
   "rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm outline-none transition-colors focus:border-accent";
@@ -1106,15 +1107,19 @@ export function FormularioCheckout({
             className={`${CAMPO} resize-none`}
           />
 
-          <label className="flex cursor-pointer items-center gap-2 text-sm text-ink-soft">
-            <input
-              type="checkbox"
-              checked={quiereFactura}
-              onChange={(e) => setQuiereFactura(e.target.checked)}
-              className="accent-accent"
-            />
-            Solicitar factura
-          </label>
+          {/* Sin la casilla, `quiereFactura` nunca pasa a true y el bloque de
+              datos de empresa de abajo no se muestra (ver lib/factura.ts). */}
+          {FACTURA_HABILITADA && (
+            <label className="flex cursor-pointer items-center gap-2 text-sm text-ink-soft">
+              <input
+                type="checkbox"
+                checked={quiereFactura}
+                onChange={(e) => setQuiereFactura(e.target.checked)}
+                className="accent-accent"
+              />
+              Solicitar factura
+            </label>
+          )}
 
           <AnimatePresence>
             {quiereFactura && (

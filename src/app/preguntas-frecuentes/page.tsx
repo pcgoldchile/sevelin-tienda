@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { HAY_RECARGO, RECARGO_CHECKOUT_TARJETA } from "@/lib/precios-medio-pago";
 import { FLOW_HABILITADO } from "@/lib/flow";
+import { FACTURA_HABILITADA } from "@/lib/factura";
 
 /* Contenido confirmado por el dueño el 08-09-2026 — ver
    docs/FAQ-PROPUESTA.md. Nada acá se inventa: cada respuesta sale de algo
@@ -134,8 +135,9 @@ const PREGUNTAS: { pregunta: string; respuesta: string }[] = [
   },
   {
     pregunta: "¿Emiten boleta o factura?",
-    respuesta:
-      "Emitimos boleta por cada compra. Si necesitas factura, puedes solicitarla durante el checkout indicando razón social, RUT y giro.",
+    respuesta: FACTURA_HABILITADA
+      ? "Emitimos boleta por cada compra. Si necesitas factura, puedes solicitarla durante el checkout indicando razón social, RUT y giro."
+      : "Emitimos boleta por cada compra. Por ahora no emitimos factura: estamos gestionando su habilitación y avisaremos cuando esté disponible.",
   },
   {
     pregunta: "¿Hacen envíos a todo Chile?",
@@ -199,7 +201,9 @@ export default function PreguntasFrecuentes() {
           </table>
         </div>
         <p className="mt-3 text-xs text-ink-faint">
-          Se emite boleta por cada compra. Si necesitas factura, la puedes pedir durante el checkout.
+          {FACTURA_HABILITADA
+            ? "Se emite boleta por cada compra. Si necesitas factura, la puedes pedir durante el checkout."
+            : "Se emite boleta por cada compra. Por ahora no emitimos factura."}
         </p>
       </section>
 

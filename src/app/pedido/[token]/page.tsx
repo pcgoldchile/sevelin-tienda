@@ -3,6 +3,7 @@ import { Star } from "lucide-react";
 import { notFound } from "next/navigation";
 import { obtenerPedidoPorToken } from "@/lib/pedidos";
 import { formatoCLP } from "@/lib/formato";
+import { FACTURA_HABILITADA } from "@/lib/factura";
 import { URL_RESENA_GOOGLE } from "@/lib/resena-google";
 import { AvisoResenaGoogle } from "@/components/aviso-resena-google";
 import { SeguimientoPago } from "@/components/seguimiento-pago";
@@ -137,7 +138,7 @@ export default async function EstadoPedido({ params }: PropsPagina) {
             Tu comprobante de pago de {pedido.metodo_pago === 'KHIPU' ? 'Khipu' : 'Flow'} respalda esta compra.
             {whatsapp && (
               <>
-                {" "}¿Necesitas boleta o factura?{" "}
+                {" "}{FACTURA_HABILITADA ? "¿Necesitas boleta o factura?" : "¿Necesitas tu boleta?"}{" "}
                 <a href={`https://wa.me/${whatsapp}`} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
                   Escríbenos por WhatsApp
                 </a>

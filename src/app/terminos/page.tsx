@@ -1,5 +1,6 @@
 import { HAY_RECARGO, RECARGO_CHECKOUT_TARJETA } from "@/lib/precios-medio-pago";
 import { FLOW_HABILITADO } from "@/lib/flow";
+import { FACTURA_HABILITADA } from "@/lib/factura";
 
 export const metadata = {
   // El layout raíz ya agrega " — Sevelin" con su template.
@@ -77,8 +78,10 @@ export default function Terminos() {
           <h2 className="mb-1.5 text-base font-semibold text-ink">Boleta y factura</h2>
           <p>
             El comprobante de pago de la pasarela que uses para pagar (Flow o Khipu) respalda tu
-            compra. Si necesitas boleta o factura, puedes solicitarla en el checkout o escribirnos
-            directamente.
+            compra.{" "}
+            {FACTURA_HABILITADA
+              ? "Si necesitas boleta o factura, puedes solicitarla en el checkout o escribirnos directamente."
+              : "Si necesitas tu boleta, escríbenos directamente. Por ahora no emitimos factura."}
           </p>
         </section>
 

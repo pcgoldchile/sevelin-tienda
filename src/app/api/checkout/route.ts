@@ -12,6 +12,7 @@ import { marcarCarritoConvertido } from '@/lib/carritos-web';
 import { contextoMayorista, preciosMayoristasDe } from '@/lib/mayorista';
 import { resolverPreciosMayoristas } from '@/lib/mayorista-precios';
 import type { DatosFactura, DireccionEnvio, ItemPedido } from '@/lib/tipos';
+import { FACTURA_HABILITADA } from '@/lib/factura';
 
 interface CuerpoCheckout {
   cliente?: {
@@ -92,9 +93,10 @@ export async function POST(req: NextRequest) {
 
   // "Solicitar factura" es todo o nada: si viene marcado, los datos de
   // empresa y su dirección son obligatorios (sin eso no se puede emitir nada
-  // después) — piso/depto es el único campo opcional del grupo.
+  // después) — piso/depto es el único campo opcional del grupo. Con la
+  // factura apagada (lib/factura.ts) esos datos se ignoran aunque lleguen.
   let factura: DatosFactura | null = null;
-  if (cuerpo.factura) {
+  if (FACTURA_HABILITADA && cuerpo.factura) {
     const razonSocial = (cuerpo.factura.razonSocial || '').trim();
     const rut = (cuerpo.factura.rut || '').trim();
     const giro = (cuerpo.factura.giro || '').trim();

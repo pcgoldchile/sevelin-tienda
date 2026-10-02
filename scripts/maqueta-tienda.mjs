@@ -9,6 +9,7 @@
 //   http://localhost:54399/maqueta/entrar?quien=cliente     cuenta normal
 //   http://localhost:54399/maqueta/entrar?quien=salir       sin sesión
 // Ver lo que guardó la tienda:  http://localhost:54399/maqueta/tabla/pedidos_web
+// Ofertas de prueba:            http://localhost:54399/maqueta/ofertas?estado=vigentes   (o proximas, ninguna)
 import http from 'node:http';
 import { spawn } from 'node:child_process';
 import { readFileSync } from 'node:fs';
@@ -189,6 +190,23 @@ const servidor = http.createServer(async (req, res) => {
   }
   const mTabla = url.pathname.match(/^\/maqueta\/tabla\/([a-z_]+)$/);
   if (mTabla) return responder(200, tablas[mTabla[1]] || []);
+  // Ofertas de prueba: ?estado=vigentes | proximas | ninguna. Pone una rebaja de ~12% a los
+  // servicios técnicos y a los tres primeros productos de la muestra, para ver /ofertas y la franja.
+  if (url.pathname === '/maqueta/ofertas') {
+    const estado = url.searchParams.get('estado');
+    const dia = 24 * 3600 * 1000;
+    const [desde, hasta] = estado === 'vigentes' ? [Date.now() - dia, Date.now() + 2 * dia] : [Date.now() + 2 * dia, Date.now() + 5 * dia];
+    const elegidos = [...productos.filter((p) => p.categoria === 'Servicios Técnicos' && !p.precio_a_consultar),
+      ...productos.filter((p) => p.categoria !== 'Servicios Técnicos' && !p.precio_a_consultar).slice(0, 3)];
+    for (const p of productos) Object.assign(p, { precio_oferta: null, oferta_desde: null, oferta_hasta: null });
+    if (estado === 'vigentes' || estado === 'proximas') {
+      for (const p of elegidos) Object.assign(p, {
+        precio_oferta: Math.floor(p.precio_web * 0.88 / 1000) * 1000 + 990 < p.precio_web ? Math.floor(p.precio_web * 0.88 / 1000) * 1000 + 990 : Math.round(p.precio_web * 0.88),
+        oferta_desde: new Date(desde).toISOString(), oferta_hasta: new Date(hasta).toISOString(),
+      });
+    }
+    return responder(200, { estado: estado || 'ninguna', con_oferta: productos.filter((p) => p.precio_oferta).map((p) => ({ sku: p.sku, normal: p.precio_web, oferta: p.precio_oferta })) });
+  }
 
   // --- Khipu falso: el pago "queda creado" y vuelve a la página del pedido ---
   if (url.pathname === '/khipu/v3/payments' && req.method === 'POST') {

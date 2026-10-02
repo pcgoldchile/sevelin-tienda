@@ -1,6 +1,7 @@
 import { listarCatalogo } from './catalogo';
 import { finDeOfertaLegible, inicioDeOfertaLegible } from './formato';
 import { porcentajeDescuento } from './oferta';
+import { esServicioTecnico } from './servicios';
 import type { ProductoWeb } from './tipos';
 
 /**
@@ -69,12 +70,23 @@ export interface EstadoOfertas {
   texto: string;
 }
 
+/** "20 productos y 7 servicios en oferta": un servicio técnico no es un
+ *  producto (el cliente trae su equipo), así que se cuenta aparte. */
+export function resumenOfertas(lista: ProductoWeb[]): string {
+  const servicios = lista.filter(esServicioTecnico).length;
+  const productos = lista.length - servicios;
+  const partes = [
+    productos ? (productos === 1 ? '1 producto' : `${productos} productos`) : '',
+    servicios ? (servicios === 1 ? '1 servicio' : `${servicios} servicios`) : '',
+  ].filter(Boolean);
+  return `${partes.join(' y ')} en oferta`;
+}
+
 export async function estadoOfertas(ahora = Date.now()): Promise<EstadoOfertas> {
   const { vigentes, proximas, terminan, empiezan } = await listarOfertas(ahora);
   const titulo = tituloOfertas(ahora);
   if (vigentes.length && terminan) {
-    const cuantas = vigentes.length === 1 ? '1 producto en oferta' : `${vigentes.length} productos en oferta`;
-    return { activo: true, titulo, texto: `${cuantas} hasta el ${finDeOfertaLegible(terminan)}` };
+    return { activo: true, titulo, texto: `${resumenOfertas(vigentes)} hasta el ${finDeOfertaLegible(terminan)}` };
   }
   if (proximas.length && empiezan) {
     return { activo: true, titulo, texto: `Empieza el ${inicioDeOfertaLegible(empiezan)}` };
