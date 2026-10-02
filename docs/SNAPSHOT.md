@@ -4,6 +4,30 @@
 > arquitectura completo (todas las fases) vive en `README-ECOMMERCE-SEVELIN.md`, en el repo del POS
 > (`sevelin-pos-oficial`) — este documento es el estado de ESTE repo (`sevelin-tienda`) nada más.
 
+**Fecha:** 02-10-2026 (tarde) · **Servicios en `/ofertas`, factura apagada y lista de precios mayorista.**
+
+- **`/ofertas` separa productos y servicios técnicos.** Los servicios llevan el recuadro "Cómo tomar la oferta
+  de un servicio": se paga durante la oferta y en el pago se elige el día en que se trae el equipo (hasta 30
+  días después). La reserva ya la exigía el checkout. La franja cuenta aparte ("20 productos y 7 servicios").
+  Cargadas desde el POS 8 ofertas más: son 28 del 05 al 07-10.
+- **Factura apagada** (`src/lib/factura.ts`, `FACTURA_HABILITADA = false`): el checkout no ofrece "Solicitar
+  factura", el servidor ignora esos datos, y FAQ, Términos y la página del pedido dicen solo boleta. Para
+  volver a ofrecerla: cambiar la constante y el texto de `/venta-mayorista` (que lo dice a mano).
+- **Lista de precios en `/mayorista`** (solo cuenta aprobada): PDF y Excel con todo el catálogo por categoría
+  (foto, precio normal, mayorista, desde cuántas unidades, disponibles), con la fecha, el aviso de que los
+  precios pueden variar, el pedido mínimo y el recordatorio de cotizar en la web. `src/lib/lista-mayorista.ts`
+  dibuja sin depender del navegador; `npx tsx scripts/probar-lista-mayorista.mts <carpeta>` genera los dos
+  archivos con los productos de la maqueta. Dependencia nueva: `write-excel-file` (entrada `/universal`,
+  sin Web Worker: la CSP no permite scripts desde `blob:`).
+- **Arreglo:** el cotizador del carrito armaba el documento siempre a precio normal, aunque el carrito de una
+  cuenta aprobada mostrara el mayorista. `resolverLineasCotizacion` usa ahora `resolverPreciosMayoristas`.
+- Maqueta: `http://localhost:54399/maqueta/ofertas?estado=vigentes|proximas|ninguna`.
+- ⚠️ **No probado en producción:** la descarga de la lista (no existe ninguna cuenta mayorista aprobada) y el
+  Excel abierto en Excel de verdad (se revisó por dentro: filas, celdas y 32 fotos).
+- ⚠️ `terminos/page.tsx` tiene un error de lint anterior (un `<a>` a `/pedidos-por-encargo/`). No se tocó.
+
+---
+
 **Fecha:** 02-10-2026 · **Chilexpress cotiza a todas las comunas, y `max-image-preview:large`.**
 
 - **Chilexpress no cotizaba a 89 de las 346 comunas del checkout (26%)** (pendiente #24 del POS): todas las
