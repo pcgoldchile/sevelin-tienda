@@ -93,11 +93,49 @@ export async function buscarCountyCodePorComuna(regionCode: string, nombreComuna
   }
 
   const areas = (data as { coverageAreas?: CoverageArea[] }).coverageAreas || [];
-  const objetivo = nombreComuna.trim().toLowerCase();
-  const encontrada = areas.find((a) => a.coverageName?.trim().toLowerCase() === objetivo);
+  const encontrada = elegirCobertura(areas, nombreComuna);
   if (!encontrada) throw new Error(`Chilexpress no tiene cobertura para la comuna "${nombreComuna}".`);
   return encontrada.countyCode;
 }
+
+/** Sin tildes ni diéresis, en minúsculas y con los espacios colapsados. La
+ * "ñ" también pierde su tilde: Chilexpress escribe "NUNOA" y "VINA DEL MAR". */
+function normalizarComuna(texto: string): string {
+  return texto.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
+}
+
+/**
+ * Elige la cobertura de Chilexpress que corresponde a una comuna del
+ * checkout. Chilexpress escribe sus nombres en mayúsculas y SIN tildes
+ * ("CONCEPCION"), y el checkout usa los nombres oficiales ("Concepción"):
+ * comparando el texto exacto, toda comuna con tilde, diéresis o "ñ" quedaba
+ * "sin cobertura" (pendiente #24 del POS, 02-10-2026). Misma comparación que
+ * ya usaba Starken (starken.ts).
+ */
+export function elegirCobertura(areas: CoverageArea[], nombreComuna: string): CoverageArea | undefined {
+  const comuna = normalizarComuna(nombreComuna);
+  const objetivo = NOMBRE_CHILEXPRESS[comuna] || comuna;
+  return areas.find((a) => normalizarComuna(a.coverageName || '') === objetivo);
+}
+
+/**
+ * Las 10 comunas que Chilexpress llama de otra forma (clave y valor ya
+ * normalizados). Sacadas de la API real de coberturas el 02-10-2026 con
+ * `scripts/auditar-comunas-chilexpress.mts`, que revisa las 346 comunas del
+ * checkout: si Chilexpress renombra una cobertura, ese script lo muestra.
+ */
+const NOMBRE_CHILEXPRESS: Record<string, string> = {
+  llaillay: 'llay-llay',
+  santiago: 'santiago centro',
+  tiltil: 'til til',
+  marchigue: 'marchihue',
+  mostazal: 'san francisco de mostazal',
+  'san vicente de tagua tagua': 'san vicente',
+  'san fabian': 'san fabian - san fabian de alico',
+  trehuaco: 'treguaco',
+  aysen: 'puerto aysen',
+  "o'higgins": 'ohiggins',
+};
 
 interface RespuestaTarifasChilexpress {
   data?: {
