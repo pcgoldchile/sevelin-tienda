@@ -119,7 +119,8 @@ export function DescargarCotizacion({
         // la del último texto y el nombre se pasa de ancho y tapa la cantidad.
         doc.setFontSize(9);
         doc.setFont("helvetica", "normal");
-        const nombreCortado = doc.splitTextToSize(l.nombre, xCant - MARGEN - 16) as string[];
+        const nombreLinea = l.precio_tipo === "MAYORISTA" ? `${l.nombre} (precio mayorista)` : l.nombre;
+        const nombreCortado = doc.splitTextToSize(nombreLinea, xCant - MARGEN - 16) as string[];
         const alto = Math.max(6, nombreCortado.length * 4.5 + 2);
         if (y + alto > ALTO_PAGINA - 40) {
           doc.addPage();
@@ -165,6 +166,9 @@ export function DescargarCotizacion({
         "Los valores están expresados en pesos chilenos e incluyen IVA. El neto se muestra desglosado arriba.",
         "Esta cotización NO reserva stock: las unidades quedan disponibles para otros clientes hasta que se confirme el pedido.",
         "El despacho no está incluido y se cotiza aparte según la dirección de entrega.",
+        ...(lineas.some((l) => l.precio_tipo === "MAYORISTA")
+          ? ["Incluye precios mayoristas de la cuenta. Valen con las cantidades cotizadas: si baja una cantidad o el pedido, puede volver al precio normal."]
+          : []),
         "Documento generado automáticamente desde sevelin.cl. Para confirmar el pedido, responde el correo o escríbenos por WhatsApp.",
       ];
       for (const c of condiciones) {

@@ -141,6 +141,9 @@ export default async function CotizacionPage({ params }: PageProps<"/cotizacion/
               <tr key={l.sku} className="border-b border-border/60 last:border-0">
                 <td className="px-4 py-3 text-ink">
                   {l.nombre}
+                  {l.precio_tipo === "MAYORISTA" && (
+                    <span className="ml-2 rounded bg-primary/15 px-1.5 py-0.5 text-[11px] font-bold text-primary-soft">Precio mayorista</span>
+                  )}
                   <span className="block text-xs text-ink-faint sm:hidden">
                     {formatoCLP.format(l.precio_unitario)} c/u
                   </span>
@@ -182,6 +185,12 @@ export default async function CotizacionPage({ params }: PageProps<"/cotizacion/
             disponibles para otros clientes hasta que se confirme el pedido.
           </li>
           <li>El despacho no está incluido: se cotiza aparte según la dirección de entrega.</li>
+          {lineas.some((l) => l.precio_tipo === "MAYORISTA") && (
+            <li>
+              Incluye precios mayoristas de tu cuenta. Valen con las cantidades cotizadas: si bajas una cantidad o el
+              pedido, puede volver al precio normal.
+            </li>
+          )}
           <li>Para confirmar el pedido, responde el correo de la cotización o escríbenos por WhatsApp.</li>
         </ul>
       </section>

@@ -1,5 +1,7 @@
 import { supabaseWeb } from './supabase-web';
 import { aplicarOferta } from './oferta';
+import { listarCatalogo } from './catalogo';
+import { esServicioTecnico } from './servicios';
 import type { DatosMayorista } from './mayorista-precios';
 import type { ProductoWeb } from './tipos';
 
@@ -79,6 +81,50 @@ export async function preciosMayoristasDe(productoPosIds: number[]): Promise<Map
     mapa.set(Number(f.producto_pos_id), { precio: Number(f.precio_mayorista), desde: Number(f.desde_cantidad) });
   }
   return mapa;
+}
+
+/** Una fila de la lista de precios descargable (PDF / Excel) de /mayorista. */
+export interface FilaListaPrecios {
+  sku: string;
+  nombre: string;
+  categoria: string;
+  imagen: string | null;
+  /** Precio al público vigente hoy (con oferta, si la hay). */
+  precio: number;
+  /** Precio mayorista y su cantidad mínima, o null si el producto no tiene. */
+  mayorista: DatosMayorista | null;
+  stock: number;
+}
+
+/**
+ * Todo el catálogo que se puede comprar hoy, por categoría, con el precio
+ * mayorista de los productos que lo tienen (dueño, 02-10-2026: una lista
+ * que la cuenta mayorista pueda bajar en PDF o Excel). Solo servidor, y solo
+ * se llama desde /mayorista después de comprobar que la cuenta está APROBADA:
+ * lleva precios mayoristas.
+ *
+ * Quedan fuera los servicios técnicos, los encargos y lo que es "precio a
+ * consultar": nada de eso tiene precio mayorista ni se vende por cantidad.
+ */
+export async function listarPreciosParaMayoristas(): Promise<FilaListaPrecios[]> {
+  const catalogo = (await listarCatalogo()).filter((p) => !esServicioTecnico(p) && !p.precio_a_consultar);
+  const precios = await preciosMayoristasDe(catalogo.map((p) => Number(p.producto_pos_id)));
+  return catalogo
+    .map((p) => {
+      const m = precios.get(Number(p.producto_pos_id)) ?? null;
+      // Mismas condiciones que la lista de /mayorista: hay stock para una compra completa y es más barato que hoy.
+      const vale = !!m && p.stock_web >= m.desde && m.precio < p.precio_web;
+      return {
+        sku: p.sku,
+        nombre: p.nombre,
+        categoria: p.categoria || 'Otros',
+        imagen: p.imagen_urls?.[0] ?? null,
+        precio: Number(p.precio_web) || 0,
+        mayorista: vale ? m : null,
+        stock: Number(p.stock_web) || 0,
+      };
+    })
+    .sort((a, b) => a.categoria.localeCompare(b.categoria, 'es') || a.nombre.localeCompare(b.nombre, 'es'));
 }
 
 /** Lista para la página /mayorista: productos publicados, con stock para al

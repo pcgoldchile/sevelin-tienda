@@ -3,6 +3,7 @@ import { supabaseWeb } from '@/lib/supabase-web';
 import { crearClienteServidor } from '@/lib/supabase-server';
 import { chequearLimite, ipReal, respuestaLimiteExcedido } from '@/lib/rate-limit';
 import { enviarCorreoCotizacion } from '@/lib/correo-cotizacion';
+import { contextoMayorista } from '@/lib/mayorista';
 import {
   correoValido,
   resolverLineasCotizacion,
@@ -57,11 +58,25 @@ export async function POST(req: NextRequest) {
   if (!nombre) return NextResponse.json({ error: 'Escribe tu nombre' }, { status: 400 });
   if (!correoValido(correo)) return NextResponse.json({ error: 'Revisa el correo: no parece válido' }, { status: 400 });
 
+  /* La sesión se lee de la cookie en el servidor, nunca del body — mismo
+     criterio que el checkout: aceptar un user_id que manda el navegador
+     dejaría colgar una cotización de la cuenta de cualquier otro. Va antes
+     de los precios porque decide si la cuenta cotiza a precio mayorista. */
+  let clienteUserId: string | null = null;
+  try {
+    const supabaseSesion = await crearClienteServidor();
+    const { data } = await supabaseSesion.auth.getUser();
+    clienteUserId = data.user?.id ?? null;
+  } catch {
+    // Sin sesión (o Supabase Auth sin configurar): se cotiza igual como invitado.
+  }
+
   // Los precios del documento salen del catálogo, nunca del navegador.
   let lineas;
   try {
     lineas = await resolverLineasCotizacion(
-      (cuerpo.items || []).map((i) => ({ sku: String(i?.sku || ''), cantidad: Number(i?.cantidad) || 0 }))
+      (cuerpo.items || []).map((i) => ({ sku: String(i?.sku || ''), cantidad: Number(i?.cantidad) || 0 })),
+      await contextoMayorista(clienteUserId)
     );
   } catch (err) {
     return NextResponse.json(
@@ -71,18 +86,6 @@ export async function POST(req: NextRequest) {
   }
 
   const totales = totalesDeCotizacion(lineas);
-
-  /* La sesión se lee de la cookie en el servidor, nunca del body — mismo
-     criterio que el checkout: aceptar un user_id que manda el navegador
-     dejaría colgar una cotización de la cuenta de cualquier otro. */
-  let clienteUserId: string | null = null;
-  try {
-    const supabaseSesion = await crearClienteServidor();
-    const { data } = await supabaseSesion.auth.getUser();
-    clienteUserId = data.user?.id ?? null;
-  } catch {
-    // Sin sesión (o Supabase Auth sin configurar): se cotiza igual como invitado.
-  }
 
   const { data, error } = await supabaseWeb
     .from('cotizaciones_web')

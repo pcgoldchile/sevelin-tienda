@@ -20,6 +20,9 @@
  */
 
 import { obtenerProductoPorSku } from '@/lib/catalogo';
+import { preciosMayoristasDe } from '@/lib/mayorista';
+import { resolverPreciosMayoristas } from '@/lib/mayorista-precios';
+import { esServicioTecnico } from '@/lib/servicios';
 
 /** Tasa de IVA en Chile. Constante y no una env var: cambia por ley, no por configuración. */
 export const TASA_IVA = 0.19;
@@ -52,6 +55,10 @@ export interface LineaCotizacion {
   neto_unitario: number;
   /** cantidad × precio_unitario (con IVA). */
   subtotal: number;
+  /** Solo si la línea se cotizó a precio mayorista (cuenta aprobada). */
+  precio_tipo?: 'MAYORISTA';
+  /** El precio normal de esa línea, para mostrar cuánto baja. */
+  precio_normal?: number;
 }
 
 export interface TotalesCotizacion {
@@ -137,7 +144,11 @@ export interface ItemSolicitado {
  * negarse a cotizarlo sería perder la venta. La página del documento avisa
  * en grande que no reserva stock.
  */
-export async function resolverLineasCotizacion(items: ItemSolicitado[]): Promise<LineaCotizacion[]> {
+export async function resolverLineasCotizacion(
+  items: ItemSolicitado[],
+  /** Solo para una cuenta mayorista APROBADA (lo decide el llamador con la sesión del servidor). */
+  mayorista?: { pedidoMinimo: number } | null
+): Promise<LineaCotizacion[]> {
   if (!Array.isArray(items) || items.length === 0) {
     throw new Error('No hay productos para cotizar');
   }
@@ -145,7 +156,7 @@ export async function resolverLineasCotizacion(items: ItemSolicitado[]): Promise
     throw new Error(`Una cotización admite hasta ${MAX_LINEAS_COTIZACION} productos distintos`);
   }
 
-  const lineas = await Promise.all(
+  const resueltos = await Promise.all(
     items.map(async (solicitado) => {
       const sku = String(solicitado?.sku || '').trim();
       const cantidad = Math.max(1, Math.round(Number(solicitado?.cantidad) || 0));
@@ -159,19 +170,47 @@ export async function resolverLineasCotizacion(items: ItemSolicitado[]): Promise
         throw new Error(`"${producto.nombre}" se cotiza según tu equipo. Quítalo y escríbenos por WhatsApp para ese en particular.`);
       }
 
-      const precio = Number(producto.precio_web) || 0;
-      return {
-        sku: producto.sku,
-        nombre: producto.nombre,
-        cantidad,
-        precio_unitario: precio,
-        neto_unitario: netoDesdePrecioFinal(precio),
-        subtotal: precio * cantidad,
-      };
+      return { producto, cantidad };
     })
   );
 
-  return lineas;
+  /* Venta mayorista (supabase/39). Antes el documento salía SIEMPRE a precio
+     normal, aunque el carrito de una cuenta aprobada mostrara el mayorista:
+     el cliente cotizaba un precio y veía otro (02-10-2026). Se resuelve con
+     la MISMA función del carrito y del checkout, con sus mismas reglas
+     (cantidad mínima por producto y pedido mínimo); un encargo o un servicio
+     nunca tiene precio mayorista. */
+  const preciosMayoristas = mayorista
+    ? await preciosMayoristasDe(resueltos.map((r) => r.producto.producto_pos_id))
+    : null;
+  const resolucion = mayorista && preciosMayoristas
+    ? resolverPreciosMayoristas(
+        resueltos.map((r, i) => ({
+          clave: String(i),
+          precio: Number(r.producto.precio_web) || 0,
+          cantidad: r.cantidad,
+          mayorista: r.producto.es_pedido_encargo || esServicioTecnico(r.producto)
+            ? null
+            : preciosMayoristas.get(Number(r.producto.producto_pos_id)) ?? null,
+        })),
+        mayorista.pedidoMinimo
+      )
+    : null;
+
+  return resueltos.map(({ producto, cantidad }, i) => {
+    const normal = Number(producto.precio_web) || 0;
+    const aplicado = resolucion?.precios[String(i)];
+    const precio = aplicado?.mayorista ? aplicado.precio : normal;
+    return {
+      sku: producto.sku,
+      nombre: producto.nombre,
+      cantidad,
+      precio_unitario: precio,
+      neto_unitario: netoDesdePrecioFinal(precio),
+      subtotal: precio * cantidad,
+      ...(aplicado?.mayorista ? { precio_tipo: 'MAYORISTA' as const, precio_normal: normal } : {}),
+    };
+  });
 }
 
 /** Correo con forma de correo. No verifica que exista — eso lo dirá el envío. */

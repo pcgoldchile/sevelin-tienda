@@ -3,10 +3,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { crearClienteServidor } from "@/lib/supabase-server";
-import { cuentaMayoristaDe, listarCatalogoMayorista, pedidoMinimoMayorista } from "@/lib/mayorista";
+import { cuentaMayoristaDe, listarCatalogoMayorista, listarPreciosParaMayoristas, pedidoMinimoMayorista } from "@/lib/mayorista";
+import { FACTURA_HABILITADA } from "@/lib/factura";
 import { formatoCLP } from "@/lib/formato";
 import { rutaDeSku } from "@/lib/sku-url";
 import { AgregarMayorista } from "./agregar-mayorista";
+import { DescargarListaMayorista } from "./descargar-lista";
 import { AvisoMayoristaCarrito } from "@/components/aviso-mayorista-carrito";
 
 /* Venta mayorista, Fase 1 (supabase/39). Privada: depende de la sesión, así
@@ -47,7 +49,20 @@ export default async function Mayorista() {
     );
   }
 
-  const [lista, pedidoMinimo] = await Promise.all([listarCatalogoMayorista(), pedidoMinimoMayorista()]);
+  const [lista, pedidoMinimo, listaPrecios] = await Promise.all([
+    listarCatalogoMayorista(),
+    pedidoMinimoMayorista(),
+    // La lista descargable es un extra: si falla, la página sigue mostrando los precios.
+    listarPreciosParaMayoristas().catch((err) => {
+      console.error("[mayorista] No se pudo armar la lista descargable:", err instanceof Error ? err.message : err);
+      return [];
+    }),
+  ]);
+  const hoy = new Date();
+  const fecha = new Intl.DateTimeFormat("es-CL", { timeZone: "America/Santiago", weekday: "long", day: "numeric", month: "long", year: "numeric" })
+    .format(hoy)
+    .replace(",", "");
+  const fechaArchivo = hoy.toLocaleDateString("en-CA", { timeZone: "America/Santiago" });
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-10 sm:px-6 lg:px-8">
@@ -60,6 +75,15 @@ export default async function Mayorista() {
         </p>
         <p className="mt-2">El pago es siempre por adelantado.</p>
       </div>
+
+      <DescargarListaMayorista
+        filas={listaPrecios}
+        pedidoMinimo={pedidoMinimo}
+        cuenta={{ nombre: cuenta.nombre, rut: cuenta.rut }}
+        fecha={fecha}
+        fechaArchivo={fechaArchivo}
+        facturaHabilitada={FACTURA_HABILITADA}
+      />
 
       {lista.length === 0 ? (
         <p className="mt-8 text-sm text-ink-soft">Por ahora no hay productos con precio mayorista disponibles. Vuelve pronto.</p>
