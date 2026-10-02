@@ -56,6 +56,11 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
   },
+  // Deja que Google muestre la foto grande del producto en sus resultados y
+  // en Discover (pendiente #14 del POS; sin esta etiqueta usa una miniatura).
+  // Las páginas privadas definen su propio `robots` (noindex), que reemplaza
+  // a este entero: los metadatos se heredan por clave completa.
+  robots: { index: true, follow: true, "max-image-preview": "large" },
 };
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {

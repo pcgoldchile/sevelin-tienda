@@ -67,7 +67,10 @@ export async function generateMetadata({ params }: PropsPagina): Promise<Metadat
       title: tituloSeo,
       description: descripcionPlana,
       url: `/productos/${rutaDeSku(producto.sku)}`,
-      images: imagen ? [{ url: imagen, width: 1000, height: 1000, alt: producto.nombre }] : undefined,
+      // Sin width/height: las fotos ya no son todas de 1000×1000 (el POS las
+      // guarda de 1000 a 1600 px desde el 02-10-2026) y un tamaño declarado
+      // que no calza es peor que no declararlo.
+      images: imagen ? [{ url: imagen, alt: producto.nombre }] : undefined,
     },
     twitter: {
       title: tituloSeo,
