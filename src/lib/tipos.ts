@@ -323,6 +323,8 @@ export interface ProductoPOS {
   precio_oferta_web?: number | null;
   oferta_desde?: string | null;
   oferta_hasta?: string | null;
+  // Interruptor del chip "Ofertas" del POS — ver sevelin-pos-oficial/sql/83.
+  oferta_pausada?: boolean | null;
   // Complementarios elegidos en el POS — ver sevelin-pos-oficial/sql/75.
   relacionados_ids?: number[] | null;
   // Venta mayorista — ver sevelin-pos-oficial/sql/76. Va a precios_mayoristas

@@ -22,7 +22,7 @@ import { AvisoPorLlegar } from "@/components/aviso-por-llegar";
 import { AvisameProducto } from "@/components/avisame-producto";
 import { CotizarWhatsapp } from "@/components/cotizar-whatsapp";
 import { esServicioTecnico } from "@/lib/servicios";
-import { PrecioAntes } from "@/components/precio-oferta";
+import { AhorroOferta, PrecioAntes } from "@/components/precio-oferta";
 import { PrecioMayoristaFicha } from "@/components/precio-mayorista-ficha";
 import { fechaHoraOferta } from "@/lib/formato";
 
@@ -289,8 +289,9 @@ export default async function FichaProducto({ params }: PropsPagina) {
             </span>
           )}
           <h1 className="text-3xl font-semibold tracking-tight text-ink">{producto.nombre}</h1>
-          <div className="flex flex-col gap-0.5">
-            <span className="precio-gamer text-3xl text-ink">
+          <div className="flex flex-col gap-1">
+            <PrecioAntes precioAntes={producto.precio_antes} precio={producto.precio_web} className="text-base" />
+            <span className={`precio-gamer ${producto.precio_antes ? "text-4xl text-amber-400" : "text-3xl text-ink"}`}>
               {/* Precio a consultar (supabase/31): el número es una base, y
                   decirlo sin el "Desde" sería anunciar un precio que después
                   no se respeta. */}
@@ -299,7 +300,7 @@ export default async function FichaProducto({ params }: PropsPagina) {
             </span>
             {producto.precio_antes && producto.oferta_hasta && (
               <span className="flex flex-wrap items-center gap-2">
-                <PrecioAntes precioAntes={producto.precio_antes} precio={producto.precio_web} className="text-sm" />
+                <AhorroOferta precioAntes={producto.precio_antes} precio={producto.precio_web} className="text-sm" />
                 <span className="text-xs text-ink-faint">Oferta válida hasta el {fechaHoraOferta(producto.oferta_hasta)}</span>
               </span>
             )}

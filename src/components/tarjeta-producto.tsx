@@ -11,7 +11,7 @@ import { HAY_RECARGO, precioConRecargo } from "@/lib/precios-medio-pago";
 import { useCarrito } from "@/context/carrito-context";
 import { useToast } from "@/context/toast-context";
 import { EtiquetaProductoBadge } from "@/components/etiqueta-producto-badge";
-import { PrecioAntes } from "@/components/precio-oferta";
+import { AhorroOferta, PrecioAntes } from "@/components/precio-oferta";
 import { avisoUrgenciaStock } from "@/lib/urgencia-stock";
 import { rutaDeSku } from "@/lib/sku-url";
 import type { ProductoWeb } from "@/lib/tipos";
@@ -129,12 +129,15 @@ export function TarjetaProducto({ producto }: { producto: ProductoWeb }) {
         >
           {producto.nombre}
         </Link>
-        <span className="precio-gamer mt-1 text-2xl text-ink">
+        {/* Oferta vigente: primero lo que costaba (tachado, con el %), después
+            el precio de oferta en ámbar y abajo cuánto se ahorra. */}
+        <PrecioAntes precioAntes={producto.precio_antes} precio={producto.precio_web} className="mt-1 text-xs" />
+        <span className={`precio-gamer text-2xl ${producto.precio_antes ? "text-amber-400" : "mt-1 text-ink"}`}>
           {/* Precio a consultar (supabase/31): es una base, no el valor final. */}
           {producto.precio_a_consultar && <span className="mr-1 text-sm text-ink-soft">Desde</span>}
           {formatoCLP.format(producto.precio_web)}
         </span>
-        <PrecioAntes precioAntes={producto.precio_antes} precio={producto.precio_web} />
+        <AhorroOferta precioAntes={producto.precio_antes} precio={producto.precio_web} className="text-[11px] leading-4" />
         {/* Encargo: el precio se confirma con el proveedor antes de pagar. */}
         {producto.es_pedido_encargo && (
           <span className="text-[11px] leading-4 text-ink-faint">Precio referencial</span>

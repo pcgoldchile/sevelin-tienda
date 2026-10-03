@@ -142,8 +142,8 @@ export default function CarritoPage() {
                 <div className="flex flex-1 flex-col gap-1.5">
                   <span className="text-sm text-ink">{item.nombre}</span>
                   <span className="flex flex-wrap items-baseline gap-2">
-                    <span className="precio-gamer text-base text-ink">{formatoCLP.format(item.precio_web)}</span>
-                    <PrecioAntes precioAntes={item.precio_antes} precio={item.precio_web} />
+                    <span className={`precio-gamer text-base ${item.precio_antes ? "text-amber-400" : "text-ink"}`}>{formatoCLP.format(item.precio_web)}</span>
+                    <PrecioAntes precioAntes={item.precio_antes} precio={item.precio_web} className="text-xs" />
                   </span>
                   <PistaMayoristaLinea item={item} />
                   {item.es_pedido_encargo ? (

@@ -51,13 +51,16 @@ function slugDeRespaldo(nombre: string, productoPosId: number): string {
 }
 
 /** Oferta del POS (precio_oferta_web, oferta_desde, oferta_hasta) → columnas de
- * productos_web. Todo o nada, con la misma regla que el CHECK de supabase/37. */
+ * productos_web. Todo o nada, con la misma regla que el CHECK de supabase/37.
+ * Apagada desde el POS (oferta_pausada, sql/83) llega acá como "sin oferta":
+ * así el checkout, el feed y la franja no necesitan saber que existe una pausa. */
 function ofertaDesdePos(producto: ProductoPOS): {
   precio_oferta: number | null;
   oferta_desde: string | null;
   oferta_hasta: string | null;
 } {
   const sin = { precio_oferta: null, oferta_desde: null, oferta_hasta: null };
+  if (producto.oferta_pausada === true) return sin;
   const precio = Number(producto.precio_oferta_web);
   const desde = producto.oferta_desde ? Date.parse(producto.oferta_desde) : NaN;
   const hasta = producto.oferta_hasta ? Date.parse(producto.oferta_hasta) : NaN;
