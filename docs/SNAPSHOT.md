@@ -4,6 +4,32 @@
 > arquitectura completo (todas las fases) vive en `README-ECOMMERCE-SEVELIN.md`, en el repo del POS
 > (`sevelin-pos-oficial`) — este documento es el estado de ESTE repo (`sevelin-tienda`) nada más.
 
+**Fecha:** 03-10-2026 · **Segundo escalón del precio mayorista y recuadro para coordinar la entrega.**
+
+Detalle en `docs/CHANGELOG-V114.md` del POS.
+
+- **Segundo escalón mayorista (pendiente #28 del POS, `supabase/40`, aplicada):** `precios_mayoristas` suma
+  `precio_mayorista_2` y `desde_cantidad_2` (los dos o ninguno; más barato y desde más unidades que el primero).
+  - La regla sigue en un solo lugar, `src/lib/mayorista-precios.ts`: `precioMayoristaPara(m, cantidad)` decide el
+    precio; `datosMayoristaDeFila` arma los datos e ignora un segundo escalón incoherente.
+  - Carrito, `POST /api/checkout` y el cotizador cobran el escalón de la cantidad. Una oferta más barata que el
+    escalón sigue ganando.
+  - El receptor de la sincronización guarda el segundo escalón que manda el POS (sql/81) y lo borra si deja de venir.
+  - Se ve en `/mayorista`, "Tu precio mayorista" de la ficha, la pista del carrito ("desde 20 u. baja a $3.200 c/u")
+    y la lista PDF/Excel. Solo cuenta aprobada: sin sesión no viaja nada.
+  - `npx tsx scripts/probar-escalones-mayorista.mts`: 18 comprobaciones de la regla, sin tocar ninguna base.
+  - La maqueta trae dos productos con segundo escalón (104 y 207).
+  - ⚠️ Hoy ningún producto real tiene segundo escalón: falta que el dueño diga a cuáles.
+- **Página del pedido (`/pedido/[token]`):** con el pago confirmado y antes de despacharlo (PAGADO o PREPARANDO),
+  recuadro "Coordinemos tu retiro" o "Coordinemos tu entrega", con WhatsApp (lleva escrito el número de pedido) y
+  Llamar (el mismo número). Verificado en producción en WEB-000014. No está en el correo de confirmación.
+- **Precios:** 8 productos cambiaron de precio desde el POS y hay 34 precios mayoristas (antes 18).
+- ⚠️ No probado: un pedido mayorista real con segundo escalón, y la lista PDF abierta (se generó, no se pudo mirar).
+- ⚠️ Sigue el error de lint anterior de `terminos/page.tsx` y el de `hero-carrusel.tsx`. No se tocaron.
+- ⚠️ Falta el lunes 05-10: comprobar que las ofertas del Cyber se encendieron (pendiente #49 del POS).
+
+---
+
 **Fecha:** 02-10-2026 (noche) · **Encargos solo por cotización, precio mayorista en la ficha, portada y carruseles.**
 
 Detalle en `docs/CHANGELOG-V107.md` del POS.
