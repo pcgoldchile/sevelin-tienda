@@ -24,6 +24,7 @@ import { AvisameProducto } from "@/components/avisame-producto";
 import { CotizarWhatsapp } from "@/components/cotizar-whatsapp";
 import { esServicioTecnico } from "@/lib/servicios";
 import { PrecioAntes } from "@/components/precio-oferta";
+import { PrecioMayoristaFicha } from "@/components/precio-mayorista-ficha";
 import { fechaHoraOferta } from "@/lib/formato";
 
 export const revalidate = 60;
@@ -320,6 +321,10 @@ export default async function FichaProducto({ params }: PropsPagina) {
               </>
             )}
           </div>
+
+          {/* Solo aparece para una cuenta mayorista aprobada: el precio lo
+              pide el navegador con la sesión, nunca viaja en esta página. */}
+          <PrecioMayoristaFicha sku={producto.sku} />
 
           {/* Cuadro de compra bajo el precio, en celular y en escritorio.
 
