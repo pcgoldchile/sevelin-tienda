@@ -4,6 +4,36 @@
 > arquitectura completo (todas las fases) vive en `README-ECOMMERCE-SEVELIN.md`, en el repo del POS
 > (`sevelin-pos-oficial`) — este documento es el estado de ESTE repo (`sevelin-tienda`) nada más.
 
+**Fecha:** 02-10-2026 (noche) · **Encargos solo por cotización, precio mayorista en la ficha, portada y carruseles.**
+
+Detalle en `docs/CHANGELOG-V107.md` del POS.
+
+- **Encargos (pendiente #52 del POS):** un producto por encargo ya no se paga en línea.
+  - `src/lib/encargo-cotizar.ts` tiene el aviso y el WhatsApp con el producto escrito.
+  - La ficha dice "Precio referencial", y la tarjeta trae "Cotizar" en vez de "Agregar".
+  - `agregarItem` lo ignora; un encargo que quedó en un carrito viejo queda sin seleccionar, con su aviso (la
+    marca la pone `POST /api/carrito/precios`, campo `es_pedido_encargo`).
+  - El carrito compartido los lista aparte.
+  - `POST /api/checkout` y el cotizador lo rechazan antes de crear nada; `tipo_pedido` queda siempre NORMAL.
+  - Textos al día en `/pedidos-por-encargo`, condiciones, FAQ y Términos.
+  - Verificado en producción: 409 y ningún pedido creado.
+- **"Tu precio mayorista" en la ficha** (`precio-mayorista-ficha.tsx`):
+  - Lo pide el navegador con la sesión a `POST /api/carrito/precios`; la página pública nunca lo lleva.
+  - Sin sesión no se hace la consulta.
+  - Probado en la maqueta con sin sesión, cliente, sin aprobar, suspendida y aprobada.
+- **Portada:** lámina "Servicio técnico en Arica" (segunda), con la foto del servicio más vendido. Las demás
+  láminas ya no toman foto de un servicio.
+- **Ficha:** `carrusel-productos.tsx` reemplaza a `carrusel-complementarios.tsx`.
+  - Sirve a "Complementa tu compra" y a "También te puede interesar" (hasta 12 productos).
+  - Las flechas se apagan en cada extremo y se esconden si todo cabe.
+  - `scroll-px-4` evita que el snap deje la fila corrida 16 px.
+- **Maqueta:** dos encargos reales en la muestra (`maqueta-tienda-productos.json`, 42 productos).
+- ⚠️ No probado: el WhatsApp desde un teléfono, y el desplazamiento animado del carrusel en una pantalla real (el
+  panel del navegador estuvo oculto: ahí no corren `requestAnimationFrame`, `ResizeObserver` ni `scroll`).
+- ⚠️ Sigue el error de lint anterior de `terminos/page.tsx` y el de `hero-carrusel.tsx`. No se tocaron.
+
+---
+
 **Fecha:** 02-10-2026 (tarde) · **Servicios en `/ofertas`, factura apagada y lista de precios mayorista.**
 
 - **`/ofertas` separa productos y servicios técnicos.** Los servicios llevan el recuadro "Cómo tomar la oferta
