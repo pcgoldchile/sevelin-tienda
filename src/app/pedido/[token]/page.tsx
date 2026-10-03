@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Star } from "lucide-react";
+import { MessageCircle, Phone, Star } from "lucide-react";
 import { notFound } from "next/navigation";
 import { obtenerPedidoPorToken } from "@/lib/pedidos";
 import { formatoCLP } from "@/lib/formato";
@@ -18,6 +18,10 @@ interface PropsPagina {
 }
 
 const PAGO_CONFIRMADO = ["PAGADO", "PREPARANDO", "ENVIADO", "ENTREGADO"];
+
+/* Pagado y todavía en la tienda: es cuando conviene que el cliente escriba o
+   llame para coordinar (dueño, 03-10-2026). Ya enviado o entregado, no. */
+const POR_COORDINAR = ["PAGADO", "PREPARANDO"];
 
 const MENSAJE_ESTADO: Record<string, string> = {
   // Sin nombrar la pasarela: decía "con Flow" cuando Flow ya estaba
@@ -77,6 +81,39 @@ export default async function EstadoPedido({ params }: PropsPagina) {
       </div>
       <p className="mt-2 text-sm text-ink-soft">{MENSAJE_ESTADO[pedido.estado] || `Estado: ${pedido.estado}`}</p>
       <SeguimientoPago token={token} estadoActual={pedido.estado} />
+
+      {/* "Si es posible, mándanos un mensaje o llámanos para gestionar tu pedido
+          rápido" (dueño, 03-10-2026, tras una compra real). El WhatsApp sale con
+          el número de pedido escrito; el mismo número sirve para llamar. */}
+      {whatsapp && POR_COORDINAR.includes(pedido.estado) && (
+        <div className="mt-5 rounded-2xl border border-success/40 bg-success/10 p-4">
+          <p className="text-sm font-semibold text-ink">
+            {pedido.metodo_envio === "RETIRO" ? "Coordinemos tu retiro" : "Coordinemos tu entrega"}
+          </p>
+          <p className="mt-1 text-sm text-ink-soft">
+            Para gestionar tu pedido más rápido, escríbenos por WhatsApp o llámanos e indícanos tu número de pedido{" "}
+            <strong className="text-ink">{pedido.numero_pedido}</strong>.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <a
+              href={`https://wa.me/${whatsapp}?text=${encodeURIComponent(`Hola, acabo de pagar el pedido ${pedido.numero_pedido} en sevelin.cl y quiero coordinar ${pedido.metodo_envio === "RETIRO" ? "el retiro" : "la entrega"}.`)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-full bg-success px-3.5 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+            >
+              <MessageCircle className="h-4 w-4" aria-hidden />
+              Escribir por WhatsApp
+            </a>
+            <a
+              href={`tel:+${whatsapp.replace(/\D/g, "")}`}
+              className="inline-flex items-center gap-2 rounded-full border border-border px-3.5 py-2 text-sm font-semibold text-ink transition-colors hover:border-success hover:text-success"
+            >
+              <Phone className="h-4 w-4" aria-hidden />
+              Llamar
+            </a>
+          </div>
+        </div>
+      )}
 
       {/* Rescate de una venta ya decidida: el cliente llegó al banco y algo
           lo interrumpió. Sin esto tendría que armar el carrito de nuevo, y
