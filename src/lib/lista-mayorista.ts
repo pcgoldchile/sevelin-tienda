@@ -2,6 +2,7 @@ import type { jsPDF } from "jspdf";
 import { formatoCLP } from "./formato";
 import { rutaDeSku } from "./sku-url";
 import type { FilaListaPrecios } from "./mayorista";
+import { escalon2Valido, type EscalonMayorista } from "./mayorista-precios";
 
 /**
  * Lista de precios descargable de /mayorista (dueño, 02-10-2026): todo el
@@ -28,10 +29,17 @@ export function condicionesLista({ fecha, pedidoMinimo, facturaHabilitada }: Pic
   return [
     `Estos precios son del ${fecha} y pueden cambiar de un día para otro. El precio que vale es el que muestra sevelin.cl con tu cuenta el día de la compra.`,
     `El precio mayorista se aplica desde la cantidad mínima de cada producto, y solo si el pedido suma al menos ${formatoCLP.format(pedidoMinimo)} sin contar el envío. Si no llega, todo se cobra a precio normal.`,
+    "Algunos productos tienen un segundo precio, más bajo, si llevas más unidades: aparece debajo del primero.",
     "Pago siempre por adelantado. Disponibilidad sujeta a stock: esta lista no reserva unidades.",
     `Valores en pesos chilenos, con IVA incluido.${facturaHabilitada ? "" : " Por ahora emitimos solo boleta."}`,
     'Si prefieres tener tu propia cotización, entra a sevelin.cl con tu cuenta, agrega los productos al carrito y usa "Cotizar estos productos": el documento sale con tus precios mayoristas y lo puedes descargar.',
   ];
+}
+
+/** Segundo escalón de una fila, solo si hay unidades para comprarlo. */
+export function escalon2DeFila(f: FilaListaPrecios): EscalonMayorista | null {
+  const e = escalon2Valido(f.mayorista);
+  return e && f.stock >= e.desde ? e : null;
 }
 
 export function filasPorCategoria(filas: FilaListaPrecios[]): [string, FilaListaPrecios[]][] {
@@ -138,6 +146,12 @@ export function dibujarPdfLista(doc: jsPDF, datos: DatosListaMayorista, fotos: M
       if (f.mayorista) {
         texto(formatoCLP.format(f.mayorista.precio), xMayorista, { size: 10, bold: true, align: "right" });
         texto(`${f.mayorista.desde} u.`, xDesde, { size: 9, align: "right" });
+        const escalon2 = escalon2DeFila(f);
+        if (escalon2) {
+          y += 4.4;
+          texto(formatoCLP.format(escalon2.precio), xMayorista, { size: 9, bold: true, align: "right" });
+          texto(`${escalon2.desde} u.`, xDesde, { size: 8.5, align: "right" });
+        }
       } else {
         texto("—", xMayorista, { size: 9, align: "right", gris: true });
         texto("—", xDesde, { size: 9, align: "right", gris: true });
@@ -167,9 +181,9 @@ export const LADO_FOTO_EXCEL_PX = 60;
 /** La hoja del Excel: avisos arriba, títulos y una fila por producto. `filaDeProducto(i)` es la fila (desde 1) del producto i, para anclar su foto. */
 export function hojaExcelLista(datos: DatosListaMayorista) {
   const { filas, cuenta, fecha } = datos;
-  const COLUMNAS = 8;
+  const COLUMNAS = 10;
   const aviso = (value: string, extra: object = {}) => [{ value, columnSpan: COLUMNAS, wrap: true, alignVertical: "top" as const, ...extra }];
-  const titulos = ["Foto", "Categoría", "Producto", "Precio normal", "Precio mayorista (c/u)", "Desde (unidades)", "Disponibles", "Ver en sevelin.cl"];
+  const titulos = ["Foto", "Categoría", "Producto", "Precio normal", "Precio mayorista (c/u)", "Desde (unidades)", "Segundo precio (c/u)", "Desde (unidades)", "Disponibles", "Ver en sevelin.cl"];
   const encabezado = [
     aviso("Sevelin — Lista de precios mayorista", { fontWeight: "bold" as const, fontSize: 14, height: 22 }),
     aviso(`Precios al ${fecha} · Para: ${cuenta.nombre} · RUT ${cuenta.rut}`, { fontWeight: "bold" as const }),
@@ -178,13 +192,15 @@ export function hojaExcelLista(datos: DatosListaMayorista) {
     titulos.map((value) => ({ value, fontWeight: "bold" as const, backgroundColor: "#E5E7EB", wrap: true, alignVertical: "center" as const })),
   ];
   const centro = { alignVertical: "center" as const };
-  const cuerpo = filas.map((f) => [
+  const cuerpo = filas.map((f) => ({ f, e2: escalon2DeFila(f) })).map(({ f, e2 }) => [
     { value: "", height: 48 },
     { value: f.categoria, ...centro },
     { value: f.nombre, wrap: true, ...centro },
     { value: f.precio, type: Number, format: "#,##0", ...centro },
     f.mayorista ? { value: f.mayorista.precio, type: Number, format: "#,##0", fontWeight: "bold" as const, ...centro } : { value: "", ...centro },
     f.mayorista ? { value: f.mayorista.desde, type: Number, ...centro } : { value: "", ...centro },
+    e2 ? { value: e2.precio, type: Number, format: "#,##0", fontWeight: "bold" as const, ...centro } : { value: "", ...centro },
+    e2 ? { value: e2.desde, type: Number, ...centro } : { value: "", ...centro },
     { value: f.stock, type: Number, ...centro },
     { value: `https://www.sevelin.cl/productos/${rutaDeSku(f.sku)}`, ...centro },
   ]);
@@ -193,7 +209,7 @@ export function hojaExcelLista(datos: DatosListaMayorista) {
     opciones: {
       sheet: "Precios",
       // Sin filas fijas: los avisos de arriba son altos y, fijos, taparían media pantalla al bajar.
-      columns: [{ width: 10 }, { width: 22 }, { width: 62 }, { width: 14 }, { width: 20 }, { width: 16 }, { width: 12 }, { width: 46 }],
+      columns: [{ width: 10 }, { width: 22 }, { width: 62 }, { width: 14 }, { width: 20 }, { width: 16 }, { width: 20 }, { width: 16 }, { width: 12 }, { width: 46 }],
     },
     filaDeProducto: (i: number) => encabezado.length + 1 + i,
   };

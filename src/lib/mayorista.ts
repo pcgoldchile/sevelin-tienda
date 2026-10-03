@@ -2,7 +2,7 @@ import { supabaseWeb } from './supabase-web';
 import { aplicarOferta } from './oferta';
 import { listarCatalogo } from './catalogo';
 import { esServicioTecnico } from './servicios';
-import type { DatosMayorista } from './mayorista-precios';
+import { datosMayoristaDeFila, type DatosMayorista } from './mayorista-precios';
 import type { ProductoWeb } from './tipos';
 
 /**
@@ -71,14 +71,14 @@ export async function preciosMayoristasDe(productoPosIds: number[]): Promise<Map
   if (!ids.length) return mapa;
   const { data, error } = await supabaseWeb
     .from('precios_mayoristas')
-    .select('producto_pos_id, precio_mayorista, desde_cantidad')
+    .select('producto_pos_id, precio_mayorista, desde_cantidad, precio_mayorista_2, desde_cantidad_2')
     .in('producto_pos_id', ids);
   if (error) {
     console.error('[mayorista] no se pudieron leer los precios:', error.message);
     return mapa;
   }
   for (const f of data || []) {
-    mapa.set(Number(f.producto_pos_id), { precio: Number(f.precio_mayorista), desde: Number(f.desde_cantidad) });
+    mapa.set(Number(f.producto_pos_id), datosMayoristaDeFila(f));
   }
   return mapa;
 }
@@ -132,7 +132,7 @@ export async function listarPreciosParaMayoristas(): Promise<FilaListaPrecios[]>
 export async function listarCatalogoMayorista(): Promise<{ producto: ProductoWeb; mayorista: DatosMayorista }[]> {
   const { data: precios, error } = await supabaseWeb
     .from('precios_mayoristas')
-    .select('producto_pos_id, precio_mayorista, desde_cantidad');
+    .select('producto_pos_id, precio_mayorista, desde_cantidad, precio_mayorista_2, desde_cantidad_2');
   if (error) throw new Error(error.message);
   const ids = (precios || []).map((p) => Number(p.producto_pos_id));
   if (!ids.length) return [];
@@ -143,7 +143,7 @@ export async function listarCatalogoMayorista(): Promise<{ producto: ProductoWeb
     .eq('publicado_web', true)
     .eq('es_pedido_encargo', false);
   if (errP) throw new Error(errP.message);
-  const porId = new Map((precios || []).map((p) => [Number(p.producto_pos_id), { precio: Number(p.precio_mayorista), desde: Number(p.desde_cantidad) }]));
+  const porId = new Map((precios || []).map((p) => [Number(p.producto_pos_id), datosMayoristaDeFila(p)]));
   return (productos || [])
     .map((p) => aplicarOferta(p as ProductoWeb))
     .filter((p) => !p.precio_a_consultar)

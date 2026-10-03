@@ -4,6 +4,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { crearClienteServidor } from "@/lib/supabase-server";
 import { cuentaMayoristaDe, listarCatalogoMayorista, listarPreciosParaMayoristas, pedidoMinimoMayorista } from "@/lib/mayorista";
+import { escalon2Valido } from "@/lib/mayorista-precios";
 import { FACTURA_HABILITADA } from "@/lib/factura";
 import { formatoCLP } from "@/lib/formato";
 import { rutaDeSku } from "@/lib/sku-url";
@@ -69,7 +70,8 @@ export default async function Mayorista() {
       <h1 className="font-display text-3xl font-semibold tracking-tight text-ink">Precios mayoristas</h1>
       <div className="mt-4 rounded-xl border border-border bg-surface p-4 text-sm text-ink-soft">
         <p>
-          Cada producto tiene su precio mayorista <strong className="text-ink">desde una cantidad mínima</strong>. Para que se apliquen,
+          Cada producto tiene su precio mayorista <strong className="text-ink">desde una cantidad mínima</strong>, y algunos bajan
+          otro poco si llevas más unidades. Para que se apliquen,
           el pedido tiene que sumar al menos <strong className="text-ink">{formatoCLP.format(pedidoMinimo)}</strong> sin contar el envío.
           El carrito te muestra cuánto te falta.
         </p>
@@ -91,6 +93,9 @@ export default async function Mayorista() {
         <ul className="mt-6 flex flex-col divide-y divide-border">
           {lista.map(({ producto, mayorista }) => {
             const ahorro = Math.round(((producto.precio_web - mayorista.precio) / producto.precio_web) * 100);
+            // El segundo escalón se anuncia solo si hay unidades para comprarlo.
+            const e2 = escalon2Valido(mayorista);
+            const escalon2 = e2 && producto.stock_web >= e2.desde ? e2 : null;
             return (
               <li key={producto.sku} className="flex gap-4 py-5">
                 <Link href={`/productos/${rutaDeSku(producto.sku)}`} className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-white">
@@ -112,8 +117,14 @@ export default async function Mayorista() {
                       {ahorro > 0 && <span className="ml-1 rounded bg-primary/15 px-1.5 py-0.5 text-[11px] font-bold text-primary-soft">−{ahorro}%</span>}
                     </span>
                   </div>
+                  {escalon2 && (
+                    <span className="text-xs text-ink-soft">
+                      Y desde <strong className="text-ink">{escalon2.desde} unidades</strong>:{" "}
+                      <strong className="precio-gamer text-sm text-ink">{formatoCLP.format(escalon2.precio)}</strong> c/u
+                    </span>
+                  )}
                   <span className="text-xs text-ink-faint">{producto.stock_web} disponibles</span>
-                  <AgregarMayorista producto={producto} desde={mayorista.desde} precioMayorista={mayorista.precio} />
+                  <AgregarMayorista producto={producto} mayorista={mayorista} />
                 </div>
               </li>
             );

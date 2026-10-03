@@ -170,11 +170,19 @@ export async function POST(req: NextRequest) {
      viejo cobrando de menos. */
   const precioMayorista = Math.round(Number(producto.precio_mayorista));
   const mayoristaDesde = Math.round(Number(producto.mayorista_desde));
+  /* Segundo escalón (sql/81 del POS → supabase/40): más barato y desde más
+     unidades que el primero. Si no viene o no es coherente, se guarda vacío:
+     un escalón viejo no puede quedar cobrando de menos. */
+  const precioMayorista2 = Math.round(Number(producto.precio_mayorista_2));
+  const mayoristaDesde2 = Math.round(Number(producto.mayorista_desde_2));
+  const hayEscalon2 = precioMayorista2 > 0 && precioMayorista2 < precioMayorista && mayoristaDesde2 > mayoristaDesde;
   const errMayorista = precioMayorista > 0 && mayoristaDesde >= 2
     ? (await supabaseWeb.from('precios_mayoristas').upsert({
         producto_pos_id: producto.id,
         precio_mayorista: precioMayorista,
         desde_cantidad: mayoristaDesde,
+        precio_mayorista_2: hayEscalon2 ? precioMayorista2 : null,
+        desde_cantidad_2: hayEscalon2 ? mayoristaDesde2 : null,
         actualizado_en: new Date().toISOString(),
       }, { onConflict: 'producto_pos_id' })).error
     : (await supabaseWeb.from('precios_mayoristas').delete().eq('producto_pos_id', producto.id)).error;

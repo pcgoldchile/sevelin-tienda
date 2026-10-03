@@ -4,12 +4,14 @@ import { useState } from "react";
 import { Minus, Plus } from "lucide-react";
 import { useCarrito } from "@/context/carrito-context";
 import { useToast } from "@/context/toast-context";
+import { precioMayoristaPara, type DatosMayorista } from "@/lib/mayorista-precios";
 import type { ProductoWeb } from "@/lib/tipos";
 
 /* Agregar desde la lista mayorista: parte en la cantidad mínima, que es
  * desde donde corre el precio mayorista. El precio que se cobra lo decide
  * el carrito con la misma regla que el checkout (resolverPreciosMayoristas). */
-export function AgregarMayorista({ producto, desde, precioMayorista }: { producto: ProductoWeb; desde: number; precioMayorista: number }) {
+export function AgregarMayorista({ producto, mayorista }: { producto: ProductoWeb; mayorista: DatosMayorista }) {
+  const { desde } = mayorista;
   const { agregarItem, items } = useCarrito();
   const { mostrarToast } = useToast();
   const enCarrito = items.find((i) => i.sku === producto.sku)?.cantidad ?? 0;
@@ -41,7 +43,7 @@ export function AgregarMayorista({ producto, desde, precioMayorista }: { product
           mostrarToast({
             imagen: producto.imagen_urls?.[0] ?? null,
             nombre: producto.nombre,
-            precioUnitario: alcanza ? precioMayorista : producto.precio_web,
+            precioUnitario: alcanza ? precioMayoristaPara(mayorista, cantidad + enCarrito) : producto.precio_web,
             cantidad,
           });
           setAgregado(true);

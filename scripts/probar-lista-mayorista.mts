@@ -17,7 +17,7 @@ const salida = path.resolve(process.argv[2] || '.');
 mkdirSync(salida, { recursive: true });
 
 // Mismos precios mayoristas de prueba que scripts/maqueta-tienda.mjs.
-const MAYORISTA: Record<number, [number, number]> = { 104: [3400, 5], 126: [7000, 3], 162: [26000, 3], 100: [6100, 5], 207: [3500, 5], 197: [2500, 5], 287: [1600, 10], 222: [8500, 3], 109: [9000, 3], 141: [7300, 3] };
+const MAYORISTA: Record<number, number[]> = { 104: [3400, 5, 3100, 10], 126: [7000, 3], 162: [26000, 3], 100: [6100, 5], 207: [3500, 5, 3200, 20], 197: [2500, 5], 287: [1600, 10], 222: [8500, 3], 109: [9000, 3], 141: [7300, 3] };
 const productos = JSON.parse(readFileSync(new URL('./maqueta-tienda-productos.json', import.meta.url), 'utf8')) as Record<string, unknown>[];
 
 const filas = productos
@@ -27,7 +27,7 @@ const filas = productos
     return {
       sku: String(p.sku), nombre: String(p.nombre), categoria: String(p.categoria || 'Otros'),
       imagen: (p.imagen_urls as string[] | null)?.[0] ?? null,
-      precio: Number(p.precio_web), mayorista: m ? { precio: m[0], desde: m[1] } : null, stock: Number(p.stock_web),
+      precio: Number(p.precio_web), mayorista: m ? { precio: m[0], desde: m[1], escalon2: m[2] ? { precio: m[2], desde: m[3] } : null } : null, stock: Number(p.stock_web),
     };
   })
   .sort((a, b) => a.categoria.localeCompare(b.categoria, 'es') || a.nombre.localeCompare(b.nombre, 'es'));

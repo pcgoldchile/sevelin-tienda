@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useSesion } from "@/context/sesion-context";
 import { formatoCLP } from "@/lib/formato";
-import type { DatosMayorista } from "@/lib/mayorista-precios";
+import { escalon2Valido, type DatosMayorista } from "@/lib/mayorista-precios";
 
 interface DatosFicha {
   /** A quién y de qué producto es la respuesta: si cambia la sesión o la
@@ -12,6 +12,7 @@ interface DatosFicha {
   sku: string;
   mayorista: DatosMayorista;
   precioVigente: number;
+  stock: number;
   pedidoMinimo: number;
 }
 
@@ -53,7 +54,7 @@ export function PrecioMayoristaFicha({ sku }: { sku: string }) {
           setDatos(null);
           return;
         }
-        setDatos({ usuarioId, sku, mayorista: m, precioVigente: p.precio_web, pedidoMinimo: Number(json.mayorista.pedido_minimo) || 0 });
+        setDatos({ usuarioId, sku, mayorista: m, precioVigente: p.precio_web, stock: p.stock_web, pedidoMinimo: Number(json.mayorista.pedido_minimo) || 0 });
       })
       .catch(() => {
         // Mejor esfuerzo: sin respuesta se ve la ficha normal, y el carrito igual aplica el precio.
@@ -64,7 +65,10 @@ export function PrecioMayoristaFicha({ sku }: { sku: string }) {
   }, [usuarioId, sku]);
 
   if (!datos || datos.usuarioId !== usuarioId || datos.sku !== sku) return null;
-  const { mayorista, precioVigente, pedidoMinimo } = datos;
+  const { mayorista, precioVigente, pedidoMinimo, stock } = datos;
+  // El segundo escalón se anuncia solo si hay unidades para comprarlo.
+  const e2 = escalon2Valido(mayorista);
+  const escalon2 = e2 && stock >= e2.desde ? e2 : null;
 
   return (
     <div className="rounded-2xl border border-success/40 bg-success/10 px-4 py-3 text-sm text-ink-soft">
@@ -73,6 +77,12 @@ export function PrecioMayoristaFicha({ sku }: { sku: string }) {
         <strong className="precio-gamer text-lg">{formatoCLP.format(mayorista.precio)}</strong> c/u desde{" "}
         <strong>{mayorista.desde} unidades</strong>
       </p>
+      {escalon2 && (
+        <p className="text-ink">
+          Y desde <strong>{escalon2.desde} unidades</strong>:{" "}
+          <strong className="precio-gamer">{formatoCLP.format(escalon2.precio)}</strong> c/u
+        </p>
+      )}
       <p className="mt-1 text-xs">
         Ahorras {formatoCLP.format(precioVigente - mayorista.precio)} por unidad. Se aplica solo en el carrito cuando
         llevas esa cantidad y tu pedido llega a {formatoCLP.format(pedidoMinimo)} (sin envío).

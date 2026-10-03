@@ -329,6 +329,9 @@ export interface ProductoPOS {
   // (supabase/39), NUNCA a productos_web: no es público.
   precio_mayorista?: number | null;
   mayorista_desde?: number | null;
+  // Segundo escalón mayorista — sql/81 del POS → supabase/40.
+  precio_mayorista_2?: number | null;
+  mayorista_desde_2?: number | null;
   // SEO con IA — ver sevelin-pos-oficial/sql/33-seo-ia.sql.
   meta_titulo_web: string | null;
   meta_descripcion_web: string | null;

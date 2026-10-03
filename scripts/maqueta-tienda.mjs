@@ -32,7 +32,8 @@ const USUARIOS = {
 const productos = JSON.parse(readFileSync(path.join(RAIZ, 'scripts/maqueta-tienda-productos.json'), 'utf8'))
   .map((p) => ({ precio_oferta: null, oferta_desde: null, oferta_hasta: null, meta_titulo_web: null, meta_descripcion_web: null, ...p }));
 // Precio mayorista [precio, desde] por id del POS, solo para los que vienen en la muestra.
-const MAYORISTA = { 104: [3400, 5], 126: [7000, 3], 162: [26000, 3], 100: [6100, 5], 207: [3500, 5], 197: [2500, 5], 287: [1600, 10], 222: [8500, 3], 109: [9000, 3], 141: [7300, 3] };
+// Con cuatro valores, los dos últimos son el segundo escalón [precio, desde] (supabase/40).
+const MAYORISTA = { 104: [3400, 5, 3100, 10], 126: [7000, 3], 162: [26000, 3], 100: [6100, 5], 207: [3500, 5, 3200, 20], 197: [2500, 5], 287: [1600, 10], 222: [8500, 3], 109: [9000, 3], 141: [7300, 3] };
 const ahora = () => new Date().toISOString();
 const cuentaMayorista = (quien, estado) => ({
   user_id: USUARIOS[quien].id, estado, nombre: `${USUARIOS[quien].nombre} ${USUARIOS[quien].apellido}`, rut: quien === 'mayorista' ? '12345678-5' : '11111111-1',
@@ -42,7 +43,8 @@ const cuentaMayorista = (quien, estado) => ({
 const tablas = {
   productos_web: productos,
   precios_mayoristas: productos.filter((p) => MAYORISTA[p.producto_pos_id]).map((p) => ({
-    producto_pos_id: p.producto_pos_id, precio_mayorista: MAYORISTA[p.producto_pos_id][0], desde_cantidad: MAYORISTA[p.producto_pos_id][1], actualizado_en: ahora() })),
+    producto_pos_id: p.producto_pos_id, precio_mayorista: MAYORISTA[p.producto_pos_id][0], desde_cantidad: MAYORISTA[p.producto_pos_id][1],
+    precio_mayorista_2: MAYORISTA[p.producto_pos_id][2] ?? null, desde_cantidad_2: MAYORISTA[p.producto_pos_id][3] ?? null, actualizado_en: ahora() })),
   cuentas_mayoristas: [cuentaMayorista('mayorista', 'APROBADA'), cuentaMayorista('pendiente', 'PENDIENTE')],
   ajustes_mayorista: [{ id: 1, pedido_minimo: 100000 }],
   perfiles_clientes: Object.values(USUARIOS).map((u) => ({ id: u.id, nombre: u.nombre, apellido: u.apellido, telefono: '+56 900000000', carrito: null, creado_en: ahora() })),
