@@ -7,9 +7,10 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight, Zap, Pause, Play, ChevronLeft, ChevronRight } from "lucide-react";
 import { EASE_OUT } from "@/lib/motion";
 import { FIESTAS_PATRIAS_ACTIVO } from "@/lib/tema-estacional";
+import { CATEGORIA_SERVICIOS } from "@/lib/servicios";
 
 // Sin gestión de banners desde un panel (fuera de alcance a propósito, ver
-// README-ECOMMERCE-SEVELIN.md sección 2.1): estas son las 3 franjas fijas del
+// README-ECOMMERCE-SEVELIN.md sección 2.1): estas son las franjas fijas del
 // hero, editables acá directamente cuando cambie la promo.
 // Cada slide lleva su propio destino: antes el botón mandaba siempre a
 // /productos, así que las franjas que hablan de otra sección prometían una
@@ -22,6 +23,16 @@ const SLIDES_BASE = [
     texto: "Encuentra los mejores productos de electrónica al mejor precio en Arica.",
     href: "/productos",
     cta: "Ver catálogo",
+  },
+  /* Servicio técnico (dueño, 02-10-2026: en el carrusel no había nada que
+     dijera que la tienda tiene taller). Segunda a propósito: es por donde el
+     negocio decidió crecer (11-09-2026). La foto es la de un servicio real. */
+  {
+    id: "servicios",
+    titulo: "Servicio técnico en Arica",
+    texto: "Mantenimiento, formateo, diagnóstico y reparación de PC, notebooks y consolas, con garantía.",
+    href: `/productos?categoria=${encodeURIComponent(CATEGORIA_SERVICIOS)}`,
+    cta: "Ver servicios",
   },
   {
     id: "por-llegar",

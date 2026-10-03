@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { listarMasVendidos } from "@/lib/catalogo";
+import { buscarCatalogo, listarMasVendidos } from "@/lib/catalogo";
+import { CATEGORIA_SERVICIOS, esServicioTecnico } from "@/lib/servicios";
 import { HeroCarrusel, type FotoHero } from "@/components/hero-carrusel";
 import { listarEncargos, listarPorLlegar } from "@/lib/encargos";
 import { rutaDeSku } from "@/lib/sku-url";
@@ -27,6 +28,7 @@ function fotosDelHero(
   masVendidos: ProductoWeb[],
   porLlegar: ProductoWeb[],
   encargos: ProductoWeb[],
+  servicios: ProductoWeb[],
 ): Record<string, FotoHero | undefined> {
   const usados = new Set<number>();
   const aFoto = (p: ProductoWeb, esEncargo = false): FotoHero => {
@@ -38,8 +40,9 @@ function fotosDelHero(
     };
   };
   const conFoto = (p: ProductoWeb) => !!p.imagen_urls?.[0] && !!p.sku && !usados.has(p.producto_pos_id);
+  // Las demás láminas hablan de productos: un servicio nunca les presta su foto.
   const siguienteVendido = () => {
-    const p = masVendidos.find(conFoto);
+    const p = masVendidos.find((x) => !esServicioTecnico(x) && conFoto(x));
     return p ? aFoto(p) : undefined;
   };
   const deLista = (lista: ProductoWeb[], esEncargo = false) => {
@@ -49,6 +52,9 @@ function fotosDelHero(
 
   const fotos: Record<string, FotoHero | undefined> = {};
   fotos.tecnologia = siguienteVendido();
+  // La lámina de servicio técnico lleva la foto de un servicio (el más vendido), nunca la de un producto.
+  const servicio = servicios.find(conFoto);
+  fotos.servicios = servicio ? aFoto(servicio) : undefined;
   // Sin nada por llegar, la lámina se oculta (ver `ocultar` en Home): no se le pone foto de otro producto.
   const conFotoPorLlegar = porLlegar.filter((p) => !p.es_pedido_encargo).find(conFoto);
   fotos["por-llegar"] = conFotoPorLlegar ? aFoto(conFotoPorLlegar) : undefined;
@@ -77,11 +83,14 @@ export default async function Home() {
   }
 
   // Las fotos son adorno: si Supabase falla acá, el hero queda solo con texto.
-  const [porLlegar, encargos] = await Promise.all([
+  const [porLlegar, encargos, servicios] = await Promise.all([
     listarPorLlegar().catch(() => []),
     listarEncargos().catch(() => []),
+    buscarCatalogo({ categoria: CATEGORIA_SERVICIOS })
+      .then((lista) => lista.filter((p) => !p.precio_a_consultar).sort((a, b) => (b.unidades_vendidas ?? 0) - (a.unidades_vendidas ?? 0)))
+      .catch(() => []),
   ]);
-  const fotosHero = fotosDelHero(destacados, porLlegar, encargos);
+  const fotosHero = fotosDelHero(destacados, porLlegar, encargos, servicios);
 
   return (
     <main className="flex flex-col">

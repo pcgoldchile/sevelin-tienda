@@ -46,6 +46,8 @@ export interface ProductoWeb {
    *  puede comprar en línea, solo cotizar por WhatsApp. Ver
    *  supabase/31-precio-a-consultar.sql. */
   precio_a_consultar: boolean;
+  /** Unidades vendidas según el POS (supabase/10, POST /api/sync/mas-vendidos). */
+  unidades_vendidas?: number;
   // SEO — título/meta-descripción propios para Google, distintos del
   // nombre/descripcion_web que ve el cliente. NULL = generateMetadata()
   // arma uno automático (ver productos/[sku]/page.tsx). Se llenan a mano o

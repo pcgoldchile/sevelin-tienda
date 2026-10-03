@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { after } from "next/server";
 import { obtenerProductoPublicado, productosComplementarios, productosRelacionados } from "@/lib/catalogo";
-import { CarruselComplementarios } from "@/components/carrusel-complementarios";
+import { CarruselProductos } from "@/components/carrusel-productos";
 import { OpcionesAgotado } from "@/components/opciones-agotado";
 import { skuDesdeRuta, rutaDeSku } from "@/lib/sku-url";
 import { formatoCLP } from "@/lib/formato";
@@ -12,7 +12,6 @@ import { sanitizarDescripcionHtml } from "@/lib/sanitizar-html";
 import { textoPlanoDesdeHtml, recortarEnPalabra } from "@/lib/texto-plano";
 import { registrarVistaProducto } from "@/lib/eventos-web";
 import { GaleriaProducto } from "@/components/galeria-producto";
-import { TarjetaProducto } from "@/components/tarjeta-producto";
 import { AccionesProducto } from "@/components/acciones-producto";
 import { BotonAgregarFoto } from "@/components/boton-agregar-foto";
 import { EtiquetaProductoBadge } from "@/components/etiqueta-producto-badge";
@@ -110,7 +109,8 @@ export default async function FichaProducto({ params }: PropsPagina) {
   // — si falla, la ficha se muestra igual, solo sin esa sección.
   const [complementarios, parecidos] = await Promise.all([
     productosComplementarios(producto).catch(() => []),
-    productosRelacionados(producto).catch(() => []),
+    // 12 y no 4: ahora van en un carrusel con flechas (#57), no en una grilla de una fila.
+    productosRelacionados(producto, 12).catch(() => []),
   ]);
   // Un producto elegido como complemento no se repite abajo como "parecido".
   const idsComplementarios = new Set(complementarios.map((p) => p.id));
@@ -424,25 +424,23 @@ export default async function FichaProducto({ params }: PropsPagina) {
         </div>
       </div>
 
-      {/* "También te puede interesar": antes ninguna ficha de producto
-          enlazaba a otra — sin links internos, Google tiene que descubrir
-          el resto del catálogo solo por el sitemap, más lento que
-          seguir enlaces reales entre fichas relacionadas. */}
-      <CarruselComplementarios productos={complementarios} />
-
-      {relacionados.length > 0 && (
-        <section className="mt-16">
-          <h2 className="font-display mb-5 text-xl font-bold uppercase tracking-tight text-ink">
-            {/* Agotado: los parecidos con stock SON la alternativa que busca. */}
-            {agotado ? "Alternativas disponibles" : "También te puede interesar"}
-          </h2>
-          <div className="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4">
-            {relacionados.map((p) => (
-              <TarjetaProducto key={p.id} producto={p} />
-            ))}
-          </div>
-        </section>
-      )}
+      {/* "Complementa tu compra" (supabase/38): los que el dueño eligió en el
+          POS, en su orden. Y "También te puede interesar": antes ninguna ficha
+          enlazaba a otra — sin links internos, Google tiene que descubrir el
+          resto del catálogo solo por el sitemap. Los dos son carruseles con
+          flechas desde el 02-10-2026 (pendiente #57 del POS). */}
+      <CarruselProductos
+        id="complementarios"
+        titulo="Complementa tu compra"
+        subtitulo="Lo que suele hacer falta junto con este producto."
+        productos={complementarios}
+      />
+      <CarruselProductos
+        id="relacionados"
+        // Agotado: los parecidos con stock SON la alternativa que busca.
+        titulo={agotado ? "Alternativas disponibles" : "También te puede interesar"}
+        productos={relacionados}
+      />
     </main>
   );
 }
