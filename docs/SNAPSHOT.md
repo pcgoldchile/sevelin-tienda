@@ -4,6 +4,19 @@
 > arquitectura completo (todas las fases) vive en `README-ECOMMERCE-SEVELIN.md`, en el repo del POS
 > (`sevelin-pos-oficial`) — este documento es el estado de ESTE repo (`sevelin-tienda`) nada más.
 
+**Fecha:** 03-10-2026 (noche) · **Sin cambios de código. Datos que llegaron desde el POS.**
+
+- **15 productos ya tienen segundo escalón mayorista** (pendiente #28 del POS, aprobados por el dueño): `precios_mayoristas`
+  tiene 34 filas y 15 con `precio_mayorista_2`, iguales al POS. Lista en
+  `docs/estudios-precios/2026-10-03-segundo-escalon-mayorista.md` del POS.
+- **Adaptador USB WiFi 6 en `stock_web` 0** (stock fantasma corregido en el POS): la ficha queda como agotada.
+- Google Shopping revisado: 158 productos aprobados; "sevelin" no los muestra porque Shopping busca productos, no
+  tiendas. Detalle en `docs/CHANGELOG-V115.md` del POS.
+- ⚠️ Sigue sin probarse un pedido mayorista real (no hay ninguna cuenta mayorista aprobada).
+- ⚠️ Falta el lunes 05-10: comprobar que las ofertas del Cyber se encendieron (pendiente #49 del POS).
+
+---
+
 **Fecha:** 03-10-2026 · **Segundo escalón del precio mayorista y recuadro para coordinar la entrega.**
 
 Detalle en `docs/CHANGELOG-V114.md` del POS.
