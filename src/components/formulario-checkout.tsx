@@ -21,7 +21,7 @@ import { COMUNAS_POR_REGION } from "@/lib/comunas-chile";
 import type { OpcionEnvio } from "@/lib/envio";
 import { AvisoMayoristaCarrito } from "@/components/aviso-mayorista-carrito";
 import { FACTURA_HABILITADA } from "@/lib/factura";
-import { esReservaPorLlegar, fechaLlegadaLegible, ultimaFechaLlegada } from "@/lib/por-llegar";
+import { esReservaPorLlegar, fechaLlegadaLegible, ultimaFechaLlegada, type EntregaPorLlegar } from "@/lib/por-llegar";
 
 const CAMPO =
   "rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm outline-none transition-colors focus:border-accent";
@@ -144,16 +144,24 @@ export function FormularioCheckout({
   const todoPorLlegar = hayPorLlegar && !itemsSeleccionados.some((item) => !esItemServicio(item) && !esReservaPorLlegar(item));
   const fechaPorLlegar = fechaLlegadaLegible(ultimaFechaLlegada(porLlegar.map((item) => item.fecha_llegada_estimada)));
   const cuandoLlega = fechaPorLlegar ? ` (fecha estimada: ${fechaPorLlegar})` : "";
+  /* Mezcla de productos que ya están con productos por llegar (dueño,
+     06-10-2026, supabase/41). Retiro: gratis, y se retira cada cosa cuando
+     llega el correo "listo para retiro". Despacho: el cliente elige un solo
+     envío cuando llegue todo, o dos envíos pagando los dos ahora. */
+  const mezclaPorLlegar = hayPorLlegar && !todoPorLlegar;
+  const [entregaPorLlegar, setEntregaPorLlegar] = useState<EntregaPorLlegar>("JUNTO");
   const avisoDeOpcion = (opcion: OpcionEnvio): string | undefined => {
     if (!hayPorLlegar) return opcion.aviso;
     if (opcion.metodo === "RETIRO") {
       return todoPorLlegar
-        ? `Todavía no está en la tienda${cuandoLlega}. Te avisamos por correo apenas llegue y lo retiras cuando te acomode.`
-        : `${opcion.aviso ? opcion.aviso + " " : ""}Lo que está por llegar${cuandoLlega} lo retiras después: te avisamos por correo apenas esté en la tienda.`;
+        ? `Todavía no está en la tienda${cuandoLlega}. Te avisamos por correo apenas llegue y esté listo para retiro: espera ese correo antes de venir.`
+        : `Gratis las dos veces. Te avisamos por correo cuando lo que ya está quede listo para retiro, y de nuevo cuando llegue lo que falta${cuandoLlega}. Espera cada correo antes de venir.`;
     }
     return todoPorLlegar
-      ? `Se despacha apenas llegue a la tienda${cuandoLlega}. Te avisamos por correo.`
-      : `Tu pedido se despacha completo cuando llegue lo que falta${cuandoLlega}. Si quieres antes lo que ya está, elige retiro en tienda o escríbenos por WhatsApp.`;
+      ? `Se despacha apenas llegue a la tienda${cuandoLlega}. El despacho queda pagado ahora y te avisamos por correo.`
+      : opcion.costoDosEnvios !== undefined
+        ? "Elige abajo si lo quieres en un solo envío o en dos."
+        : `Tu pedido se despacha completo cuando llegue lo que falta${cuandoLlega}.`;
   };
   const [quiereCuenta, setQuiereCuenta] = useState(false);
   const [avisoCuenta, setAvisoCuenta] = useState<string | null>(null);
@@ -205,7 +213,13 @@ export function FormularioCheckout({
      catálogo — esto es únicamente lo que se muestra en pantalla. No incluye
      el envío (decisión D1). Ver src/lib/precios-medio-pago.ts. */
   const recargo = recargoTotal(itemsSeleccionados, metodoPago);
-  const total = subtotalSeleccionado + recargo + (opcionElegida?.costo ?? 0);
+  /* Lo que se muestra del envío. Con dos envíos elegidos es la suma de los
+     dos; POST /api/checkout vuelve a calcularlo por su cuenta. */
+  const hayDespachoConMezcla = mezclaPorLlegar && !!opcionElegida && opcionElegida.metodo !== "RETIRO";
+  const puedeDosEnvios = hayDespachoConMezcla && opcionElegida?.costoDosEnvios !== undefined;
+  const dosEnvios = puedeDosEnvios && entregaPorLlegar === "DOS_ENVIOS";
+  const costoEnvioElegido = opcionElegida ? (dosEnvios ? opcionElegida.costoDosEnvios ?? opcionElegida.costo : opcionElegida.costo) : 0;
+  const total = subtotalSeleccionado + recargo + costoEnvioElegido;
 
   const direccionCompleta =
     !!regionElegida && !!comunaElegida && !!calleTexto.trim() && !!numeroTexto.trim() &&
@@ -497,6 +511,8 @@ export function FormularioCheckout({
           // el servidor detiene el pago en vez de cobrar otro monto.
           items: itemsSeleccionados.map((item) => ({ sku: item.sku, cantidad: item.cantidad, precio_esperado: item.precio_web })),
           metodoEnvio: metodoElegido,
+          // El servidor lo ignora si el pedido no mezcla stock y por llegar, o si es retiro.
+          entregaPorLlegar: dosEnvios ? "DOS_ENVIOS" : "JUNTO",
           // Solo tienen sentido con retiro en tienda; el servidor los ignora
           // en cualquier otro método.
           retiroFecha: todoPorLlegar && !hayServicios ? null : retiroFecha || null,
@@ -610,10 +626,15 @@ export function FormularioCheckout({
             <div className="flex justify-between text-ink-soft">
               <span>Envío</span>
               <span className="tabular-nums">
-                {opcionElegida ? (opcionElegida.costo === 0 ? "Gratis" : formatoCLP.format(opcionElegida.costo)) : "Por calcular"}
+                {opcionElegida ? (costoEnvioElegido === 0 ? "Gratis" : formatoCLP.format(costoEnvioElegido)) : "Por calcular"}
               </span>
             </div>
-            {opcionElegida?.detalle && <span className="text-xs text-ink-faint">{opcionElegida.detalle}</span>}
+            {opcionElegida?.detalle && (
+              <span className="text-xs text-ink-faint">
+                {opcionElegida.detalle}
+                {dosEnvios ? " · en 2 envíos" : ""}
+              </span>
+            )}
           </div>
           {/* El recargo aparece como línea propia solo cuando aplica. Nunca
               se esconde dentro del total: el cliente tiene que poder ver de
@@ -644,7 +665,7 @@ export function FormularioCheckout({
               <span className="tabular-nums">
                 {formatoCLP.format(
                   subtotalSeleccionado +
-                    (opcionElegida?.costo ?? 0) +
+                    costoEnvioElegido +
                     (recargo > 0 ? 0 : recargoTotal(itemsSeleccionados, "FLOW"))
                 )}
               </span>
@@ -963,7 +984,7 @@ export function FormularioCheckout({
               <p className="mt-2 text-ink-soft">
                 Todavía no {porLlegar.length === 1 ? "está" : "están"} en la tienda. Tu pago {porLlegar.length === 1 ? "lo deja reservado" : "los deja reservados"} a tu nombre y{" "}
                 <strong className="text-ink">te avisamos por correo apenas {porLlegar.length === 1 ? "esté disponible y listo" : "estén disponibles y listos"} para retiro</strong>.
-                {!todoPorLlegar && " Mientras tanto puedes pasar a buscar tus otros productos."} La fecha es estimada; si no llega, te devolvemos el 100%.
+                {!todoPorLlegar && " Tus otros productos no tienen que esperar: elige abajo cómo los recibes."} La fecha es estimada; si no llega, te devolvemos el 100%.
               </p>
             </div>
           )}
@@ -1052,6 +1073,71 @@ export function FormularioCheckout({
               </motion.div>
             )}
           </AnimatePresence>
+
+          {/* Un envío o dos (supabase/41): solo con despacho y un carrito
+              que mezcla lo que ya está con lo por llegar. Los dos despachos
+              se cobran ahora, por adelantado (decisión del dueño). */}
+          {hayDespachoConMezcla && opcionElegida && (
+            <div className="rounded-xl border border-border bg-surface-sunken/50 p-3.5">
+              <p className="text-sm font-medium text-ink">
+                Tu pedido tiene productos que ya están y otros por llegar. ¿Cómo te lo enviamos?
+              </p>
+              <div className="mt-2 flex flex-col gap-2">
+                {(
+                  [
+                    {
+                      valor: "JUNTO" as const,
+                      titulo: "Un solo envío, cuando llegue todo",
+                      detalle: `Sale completo cuando llegue lo que falta${cuandoLlega}.`,
+                      costo: opcionElegida.costo,
+                    },
+                    ...(puedeDosEnvios
+                      ? [
+                          {
+                            valor: "DOS_ENVIOS" as const,
+                            titulo: "Dos envíos",
+                            detalle: "Ahora lo que ya está, y lo por llegar apenas llegue. Los dos despachos quedan pagados ahora.",
+                            costo: opcionElegida.costoDosEnvios ?? opcionElegida.costo,
+                          },
+                        ]
+                      : []),
+                  ]
+                ).map((plan) => {
+                  const elegido = (dosEnvios ? "DOS_ENVIOS" : "JUNTO") === plan.valor;
+                  return (
+                    <label
+                      key={plan.valor}
+                      className={`flex cursor-pointer items-center justify-between gap-3 rounded-xl border px-4 py-3 text-sm transition-all ${
+                        elegido ? "border-accent bg-accent-soft/40 shadow-glow-accent" : "border-border bg-surface hover:border-border-strong"
+                      }`}
+                    >
+                      <span className="flex items-start gap-3">
+                        <input
+                          type="radio"
+                          name="entrega-por-llegar"
+                          checked={elegido}
+                          onChange={() => setEntregaPorLlegar(plan.valor)}
+                          className="mt-0.5 accent-accent"
+                        />
+                        <span className="flex flex-col gap-0.5">
+                          <span>{plan.titulo}</span>
+                          <span className={`text-xs leading-snug ${elegido ? "text-ink" : "text-ink-soft"}`}>{plan.detalle}</span>
+                        </span>
+                      </span>
+                      <span className="shrink-0 font-semibold text-ink tabular-nums">
+                        {plan.costo === 0 ? "Gratis" : formatoCLP.format(plan.costo)}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+              {!puedeDosEnvios && (
+                <p className="mt-2 text-xs leading-snug text-ink-soft">
+                  Con este método solo podemos mandarlo en un envío. Si quieres antes lo que ya está, elige retiro en tienda.
+                </p>
+              )}
+            </div>
+          )}
 
           {errorEnvio && <p className="text-sm text-red-600">{errorEnvio}</p>}
 
@@ -1274,7 +1360,7 @@ export function FormularioCheckout({
               /* Cada opción muestra su propio total, para que la diferencia
                  se vea ANTES de elegir y no como una sorpresa al final. */
               const totalDeEstaOpcion =
-                subtotalSeleccionado + recargoTotal(itemsSeleccionados, opcion.valor) + (opcionElegida?.costo ?? 0);
+                subtotalSeleccionado + recargoTotal(itemsSeleccionados, opcion.valor) + costoEnvioElegido;
               return (
                 <label
                   key={opcion.valor}

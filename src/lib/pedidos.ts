@@ -2,6 +2,7 @@ import { supabaseWeb } from './supabase-web';
 import { VERSION_POLITICA_PRIVACIDAD } from './politica-privacidad';
 import type { DatosFactura, DireccionEnvio, ItemPedido, PedidoWeb } from './tipos';
 import type { MetodoEnvio } from './envio';
+import type { EntregaPorLlegar } from './por-llegar';
 
 /**
  * Lanza un error genérico ante un fallo de Supabase, sin reenviar
@@ -48,6 +49,10 @@ export async function crearPedido(datos: {
   tipoPedido: 'NORMAL' | 'ENCARGO';
   metodoEnvio: MetodoEnvio;
   costoEnvio: number;
+  /* Pedido con despacho que mezcla stock y por llegar (supabase/41): un
+     envío cuando llegue todo, o dos (los dos ya vienen sumados en
+     costoEnvio). null = no aplica. */
+  entregaPorLlegar?: EntregaPorLlegar | null;
   /* Recargo por pagar con tarjeta en el checkout web (Flow). 0 con Khipu.
      Lo calcula POST /api/checkout con recargoTotal() sobre los precios ya
      revalidados contra el catálogo — nunca llega desde el navegador. Ver
@@ -116,6 +121,9 @@ export async function crearPedido(datos: {
       retiro_bloque: datos.retiroBloque ?? null,
       agenda_tipo: datos.agendaTipo ?? 'RETIRO',
       costo_envio: datos.costoEnvio,
+      /* Solo viaja cuando aplica: un pedido normal no depende de que la
+         columna de supabase/41 exista. */
+      ...(datos.entregaPorLlegar ? { entrega_por_llegar: datos.entregaPorLlegar } : {}),
       recargo_medio_pago: datos.recargoMedioPago,
       subtotal,
       /* subtotal va a precio BASE (los items guardan precio_web sin

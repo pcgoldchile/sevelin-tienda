@@ -3,8 +3,9 @@ import { formatoCLP } from './formato';
 import { escaparHtml } from './escapar-html';
 import { fechaRetiroLegible } from './retiro-agendado';
 import { fechaLlegadaLegible } from './por-llegar';
+import { HORARIO_LEGIBLE } from './horarios';
 import { URL_RESENA_GOOGLE } from './resena-google';
-import type { PedidoWeb } from './tipos';
+import type { ItemPedido, PedidoWeb } from './tipos';
 
 const AZUL = '#2b3f66';
 const TEXTO = '#1a1f29';
@@ -110,8 +111,10 @@ export function correoConfirmacionPedido(
   const cuandoTrae = pedido.retiro_fecha
     ? ` el ${fechaRetiroLegible(pedido.retiro_fecha)}${pedido.retiro_bloque ? `, entre las ${pedido.retiro_bloque.replace('-', ' y las ')}` : ''}`
     : '';
+  /* Retiro (dueño, 06-10-2026): el cliente no viene hasta que se le avisa
+     "listo para retiro" desde el POS. Dejar el pedido listo toma tiempo. */
   const entregaProductos = pedido.metodo_envio === 'RETIRO'
-    ? `Retiro en tienda (${DIRECCION_TIENDA})`
+    ? `Retiro en tienda (${DIRECCION_TIENDA}). Te avisamos por correo cuando esté listo: espera ese correo antes de venir`
     : pedido.metodo_envio === 'LOCAL'
       ? `Despacho a domicilio en Arica — ${pedido.direccion_envio.calle} ${pedido.direccion_envio.numero}, ${pedido.direccion_envio.comuna}`
       : `Envío por Chilexpress — ${pedido.direccion_envio.calle} ${pedido.direccion_envio.numero}, ${pedido.direccion_envio.comuna}`;
@@ -137,6 +140,15 @@ export function correoConfirmacionPedido(
      su fecha estimada, y qué pasa con el resto del pedido. */
   const porLlegar = pedido.items.filter((it) => it.por_llegar);
   const hayOtrosProductos = pedido.items.some((it) => !it.por_llegar && !it.es_servicio);
+  /* Lo que eligió en el pago (supabase/41). Retiro: gratis, cada cosa cuando
+     se le avisa. Despacho: un envío cuando llegue todo, o dos ya pagados. */
+  const planPorLlegar = pedido.metodo_envio === 'RETIRO'
+    ? (hayOtrosProductos ? ' El resto de tu pedido lo retiras antes: te mandamos un correo cuando esté listo.' : '')
+    : !hayOtrosProductos
+      ? ' Te lo despachamos apenas llegue: el despacho ya quedó pagado.'
+      : pedido.entrega_por_llegar === 'DOS_ENVIOS'
+        ? ' Elegiste dos envíos: lo que ya está sale ahora y esto te lo mandamos apenas llegue. Los dos despachos ya quedaron pagados.'
+        : ' Elegiste un solo envío: tu pedido sale completo cuando llegue.';
   const bloquePorLlegar = porLlegar.length === 0 ? '' : `
     <div style="margin:0 0 16px;padding:12px 14px;border:1px solid #f59e0b;border-radius:10px;">
       <p style="margin:0 0 6px;font-size:14px;font-weight:700;color:${TEXTO};">🚚 ${porLlegar.length === 1 ? 'Un producto de tu pedido está por llegar' : 'Productos de tu pedido que están por llegar'}</p>
@@ -144,7 +156,7 @@ export function correoConfirmacionPedido(
         const fecha = fechaLlegadaLegible(it.fecha_llegada_estimada);
         return `<p style="margin:0 0 4px;font-size:14px;color:${TEXTO_SUAVE};">• <strong style="color:${TEXTO};">${it.nombre}</strong>${fecha ? ` — llega aprox. el ${fecha}` : ''}</p>`;
       }).join('')}
-      <p style="margin:8px 0 0;font-size:14px;color:${TEXTO_SUAVE};">Ya quedó pagado y reservado a tu nombre. <strong style="color:${TEXTO};">Te avisamos por correo apenas esté en la tienda</strong>${pedido.metodo_envio === 'RETIRO' ? ', listo para retiro' : ' y coordinamos la entrega'}.${hayOtrosProductos && pedido.metodo_envio === 'RETIRO' ? ' Mientras tanto puedes pasar a buscar el resto de tu pedido.' : ''}${hayOtrosProductos && pedido.metodo_envio !== 'RETIRO' ? ' Tu pedido se despacha completo cuando llegue; si quieres antes lo que ya está, escríbenos por WhatsApp.' : ''} La fecha es estimada. Si no llega, te devolvemos el 100%.</p>
+      <p style="margin:8px 0 0;font-size:14px;color:${TEXTO_SUAVE};">Ya quedó pagado y reservado a tu nombre. <strong style="color:${TEXTO};">Te avisamos por correo apenas esté en la tienda</strong>${pedido.metodo_envio === 'RETIRO' ? ' y listo para retiro' : ''}.${planPorLlegar} La fecha es estimada. Si no llega, te devolvemos el 100%.</p>
     </div>`;
 
   const contenido = `
@@ -278,6 +290,55 @@ export function correoEntregaPedido(
   };
 }
 
+/**
+ * "Tu pedido está listo para retiro" (dueño, 06-10-2026, supabase/41).
+ *
+ * Lo manda el POS con un botón (Pedidos Web → "Listo para retiro"), vía
+ * POST /api/pos/notificar-listo-retiro. Existe porque encontrar los
+ * productos, revisarlos y dejarlos listos toma tiempo: el cliente no debe
+ * venir antes de este correo.
+ *
+ * `listos` es lo que ya puede pasar a buscar; `pendientes`, lo que todavía
+ * no (casi siempre algo por llegar). Con pendientes el correo lo dice
+ * claro, para que nadie venga creyendo que se lleva todo.
+ */
+export function correoListoParaRetiro(
+  pedido: PedidoWeb,
+  partes: { listos: ItemPedido[]; pendientes: ItemPedido[] },
+  imagenesPorProductoId: Record<number, string | undefined> = {}
+): { subject: string; html: string } {
+  const nombre = pedido.cliente_nombre ? `${escaparHtml(pedido.cliente_nombre)},` : 'Hola,';
+  const numero = escaparHtml(pedido.numero_pedido);
+  const parcial = partes.pendientes.length > 0;
+  const filas = partes.listos
+    .map((it) => filaItemConFoto(escaparHtml(it.nombre), it.cantidad, it.precio_web * it.cantidad, imagenesPorProductoId[it.producto_pos_id]))
+    .join('');
+  const bloquePendientes = !parcial ? '' : `
+    <div style="margin:0 0 16px;padding:12px 14px;border:1px solid #f59e0b;border-radius:10px;">
+      <p style="margin:0 0 6px;font-size:14px;font-weight:700;color:${TEXTO};">Todavía no ${partes.pendientes.length === 1 ? 'está listo' : 'están listos'}</p>
+      ${partes.pendientes.map((it) => {
+        const fecha = it.por_llegar ? fechaLlegadaLegible(it.fecha_llegada_estimada) : null;
+        return `<p style="margin:0 0 4px;font-size:14px;color:${TEXTO_SUAVE};">• <strong style="color:${TEXTO};">${escaparHtml(it.nombre)}</strong> × ${it.cantidad}${fecha ? ` — llega aprox. el ${fecha}` : ''}</p>`;
+      }).join('')}
+      <p style="margin:8px 0 0;font-size:14px;color:${TEXTO_SUAVE};">Te mandamos otro correo como este cuando ${partes.pendientes.length === 1 ? 'esté listo' : 'estén listos'}. Ya ${partes.pendientes.length === 1 ? 'está pagado' : 'están pagados'}.</p>
+    </div>`;
+  const contenido = `
+    <p style="margin:0 0 16px;font-size:14px;color:${TEXTO_SUAVE};">${nombre} ${parcial ? 'ya puedes pasar a buscar esta parte de tu pedido' : 'ya puedes pasar a buscar tu pedido'} <strong style="color:${TEXTO};">${numero}</strong>. Lo revisamos y quedó apartado a tu nombre.</p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">${filas}</table>
+    ${bloquePendientes}
+    <p style="margin:0 0 6px;font-size:14px;color:${TEXTO_SUAVE};"><strong style="color:${TEXTO};">Dónde:</strong> ${DIRECCION_TIENDA}</p>
+    <p style="margin:0 0 6px;font-size:14px;color:${TEXTO_SUAVE};"><strong style="color:${TEXTO};">Horario:</strong> ${HORARIO_LEGIBLE}</p>
+    <p style="margin:0 0 16px;font-size:14px;color:${TEXTO_SUAVE};"><strong style="color:${TEXTO};">Al llegar:</strong> di tu nombre y el número de pedido ${numero}. El retiro es gratis.</p>
+    <p style="margin:0;font-size:13px;color:${TEXTO_SUAVE};">¿Alguna duda? Escríbenos por WhatsApp y lo vemos contigo.</p>
+  `;
+  return {
+    subject: parcial
+      ? `Una parte de tu pedido ${pedido.numero_pedido} está lista para retiro — Sevelin`
+      : `Tu pedido ${pedido.numero_pedido} está listo para retiro — Sevelin`,
+    html: envoltorio(parcial ? 'Parte de tu pedido está lista' : '¡Tu pedido está listo para retiro!', contenido),
+  };
+}
+
 /** Cancelación de pedido — misma estructura, la usa el POS (Pedidos Web →
  * Cancelar) llamando a esta misma tienda vía POST /api/pos/notificar-cancelacion
  * (el POS no tiene acceso directo a Resend con este remitente ni a este
@@ -323,8 +384,9 @@ export function correoProductoLlego(datos: {
     ? `
     <p style="margin:0 0 16px;font-size:14px;color:${TEXTO_SUAVE};">${hola} llegó a la tienda el producto que reservaste:</p>
     <p style="margin:0 0 16px;font-size:16px;font-weight:700;color:${TEXTO};">${datos.nombreProducto}</p>
-    <p style="margin:0 0 16px;font-size:14px;color:${TEXTO_SUAVE};">Ya está pagado y apartado a tu nombre${datos.numeroPedido ? ` (pedido <strong style="color:${TEXTO};">${datos.numeroPedido}</strong>)` : ''}. Solo queda que lo retires cuando te acomode, o que coordinemos el despacho.</p>
-    <p style="margin:0;font-size:14px;color:${TEXTO_SUAVE};">Escríbenos por WhatsApp y lo dejamos listo.</p>
+    <p style="margin:0 0 16px;font-size:14px;color:${TEXTO_SUAVE};">Ya está pagado y apartado a tu nombre${datos.numeroPedido ? ` (pedido <strong style="color:${TEXTO};">${datos.numeroPedido}</strong>)` : ''}. Lo estamos revisando y dejando listo.</p>
+    <p style="margin:0 0 8px;font-size:14px;color:${TEXTO_SUAVE};"><strong style="color:${TEXTO};">Si elegiste retiro en tienda:</strong> te mandamos otro correo cuando esté listo para retiro. Espera ese correo antes de venir.</p>
+    <p style="margin:0;font-size:14px;color:${TEXTO_SUAVE};"><strong style="color:${TEXTO};">Si elegiste despacho:</strong> ya está pagado, te lo enviamos.</p>
   `
     : `
     <p style="margin:0 0 16px;font-size:14px;color:${TEXTO_SUAVE};">${hola} nos pediste que te avisáramos, y ya está disponible:</p>
@@ -337,7 +399,7 @@ export function correoProductoLlego(datos: {
 
   return {
     subject: datos.esReserva
-      ? `Llegó tu ${datos.nombreProducto} — pasa a buscarlo`
+      ? `Llegó tu ${datos.nombreProducto} — lo estamos dejando listo`
       : `Ya llegó: ${datos.nombreProducto}`,
     html: envoltorio(datos.esReserva ? '¡Llegó tu reserva!' : '¡Ya está disponible!', contenido),
   };

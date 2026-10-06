@@ -154,6 +154,7 @@ function completarFila(tabla, fila) {
   if (tabla === 'pedidos_web') {
     if (!f.token_publico) f.token_publico = randomBytes(16).toString('hex');
     if (!f.estado) f.estado = 'CREADO';
+    if (f.retiro_avisos === undefined) f.retiro_avisos = [];   // default de supabase/41
   }
   return f;
 }

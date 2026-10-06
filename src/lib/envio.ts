@@ -44,6 +44,17 @@ export interface OpcionEnvio {
   km?: number;
   /** true si la distancia es una estimación porque OSRM no respondió. */
   distanciaEstimada?: boolean;
+  /** Solo en la vista previa de un carrito que mezcla productos que ya están
+   *  con productos por llegar: lo que cuesta mandarlo en DOS envíos (ver
+   *  EntregaPorLlegar en src/lib/por-llegar.ts). Ausente = esa opción no
+   *  ofrece dos envíos (retiro, o el courier no cotizó alguna de las partes). */
+  costoDosEnvios?: number;
+}
+
+/** Las dos partes de un pedido que mezcla stock y por llegar. */
+export interface PartesDeEnvio {
+  ahora: { sku: string; cantidad: number }[];
+  despues: { sku: string; cantidad: number }[];
 }
 
 export interface CotizacionEnvio {
@@ -289,14 +300,58 @@ function formatearServicio(servicio: string): string {
   return limpio.charAt(0).toUpperCase() + limpio.slice(1);
 }
 
-/** Retiro en tienda: siempre disponible y siempre gratis, con su aviso de horario. */
+/** Retiro en tienda: siempre disponible y siempre gratis, con su aviso de horario.
+ *
+ * "Espera ese correo antes de venir" (dueño, 06-10-2026): encontrar los
+ * productos, revisarlos y dejarlos listos toma tiempo. El aviso lo manda el
+ * POS con el botón "Listo para retiro" (POST /api/pos/notificar-listo-retiro). */
 function opcionRetiro(): OpcionEnvio {
   return {
     metodo: 'RETIRO',
     costo: 0,
     detalle: `Retiro en tienda (${DIRECCION_TIENDA})`,
-    aviso: estadoHorario().avisoRetiro,
+    aviso: `${estadoHorario().avisoRetiro} Te avisamos por correo cuando esté listo para retiro: espera ese correo antes de venir.`,
   };
+}
+
+/**
+ * Lo que cuesta mandar un pedido en DOS envíos (lo que está ahora + lo por
+ * llegar después), para un método con despacho.
+ *
+ *   LOCAL   → el despacho propio se cobra por distancia, no por bulto: son
+ *             dos viajes a la misma dirección, o sea dos veces la tarifa.
+ *   Courier → cada envío se cotiza con sus propios productos (peso y medidas
+ *             distintos) y se suman.
+ *
+ * `unEnvio` es la cotización normal del pedido completo; se reutiliza para
+ * LOCAL y así no se vuelve a medir la distancia.
+ */
+async function costoDeDosEnvios(
+  direccion: DireccionEnvio,
+  partes: PartesDeEnvio,
+  unEnvio: OpcionEnvio
+): Promise<number> {
+  if (unEnvio.metodo === 'LOCAL') return unEnvio.costo * 2;
+  const cotizar = unEnvio.metodo === 'CHILEXPRESS' ? cotizarViaChilexpress : cotizarViaStarken;
+  const [ahora, despues] = await Promise.all([cotizar(direccion, partes.ahora), cotizar(direccion, partes.despues)]);
+  return ahora.costo + despues.costo;
+}
+
+/** Agrega `costoDosEnvios` a las opciones con despacho. Mejor esfuerzo: si un
+ *  courier no cotiza una de las partes, esa opción queda solo con un envío. */
+async function conDosEnvios(direccion: DireccionEnvio, opciones: OpcionEnvio[], partes?: PartesDeEnvio): Promise<OpcionEnvio[]> {
+  if (!partes || partes.ahora.length === 0 || partes.despues.length === 0) return opciones;
+  return Promise.all(
+    opciones.map(async (opcion) => {
+      if (opcion.metodo === 'RETIRO') return opcion;
+      try {
+        return { ...opcion, costoDosEnvios: await costoDeDosEnvios(direccion, partes, opcion) };
+      } catch (err) {
+        console.error(`[envio] ${opcion.metodo} no cotizó los dos envíos:`, err instanceof Error ? err.message : err);
+        return opcion;
+      }
+    })
+  );
 }
 
 /**
@@ -337,7 +392,10 @@ function opcionTraerEquipo(): OpcionEnvio {
 export async function cotizarOpcionesEnvio(
   direccion: DireccionEnvio,
   items: { sku: string; cantidad: number }[],
-  contexto?: { soloServicios?: boolean }
+  /* partes: solo cuando el carrito mezcla productos que ya están con
+     productos por llegar. Con eso cada opción con despacho trae además lo
+     que cuesta mandarlo en dos envíos (costoDosEnvios). */
+  contexto?: { soloServicios?: boolean; partes?: PartesDeEnvio }
 ): Promise<CotizacionEnvio> {
   /* Carrito solo de servicios (dueño, 12-09-2026): enviar un servicio no
      tiene sentido. Se corta ANTES de cotizar couriers — además de ser la
@@ -378,7 +436,7 @@ export async function cotizarOpcionesEnvio(
     }
 
     return {
-      opciones,
+      opciones: await conDosEnvios(direccion, opciones, contexto?.partes),
       aviso: local
         ? undefined
         : 'No pudimos ubicar esa dirección en el mapa para calcular el despacho a domicilio. ' +
@@ -401,7 +459,7 @@ export async function cotizarOpcionesEnvio(
     if (starkenHabilitado()) console.error('[envio] Starken no cotizó:', err instanceof Error ? err.message : err);
   }
 
-  return { opciones };
+  return { opciones: await conDosEnvios(direccion, opciones, contexto?.partes) };
 }
 
 /**
@@ -411,6 +469,29 @@ export async function cotizarOpcionesEnvio(
  * acá a partir del método.
  */
 export async function confirmarEnvio(
+  direccion: DireccionEnvio,
+  items: { sku: string; cantidad: number }[],
+  metodoElegido?: string,
+  /* dosEnvios: el cliente eligió recibir en dos envíos un pedido que mezcla
+     stock y por llegar. Quién puede elegirlo lo decide POST /api/checkout
+     contra el catálogo; acá solo se cobra. Con retiro se ignora: es gratis. */
+  contexto?: { soloServicios?: boolean; dosEnvios?: PartesDeEnvio }
+): Promise<OpcionEnvio> {
+  const unEnvio = await confirmarUnEnvio(direccion, items, metodoElegido, contexto);
+  const partes = contexto?.dosEnvios;
+  if (!partes || unEnvio.metodo === 'RETIRO' || partes.ahora.length === 0 || partes.despues.length === 0) return unEnvio;
+  /* Si un courier no cotiza una de las dos partes, se corta acá con un
+     mensaje claro: nunca se cobra un solo envío a quien pidió dos. */
+  let costo: number;
+  try {
+    costo = await costoDeDosEnvios(direccion, partes, unEnvio);
+  } catch {
+    throw new Error('No pudimos cotizar los dos envíos por separado. Elige un solo envío cuando llegue todo, o retiro en tienda.');
+  }
+  return { ...unEnvio, costo, detalle: `${unEnvio.detalle ?? 'Despacho'} · en 2 envíos` };
+}
+
+async function confirmarUnEnvio(
   direccion: DireccionEnvio,
   items: { sku: string; cantidad: number }[],
   metodoElegido?: string,

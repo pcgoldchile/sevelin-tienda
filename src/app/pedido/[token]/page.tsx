@@ -72,6 +72,13 @@ export default async function EstadoPedido({ params }: PropsPagina) {
 
   const whatsapp = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER;
 
+  /* Avisos "listo para retiro" que mandó el POS (supabase/41). Los servicios
+     técnicos no entran: tienen su propio aviso. */
+  const productosDelPedido = pedido.items.filter((item) => !item.es_servicio);
+  const hayProductos = productosDelPedido.length > 0;
+  const skusListos = new Set((pedido.retiro_avisos || []).flatMap((aviso) => aviso.skus || []));
+  const faltanPorAvisar = productosDelPedido.some((item) => !skusListos.has(item.sku));
+
   return (
     <main className="mx-auto max-w-2xl px-4 py-10 sm:px-6 lg:px-8">
       <div className="flex flex-wrap items-center gap-3">
@@ -116,6 +123,41 @@ export default async function EstadoPedido({ params }: PropsPagina) {
         </div>
       )}
 
+      {/* Retiro en tienda (dueño, 06-10-2026, supabase/41): el cliente no
+          viene hasta que el POS avisa "listo para retiro". Acá se ve lo
+          mismo que dice el correo, por si no lo encuentra. */}
+      {pedido.metodo_envio === "RETIRO" && POR_COORDINAR.includes(pedido.estado) && hayProductos && (
+        skusListos.size > 0 ? (
+          <div className="mt-5 rounded-2xl border border-success/40 bg-success/10 p-4">
+            <p className="text-sm font-semibold text-ink">
+              ✅ {faltanPorAvisar ? "Parte de tu pedido está lista para retiro" : "Tu pedido está listo para retiro"}
+            </p>
+            <p className="mt-1 text-sm text-ink-soft">
+              Ya puedes pasar a buscar{faltanPorAvisar ? " lo que aparece marcado abajo" : "lo"}. Al llegar, di tu nombre y el número de pedido{" "}
+              <strong className="text-ink">{pedido.numero_pedido}</strong>.
+              {faltanPorAvisar ? " Por lo demás te avisamos con otro correo." : ""}
+            </p>
+          </div>
+        ) : (
+          <div className="mt-5 rounded-2xl border border-border bg-surface p-4">
+            <p className="text-sm font-semibold text-ink">Lo estamos dejando listo</p>
+            <p className="mt-1 text-sm text-ink-soft">
+              Te avisamos por correo cuando esté listo para retiro. Espera ese correo antes de venir.
+            </p>
+          </div>
+        )
+      )}
+
+      {/* Despacho de un pedido que mezcla stock y por llegar: lo que eligió. */}
+      {pedido.entrega_por_llegar && PAGO_CONFIRMADO.includes(pedido.estado) && (
+        <p className="mt-4 text-sm text-ink-soft">
+          📦{" "}
+          {pedido.entrega_por_llegar === "DOS_ENVIOS"
+            ? "Va en dos envíos: ahora lo que ya está, y lo por llegar apenas llegue. Los dos despachos ya están pagados."
+            : "Va en un solo envío, cuando llegue lo que falta."}
+        </p>
+      )}
+
       {/* Rescate de una venta ya decidida: el cliente llegó al banco y algo
           lo interrumpió. Sin esto tendría que armar el carrito de nuevo, y
           casi nadie lo hace. Solo en CREADO — el servidor lo revalida. */}
@@ -127,7 +169,10 @@ export default async function EstadoPedido({ params }: PropsPagina) {
             <li key={item.sku} className="flex justify-between text-sm text-ink-soft">
               <span>
                 {item.nombre} × {item.cantidad}
-                {item.por_llegar && (
+                {skusListos.has(item.sku) && pedido.estado !== "ENTREGADO" && (
+                  <span className="mt-0.5 block text-xs font-medium text-success">✅ Listo para retiro</span>
+                )}
+                {item.por_llegar && !skusListos.has(item.sku) && (
                   <span className="mt-0.5 block text-xs font-medium text-amber-400">
                     🚚 Por llegar{fechaLlegadaLegible(item.fecha_llegada_estimada) ? ` · aprox. el ${fechaLlegadaLegible(item.fecha_llegada_estimada)}` : ""}. Te avisamos por correo apenas esté en la tienda.
                   </span>

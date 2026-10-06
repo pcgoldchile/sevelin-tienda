@@ -11,7 +11,7 @@ import { crearClienteServidor } from '@/lib/supabase-server';
 import { marcarCarritoConvertido } from '@/lib/carritos-web';
 import { contextoMayorista, preciosMayoristasDe } from '@/lib/mayorista';
 import { resolverPreciosMayoristas } from '@/lib/mayorista-precios';
-import { esReservaPorLlegar, topeDeCompra } from '@/lib/por-llegar';
+import { esReservaPorLlegar, partirPorLlegada, topeDeCompra, type EntregaPorLlegar } from '@/lib/por-llegar';
 import type { DatosFactura, DireccionEnvio, ItemPedido } from '@/lib/tipos';
 import { FACTURA_HABILITADA } from '@/lib/factura';
 
@@ -40,6 +40,10 @@ interface CuerpoCheckout {
   // quien compra de otra ciudad pero un familiar en Arica retira); 'LOCAL'
   // solo aplica dentro de la comuna de la tienda — ver src/lib/envio.ts.
   metodoEnvio?: string;
+  /* Solo cuenta si el pedido mezcla productos que ya están con productos por
+     llegar y va con despacho (supabase/41): 'DOS_ENVIOS' cobra los dos
+     despachos; cualquier otra cosa es un solo envío cuando llegue todo. */
+  entregaPorLlegar?: string;
   // 'FLOW' (webpay/tarjetas) por defecto si no llega nada — Khipu solo se
   // acepta si khipuHabilitado() (ver src/lib/khipu.ts), para que un valor
   // suelto en el body de alguien probando la API no rompa nada.
@@ -257,17 +261,29 @@ export async function POST(req: NextRequest) {
   // que precio/stock de los ítems, nunca se confía en lo que mostró la
   // pantalla previa.
   let cotizacion;
+  let entregaPorLlegar: EntregaPorLlegar | null = null;
+  const mezclaPorLlegar = partirPorLlegada(items.filter((it) => !it.es_servicio), (it) => it.por_llegar === true);
   try {
     /* Pedido mixto (dueño, 12-09-2026: "un pedido, un pago, dos entregas"):
        el envío se cotiza solo con los productos. Los servicios no viajan. */
     const itemsEnvio = (soloServicios ? items : items.filter((it) => !it.es_servicio))
       .map(({ sku, cantidad }) => ({ sku, cantidad }));
+    /* Dos envíos (supabase/41): solo si el pedido de verdad mezcla productos
+       que ya están con productos por llegar —se mira `items`, ya resuelto
+       contra el catálogo— y el cliente lo pidió. Con retiro no aplica. */
+    const dosEnvios = mezclaPorLlegar.mezcla && cuerpo.entregaPorLlegar === 'DOS_ENVIOS' && cuerpo.metodoEnvio !== 'RETIRO'
+      ? {
+          ahora: mezclaPorLlegar.ahora.map(({ sku, cantidad }) => ({ sku, cantidad })),
+          despues: mezclaPorLlegar.despues.map(({ sku, cantidad }) => ({ sku, cantidad })),
+        }
+      : undefined;
     cotizacion = await confirmarEnvio(
       direccionCompleta,
       itemsEnvio,
       cuerpo.metodoEnvio,
-      { soloServicios }
+      { soloServicios, dosEnvios }
     );
+    if (mezclaPorLlegar.mezcla && cotizacion.metodo !== 'RETIRO') entregaPorLlegar = dosEnvios ? 'DOS_ENVIOS' : 'JUNTO';
   } catch (err) {
     const mensaje = err instanceof Error ? err.message : 'No se pudo cotizar el envío';
     return NextResponse.json({ error: mensaje }, { status: 409 });
@@ -327,6 +343,7 @@ export async function POST(req: NextRequest) {
       agendaTipo: hayServicios ? 'ENTREGA_EQUIPO' : 'RETIRO',
       metodoEnvio: cotizacion.metodo,
       costoEnvio: cotizacion.costo,
+      entregaPorLlegar,
       recargoMedioPago,
       nota: cuerpo.nota?.trim() || null,
       factura,

@@ -30,6 +30,29 @@ export function topeDeCompra(p: StockDeProducto): number {
   return p.por_llegar ? Math.max(0, Number(p.stock_por_llegar) || 0) : 0;
 }
 
+/**
+ * Cómo recibe el cliente un pedido CON DESPACHO que mezcla productos que ya
+ * están con productos por llegar (dueño, 06-10-2026, supabase/41):
+ *   JUNTO      → un solo envío cuando llegue lo que falta. Paga un despacho.
+ *   DOS_ENVIOS → ahora lo que está, después lo por llegar. Paga los dos, por
+ *                adelantado.
+ * Con retiro en tienda no hay nada que elegir: es gratis y se retira cada
+ * cosa cuando se le avisa que está lista.
+ */
+export type EntregaPorLlegar = 'JUNTO' | 'DOS_ENVIOS';
+
+export function esEntregaPorLlegar(valor: unknown): valor is EntregaPorLlegar {
+  return valor === 'JUNTO' || valor === 'DOS_ENVIOS';
+}
+
+/** Separa las líneas de un pedido en lo que sale ahora y lo que sale después.
+ *  `mezcla` es true solo si hay de los dos: es el único caso con elección. */
+export function partirPorLlegada<T>(lineas: T[], esPorLlegar: (linea: T) => boolean): { ahora: T[]; despues: T[]; mezcla: boolean } {
+  const ahora = lineas.filter((l) => !esPorLlegar(l));
+  const despues = lineas.filter((l) => esPorLlegar(l));
+  return { ahora, despues, mezcla: ahora.length > 0 && despues.length > 0 };
+}
+
 /** "jueves 8 de octubre" — o null si no hay fecha o viene mal escrita. */
 export function fechaLlegadaLegible(fecha: string | null | undefined, corta = false): string | null {
   if (!fecha || !/^\d{4}-\d{2}-\d{2}/.test(fecha)) return null;

@@ -4,6 +4,26 @@
 > arquitectura completo (todas las fases) vive en `README-ECOMMERCE-SEVELIN.md`, en el repo del POS
 > (`sevelin-pos-oficial`) — este documento es el estado de ESTE repo (`sevelin-tienda`) nada más.
 
+**Fecha:** 06-10-2026 (noche) · **Por llegar: el cliente elige cómo recibe, y aviso "listo para retiro".**
+
+Detalle en `docs/CHANGELOG-V129.md` del POS. Regla del dueño: el retiro es gratis y el cliente espera el correo
+"listo para retiro" antes de venir; el despacho se cobra y queda pagado por adelantado, también por lo por llegar.
+
+- **`supabase/41` (aplicada):** `pedidos_web.entrega_por_llegar` (`JUNTO` / `DOS_ENVIOS` / null) y
+  `pedidos_web.retiro_avisos` (historial de avisos, lo escribe el POS).
+- **Checkout:** un carrito con despacho que mezcla productos que ya están con productos por llegar pregunta "un solo
+  envío cuando llegue todo" o "dos envíos" (los dos cobrados ahora). La regla del costo está en `src/lib/envio.ts`
+  (`costoDeDosEnvios`: despacho propio = el doble; courier = cada parte cotizada y sumada). Quién puede elegirlo lo
+  decide `POST /api/checkout` contra el catálogo, nunca el navegador.
+- **`POST /api/pos/notificar-listo-retiro`** (nuevo, con `SYNC_SECRET`): manda `correoListoParaRetiro` por los
+  productos que el POS marcó como listos y nombra los que todavía faltan.
+- Textos: la opción de retiro, el correo de confirmación y el de "llegó tu reserva" ya no dicen "pasa a buscarlo":
+  dicen que espere el correo. La página del pedido muestra "listo para retiro" y el plan de envío.
+- ⚠️ No probado: el despacho propio dentro de Arica en dos envíos (la maqueta no mide distancias) y un correo real.
+- ⚠️ Visto de pasada: el correo de confirmación inserta el nombre del cliente sin escapar (el correo nuevo sí escapa).
+
+---
+
 **Fecha:** 03-10-2026 (noche) · **Sin cambios de código. Datos que llegaron desde el POS.**
 
 - **15 productos ya tienen segundo escalón mayorista** (pendiente #28 del POS, aprobados por el dueño): `precios_mayoristas`

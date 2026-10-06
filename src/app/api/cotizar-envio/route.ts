@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cotizarOpcionesEnvio } from '@/lib/envio';
 import { obtenerProductoPorSku } from '@/lib/catalogo';
 import { esServicioTecnico } from '@/lib/servicios';
+import { esReservaPorLlegar, partirPorLlegada } from '@/lib/por-llegar';
 import type { DireccionEnvio } from '@/lib/tipos';
 import { chequearLimite, ipReal, respuestaLimiteExcedido } from '@/lib/rate-limit';
 
@@ -61,6 +62,15 @@ export async function POST(req: NextRequest) {
     const itemsProductos = items.filter((_, i) => !esServicio[i]);
     const soloServicios = itemsProductos.length === 0;
 
+    /* Carrito que mezcla productos que ya están con productos por llegar
+       (supabase/41): el cliente puede elegir un envío o dos, así que cada
+       opción con despacho trae los dos precios. Qué es "por llegar" se
+       resuelve contra el catálogo, igual que en POST /api/checkout. */
+    const partes = partirPorLlegada(
+      items.map((item, i) => ({ item, i })).filter(({ i }) => !esServicio[i]),
+      ({ i }) => !!productos[i] && esReservaPorLlegar(productos[i]!)
+    );
+
     const cotizacion = await cotizarOpcionesEnvio(
       {
         calle: direccion.calle,
@@ -80,7 +90,12 @@ export async function POST(req: NextRequest) {
         placeId: direccion.placeId || null,
       },
       soloServicios ? items : itemsProductos,
-      { soloServicios }
+      {
+        soloServicios,
+        partes: partes.mezcla
+          ? { ahora: partes.ahora.map(({ item }) => item), despues: partes.despues.map(({ item }) => item) }
+          : undefined,
+      }
     );
     return NextResponse.json({ ...cotizacion, hayServicios: skusServicios.length > 0, skusServicios });
   } catch (err) {

@@ -259,6 +259,15 @@ export interface PedidoWeb {
   // POST /api/checkout) — ver supabase/18-pedidos-por-encargo.sql.
   tipo_pedido: 'NORMAL' | 'ENCARGO';
   costo_envio: number;
+  /* Pedido con despacho que mezcla productos que ya están con productos por
+     llegar (supabase/41): 'JUNTO' = un envío cuando llegue todo;
+     'DOS_ENVIOS' = dos envíos, los dos ya cobrados en costo_envio. null o
+     ausente = no aplica (lo normal, y todo pedido de retiro). */
+  entrega_por_llegar?: 'JUNTO' | 'DOS_ENVIOS' | null;
+  /* Avisos "listo para retiro" que mandó el POS (supabase/41). Cada uno dice
+     qué productos quedaron listos; un pedido con algo por llegar puede
+     tener dos. Ausente en pedidos anteriores = ninguno. */
+  retiro_avisos?: { en: string; skus: string[] }[] | null;
   /* Recargo por pagar con tarjeta en el checkout web (Flow) — 0 con Khipu y
      en todo pedido anterior al 08-09-2026. Ya viene incluido en `total`;
      existe para poder explicarlo, porque si no, subtotal + envío no cuadra.
