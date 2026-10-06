@@ -70,7 +70,7 @@ export default async function PorLlegar() {
       </ul>
 
       <p className="mt-5 text-sm text-ink-soft">
-        {productos.length} producto{productos.length === 1 ? "" : "s"} en camino
+        {productos.length} producto{productos.length === 1 ? "" : "s"} por llegar
       </p>
 
       <div className="mt-5">
@@ -81,7 +81,7 @@ export default async function PorLlegar() {
         <p className="mt-10 text-ink-soft">Esta sección no está disponible en este momento.</p>
       ) : productos.length === 0 ? (
         <div className="mt-10 rounded-2xl border border-border bg-surface-sunken/60 p-6 text-center">
-          <p className="text-ink">Por ahora no hay productos en camino.</p>
+          <p className="text-ink">Por ahora no hay productos por llegar.</p>
           <p className="mt-1.5 text-sm text-ink-soft">
             Cuando tengamos algo por llegar lo vas a ver acá. Mientras tanto, mira{" "}
             <a href="/productos" className="text-accent hover:underline">

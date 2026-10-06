@@ -50,6 +50,10 @@ export function TarjetaProducto({ producto }: { producto: ProductoWeb }) {
   // cotiza por WhatsApp desde su ficha (ver src/lib/encargo-cotizar.ts).
   const sinStock = !producto.es_pedido_encargo && producto.stock_web <= 0;
   const soloCotizar = producto.precio_a_consultar || producto.es_pedido_encargo;
+  /* Por llegar y todavía sin unidades en tienda: no es "sin stock", se
+     reserva desde la ficha (fecha estimada y pago del 100%). Antes la
+     tarjeta mostraba "Sin stock" apagado en /por-llegar (06-10-2026). */
+  const reservar = !soloCotizar && producto.por_llegar && producto.stock_web <= 0;
   /* En la grilla solo se marca el caso fuerte (última unidad). Poner
      "quedan 3" en cada tarjeta llenaría el catálogo de carteles y el
      ojo dejaría de verlos justo cuando importa. El detalle completo
@@ -177,6 +181,13 @@ export function TarjetaProducto({ producto }: { producto: ProductoWeb }) {
               className="flex w-full items-center justify-center rounded-md border border-primary/40 px-3 py-2 text-sm font-semibold uppercase tracking-wide text-primary transition-colors hover:bg-primary/10 lg:py-1.5"
             >
               Cotizar
+            </Link>
+          ) : reservar ? (
+            <Link
+              href={rutaFicha}
+              className="flex w-full items-center justify-center rounded-md bg-primary px-3 py-2 text-sm font-semibold uppercase tracking-wide text-surface-sunken transition-colors hover:bg-primary-soft lg:py-1.5"
+            >
+              Reservar
             </Link>
           ) : (
           <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
