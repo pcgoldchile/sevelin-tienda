@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { FLOW_ESTADO_PAGADO, obtenerEstadoPagoFlow } from '@/lib/flow';
 import { emitirBoleta, openFacturaHabilitada } from '@/lib/openfactura';
 import { ajustarStockPos, registrarVentaWebEnPos } from '@/lib/pos-interno';
+import { anotarReservasDePedido } from '@/lib/avisos-producto';
 import {
   guardarDatosBoleta,
   marcarErrorStockSinDespacho,
@@ -127,6 +128,10 @@ export async function POST(req: NextRequest) {
 
   try {
     await ajustarStockPos(pedido.items);
+    /* Reservas de algo "por llegar": quedan en la lista de espera como
+       RESERVA, para avisarle al comprador el día que llegue. Solo si el POS
+       aceptó la reserva; nunca lanza. */
+    await anotarReservasDePedido(pedido);
   } catch (err) {
     const detalleTecnico = err instanceof Error ? err.message : String(err);
     console.error(`[flow-webhook] ${numeroPedido}: ALERTA — pago cobrado, sin stock para despachar:`, detalleTecnico);

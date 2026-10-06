@@ -3,6 +3,18 @@
 import { useMemo, useState } from "react";
 import type { ProductoWeb } from "@/lib/tipos";
 import { TarjetaProducto } from "@/components/tarjeta-producto";
+import { SelectorOrdenLocal, type OpcionOrdenLocal } from "@/components/selector-orden-local";
+
+/* Orden (dueño, 06-10-2026). "Por rubro" es la vista de siempre, agrupada.
+   Con cualquier otro orden la lista va plana: ordenar por precio dentro de
+   cada subgrupo no deja comparar entre rubros, que es para lo que se ordena. */
+type OrdenEncargos = "rubro" | "precio-asc" | "precio-desc" | "nombre";
+const OPCIONES_ORDEN: OpcionOrdenLocal<OrdenEncargos>[] = [
+  { valor: "rubro", etiqueta: "Por rubro" },
+  { valor: "precio-asc", etiqueta: "Precio: menor a mayor" },
+  { valor: "precio-desc", etiqueta: "Precio: mayor a menor" },
+  { valor: "nombre", etiqueta: "Nombre: A-Z" },
+];
 
 /**
  * Navegación por rubros de "Pedidos por Encargo".
@@ -56,13 +68,25 @@ function agrupar(productos: ProductoWeb[]): Grupo[] {
 export function EncargosNavegables({ productos }: { productos: ProductoWeb[] }) {
   const grupos = useMemo(() => agrupar(productos), [productos]);
   const [categoriaActiva, setCategoriaActiva] = useState<string | null>(null);
+  const [orden, setOrden] = useState<OrdenEncargos>("rubro");
 
   // Con una sola categoría el selector no aporta nada: se muestra directo.
   const mostrarSelector = grupos.length > 1;
   const visibles = categoriaActiva ? grupos.filter((g) => g.nombre === categoriaActiva) : grupos;
+  const planos = useMemo(() => {
+    if (orden === "rubro") return [];
+    const lista = visibles.flatMap((g) => g.subgrupos.flatMap((s) => s.productos));
+    return [...lista].sort((a, b) =>
+      orden === "precio-asc" ? a.precio_web - b.precio_web
+        : orden === "precio-desc" ? b.precio_web - a.precio_web
+          : a.nombre.localeCompare(b.nombre, "es"));
+  }, [visibles, orden]);
 
   return (
     <div className="mt-8">
+      <div className="mb-3 flex justify-end">
+        <SelectorOrdenLocal valor={orden} opciones={OPCIONES_ORDEN} onCambio={setOrden} />
+      </div>
       {mostrarSelector && (
         <nav aria-label="Rubros por encargo" className="flex flex-wrap gap-2">
           <button
@@ -95,7 +119,15 @@ export function EncargosNavegables({ productos }: { productos: ProductoWeb[] }) 
         </nav>
       )}
 
-      {visibles.map((grupo) => (
+      {orden !== "rubro" && (
+        <div className="mt-8 grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4">
+          {planos.map((producto) => (
+            <TarjetaProducto key={producto.id} producto={producto} />
+          ))}
+        </div>
+      )}
+
+      {orden === "rubro" && visibles.map((grupo) => (
         <section key={grupo.nombre} className="mt-10">
           <h2 className="font-display text-xl font-bold uppercase tracking-tight text-ink">
             {grupo.nombre}

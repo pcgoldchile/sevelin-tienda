@@ -175,6 +175,11 @@ export interface ItemPedido {
      costado sin mayorista. Ausente = precio normal. */
   precio_tipo?: 'NORMAL' | 'MAYORISTA';
   precio_normal?: number;
+  /* Reserva de algo "por llegar" (06-10-2026): pagado, pero todavía no está
+     en la tienda. No se descuenta stock: el POS lo anota como reservado
+     (sevelin-pos-oficial/sql/87). Ausente = producto que sí estaba. */
+  por_llegar?: boolean;
+  fecha_llegada_estimada?: string | null;
 }
 
 export type EstadoPedido =

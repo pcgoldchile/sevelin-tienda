@@ -11,6 +11,7 @@ import { crearClienteServidor } from '@/lib/supabase-server';
 import { marcarCarritoConvertido } from '@/lib/carritos-web';
 import { contextoMayorista, preciosMayoristasDe } from '@/lib/mayorista';
 import { resolverPreciosMayoristas } from '@/lib/mayorista-precios';
+import { esReservaPorLlegar, topeDeCompra } from '@/lib/por-llegar';
 import type { DatosFactura, DireccionEnvio, ItemPedido } from '@/lib/tipos';
 import { FACTURA_HABILITADA } from '@/lib/factura';
 
@@ -153,8 +154,15 @@ export async function POST(req: NextRequest) {
         if (producto.es_pedido_encargo) {
           throw new Error(`"${producto.nombre}" es un producto por encargo: su precio es referencial y no se paga en línea. Quítalo del carrito y cotízalo por WhatsApp desde su ficha.`);
         }
-        if (cantidad > producto.stock_web) {
-          throw new Error(`Sin stock suficiente de "${producto.nombre}" (quedan ${producto.stock_web})`);
+        /* Tope real: lo que hay en la tienda o, si no queda nada y viene en
+           camino, lo que viene (reserva con pago del 100%). Antes era solo
+           stock_web y toda reserva se rechazaba acá por "sin stock". */
+        const reserva = esReservaPorLlegar(producto);
+        const tope = topeDeCompra(producto);
+        if (cantidad > tope) {
+          throw new Error(reserva
+            ? `Solo quedan ${tope} unidad(es) por llegar de "${producto.nombre}" para reservar`
+            : `Sin stock suficiente de "${producto.nombre}" (quedan ${producto.stock_web})`);
         }
         const item: ItemPedido = {
           sku: producto.sku,
@@ -163,6 +171,7 @@ export async function POST(req: NextRequest) {
           precio_web: producto.precio_web,
           cantidad,
           es_servicio: esServicioTecnico(producto),
+          ...(reserva ? { por_llegar: true, fecha_llegada_estimada: producto.fecha_llegada_estimada ?? null } : {}),
         };
         return {
           item,

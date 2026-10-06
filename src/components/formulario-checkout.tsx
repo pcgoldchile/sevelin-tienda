@@ -21,6 +21,7 @@ import { COMUNAS_POR_REGION } from "@/lib/comunas-chile";
 import type { OpcionEnvio } from "@/lib/envio";
 import { AvisoMayoristaCarrito } from "@/components/aviso-mayorista-carrito";
 import { FACTURA_HABILITADA } from "@/lib/factura";
+import { esReservaPorLlegar, fechaLlegadaLegible, ultimaFechaLlegada } from "@/lib/por-llegar";
 
 const CAMPO =
   "rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm outline-none transition-colors focus:border-accent";
@@ -132,6 +133,28 @@ export function FormularioCheckout({
   const hayServicios = itemsSeleccionados.some(esItemServicio);
   const hayProductos = itemsSeleccionados.some((item) => !esItemServicio(item));
   const esMixto = hayServicios && hayProductos;
+
+  /* POR LLEGAR (dueño, 06-10-2026). Una línea reservada todavía no está en
+     la tienda: el checkout no puede prometer "retira hoy" ni "sale hoy" por
+     ESE producto. Se nombra cuál es, se dice que se avisa por correo cuando
+     llegue, y —si hay otros productos que sí están— que esos se pueden
+     retirar mientras tanto. Con despacho va todo junto cuando llegue. */
+  const porLlegar = itemsSeleccionados.filter((item) => !esItemServicio(item) && esReservaPorLlegar(item));
+  const hayPorLlegar = porLlegar.length > 0;
+  const todoPorLlegar = hayPorLlegar && !itemsSeleccionados.some((item) => !esItemServicio(item) && !esReservaPorLlegar(item));
+  const fechaPorLlegar = fechaLlegadaLegible(ultimaFechaLlegada(porLlegar.map((item) => item.fecha_llegada_estimada)));
+  const cuandoLlega = fechaPorLlegar ? ` (fecha estimada: ${fechaPorLlegar})` : "";
+  const avisoDeOpcion = (opcion: OpcionEnvio): string | undefined => {
+    if (!hayPorLlegar) return opcion.aviso;
+    if (opcion.metodo === "RETIRO") {
+      return todoPorLlegar
+        ? `Todavía no está en la tienda${cuandoLlega}. Te avisamos por correo apenas llegue y lo retiras cuando te acomode.`
+        : `${opcion.aviso ? opcion.aviso + " " : ""}Lo que está por llegar${cuandoLlega} lo retiras después: te avisamos por correo apenas esté en la tienda.`;
+    }
+    return todoPorLlegar
+      ? `Se despacha apenas llegue a la tienda${cuandoLlega}. Te avisamos por correo.`
+      : `Tu pedido se despacha completo cuando llegue lo que falta${cuandoLlega}. Si quieres antes lo que ya está, elige retiro en tienda o escríbenos por WhatsApp.`;
+  };
   const [quiereCuenta, setQuiereCuenta] = useState(false);
   const [avisoCuenta, setAvisoCuenta] = useState<string | null>(null);
   // Id del carrito guardado en carritos_web (origen 'checkout') — se llena
@@ -476,8 +499,8 @@ export function FormularioCheckout({
           metodoEnvio: metodoElegido,
           // Solo tienen sentido con retiro en tienda; el servidor los ignora
           // en cualquier otro método.
-          retiroFecha: retiroFecha || null,
-          retiroBloque: retiroBloque || null,
+          retiroFecha: todoPorLlegar && !hayServicios ? null : retiroFecha || null,
+          retiroBloque: todoPorLlegar && !hayServicios ? null : retiroBloque || null,
           metodoPago,
           nota: datos.get("nota"),
           consentimientoPrivacidad: aceptaPrivacidad,
@@ -560,6 +583,11 @@ export function FormularioCheckout({
               <div className="flex flex-1 flex-col gap-0.5">
                 <span className="text-ink">{item.nombre}</span>
                 <span className="text-xs text-ink-faint">Cantidad: {item.cantidad}</span>
+                {!esItemServicio(item) && esReservaPorLlegar(item) && (
+                  <span className="text-xs font-medium text-amber-400">
+                    🚚 Por llegar{fechaLlegadaLegible(item.fecha_llegada_estimada, true) ? ` · aprox. ${fechaLlegadaLegible(item.fecha_llegada_estimada, true)}` : ""}
+                  </span>
+                )}
                 {item.es_precio_mayorista && <span className="text-xs font-medium text-success">🤝 Precio mayorista</span>}
               </div>
               <span className="shrink-0 tabular-nums">{formatoCLP.format(item.precio_web * item.cantidad)}</span>
@@ -915,6 +943,31 @@ export function FormularioCheckout({
             </p>
           )}
 
+          {/* Por llegar: se nombra el producto, no el pedido entero. */}
+          {hayPorLlegar && (
+            <div className="rounded-xl border border-amber-400/40 bg-amber-400/10 p-3.5 text-sm leading-relaxed">
+              <p className="font-semibold text-ink">
+                🚚 {porLlegar.length === 1 ? "Este producto está por llegar" : "Estos productos están por llegar"}
+              </p>
+              <ul className="mt-1 flex flex-col gap-0.5 text-ink-soft">
+                {porLlegar.map((item) => {
+                  const fecha = fechaLlegadaLegible(item.fecha_llegada_estimada);
+                  return (
+                    <li key={item.sku}>
+                      • <strong className="text-ink">{item.nombre}</strong>
+                      {fecha ? ` — llega aprox. el ${fecha}` : ""}
+                    </li>
+                  );
+                })}
+              </ul>
+              <p className="mt-2 text-ink-soft">
+                Todavía no {porLlegar.length === 1 ? "está" : "están"} en la tienda. Tu pago {porLlegar.length === 1 ? "lo deja reservado" : "los deja reservados"} a tu nombre y{" "}
+                <strong className="text-ink">te avisamos por correo apenas {porLlegar.length === 1 ? "esté disponible y listo" : "estén disponibles y listos"} para retiro</strong>.
+                {!todoPorLlegar && " Mientras tanto puedes pasar a buscar tus otros productos."} La fecha es estimada; si no llega, te devolvemos el 100%.
+              </p>
+            </div>
+          )}
+
           {!direccionCompleta && (
             <p className="text-xs text-ink-faint">
               Completa tu dirección para ver los métodos de envío disponibles, incluido el retiro en tienda.
@@ -976,9 +1029,9 @@ export function FormularioCheckout({
                               opción seleccionada quedaba casi ilegible
                               (gris apagado sobre morado). Se usa el tono
                               suave, que sí contrasta en ambos estados. */}
-                          {opcion.aviso && (
+                          {avisoDeOpcion(opcion) && (
                             <span className={`text-xs leading-snug ${elegida ? "text-ink" : "text-ink-soft"}`}>
-                              {opcion.aviso}
+                              {avisoDeOpcion(opcion)}
                             </span>
                           )}
                           {/* Si OSRM no respondió, la distancia salió de una
@@ -1008,7 +1061,9 @@ export function FormularioCheckout({
 
               Todo opcional. Un campo obligatorio más en el checkout cuesta
               ventas, y esto es una comodidad, no un requisito. */}
-          {metodoElegido && (metodoElegido === "RETIRO" || hayServicios) && (
+          {/* Con TODO por llegar no se pregunta el día de retiro: todavía no
+              hay nada que retirar, y se avisa por correo cuando llegue. */}
+          {metodoElegido && (metodoElegido === "RETIRO" || hayServicios) && !(todoPorLlegar && !hayServicios) && (
             <div className="rounded-xl border border-border bg-surface-sunken/50 p-3.5">
               {/* Servicio técnico: mismo selector, otra pregunta. Acá el día
                   SÍ es obligatorio — pagar el servicio es reservarlo, y sin

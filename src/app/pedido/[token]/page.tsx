@@ -8,6 +8,7 @@ import { URL_RESENA_GOOGLE } from "@/lib/resena-google";
 import { AvisoResenaGoogle } from "@/components/aviso-resena-google";
 import { SeguimientoPago } from "@/components/seguimiento-pago";
 import { ReintentarPago } from "@/components/reintentar-pago";
+import { fechaLlegadaLegible } from "@/lib/por-llegar";
 
 interface PropsPagina {
   /* El parámetro es `token_publico`, NO el número de pedido: los números
@@ -124,7 +125,14 @@ export default async function EstadoPedido({ params }: PropsPagina) {
         <ul className="flex flex-col gap-2">
           {pedido.items.map((item) => (
             <li key={item.sku} className="flex justify-between text-sm text-ink-soft">
-              <span>{item.nombre} × {item.cantidad}</span>
+              <span>
+                {item.nombre} × {item.cantidad}
+                {item.por_llegar && (
+                  <span className="mt-0.5 block text-xs font-medium text-amber-400">
+                    🚚 Por llegar{fechaLlegadaLegible(item.fecha_llegada_estimada) ? ` · aprox. el ${fechaLlegadaLegible(item.fecha_llegada_estimada)}` : ""}. Te avisamos por correo apenas esté en la tienda.
+                  </span>
+                )}
+              </span>
               <span className="tabular-nums">{formatoCLP.format(item.precio_web * item.cantidad)}</span>
             </li>
           ))}

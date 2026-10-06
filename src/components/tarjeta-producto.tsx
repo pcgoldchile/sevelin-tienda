@@ -111,6 +111,17 @@ export function TarjetaProducto({ producto }: { producto: ProductoWeb }) {
           etiqueta={producto.etiqueta_web ?? (producto.precio_antes ? "OFERTA" : null)}
           className="absolute left-2 top-2"
         />
+        {/* Fuera de su sección (en una búsqueda) se dice qué es: no está hoy. */}
+        {reservar && (
+          <span className="absolute right-2 top-2 rounded-full bg-amber-400 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-surface-sunken shadow-elevated-md">
+            Por llegar
+          </span>
+        )}
+        {producto.es_pedido_encargo && (
+          <span className="absolute right-2 top-2 rounded-full border border-primary/50 bg-surface/90 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary shadow-elevated-md">
+            Por encargo
+          </span>
+        )}
         {ultimaUnidad && (
           <span className="absolute right-2 top-2 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-paper shadow-elevated-md">
             Última unidad

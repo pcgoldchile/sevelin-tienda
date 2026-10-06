@@ -71,6 +71,57 @@ export async function anotarAviso(datos: {
   return { ok: true, yaEstaba: false };
 }
 
+/**
+ * Anota las RESERVAS de un pedido recién pagado: una por cada línea de algo
+ * "por llegar". Es lo que hace que, cuando el dueño marque "Ya llegó" en el
+ * POS, el comprador reciba el correo "llegó tu reserva, pasa a buscarla"
+ * (correoProductoLlego con esReserva).
+ *
+ * Si la misma persona ya había pedido que le avisaran de ese producto, ese
+ * aviso se convierte en reserva: si no, recibiría "ya está disponible,
+ * cómpralo" por algo que ya pagó.
+ *
+ * Nunca lanza: corre dentro del webhook de pago, después de cobrar.
+ */
+export async function anotarReservasDePedido(pedido: {
+  numero_pedido: string;
+  cliente_email: string | null;
+  cliente_nombre: string | null;
+  cliente_telefono: string | null;
+  items: { sku: string; producto_pos_id: number; nombre: string; por_llegar?: boolean }[];
+}): Promise<number> {
+  const email = (pedido.cliente_email || '').trim().toLowerCase();
+  if (!email) return 0;
+  let anotadas = 0;
+  for (const item of pedido.items.filter((it) => it.por_llegar)) {
+    try {
+      const r = await anotarAviso({
+        productoPosId: item.producto_pos_id,
+        sku: item.sku,
+        nombreProducto: item.nombre,
+        tipo: 'RESERVA',
+        email,
+        nombre: pedido.cliente_nombre,
+        telefono: pedido.cliente_telefono,
+        numeroPedido: pedido.numero_pedido,
+      });
+      if (r.yaEstaba) {
+        const { error } = await supabaseWeb
+          .from('avisos_producto')
+          .update({ tipo: 'RESERVA', numero_pedido: pedido.numero_pedido })
+          .eq('producto_pos_id', item.producto_pos_id)
+          .eq('email', email)
+          .eq('estado', 'PENDIENTE');
+        if (error) console.error('[avisos] no se pudo convertir el aviso en reserva:', error.message);
+      }
+      anotadas++;
+    } catch (err) {
+      console.error(`[avisos] ${pedido.numero_pedido}: no se pudo anotar la reserva de ${item.sku}:`, err instanceof Error ? err.message : err);
+    }
+  }
+  return anotadas;
+}
+
 /** Quiénes esperan un producto. La usa el disparador de "ya llegó". */
 export async function avisosPendientesDe(productoPosId: number): Promise<AvisoProducto[]> {
   const { data, error } = await supabaseWeb

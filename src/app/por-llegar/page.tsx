@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { listarPorLlegar } from "@/lib/encargos";
-import { TarjetaProducto } from "@/components/tarjeta-producto";
+import { PorLlegarNavegable } from "@/components/por-llegar-navegable";
 import { AvisoPagoTarjeta } from "@/components/aviso-pago-tarjeta";
 import { Truck, ShieldCheck, BellRing } from "lucide-react";
 
@@ -69,10 +69,6 @@ export default async function PorLlegar() {
         </li>
       </ul>
 
-      <p className="mt-5 text-sm text-ink-soft">
-        {productos.length} producto{productos.length === 1 ? "" : "s"} por llegar
-      </p>
-
       <div className="mt-5">
         <AvisoPagoTarjeta />
       </div>
@@ -91,11 +87,7 @@ export default async function PorLlegar() {
           </p>
         </div>
       ) : (
-        <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-          {productos.map((producto) => (
-            <TarjetaProducto key={producto.sku} producto={producto} />
-          ))}
-        </div>
+        <PorLlegarNavegable productos={productos} />
       )}
     </main>
   );

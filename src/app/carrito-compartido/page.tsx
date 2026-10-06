@@ -1,6 +1,7 @@
 import { obtenerProductoPorSku } from "@/lib/catalogo";
 import { obtenerCarritoPorToken } from "@/lib/carritos-web";
 import Link from "next/link";
+import { topeDeCompra } from "@/lib/por-llegar";
 import { rutaDeSku } from "@/lib/sku-url";
 import { AgregarCarritoCompartido } from "./agregar-carrito-compartido";
 import { MiniaturaAmpliable } from "./miniatura-ampliable";
@@ -64,10 +65,10 @@ export default async function CarritoCompartido({ searchParams }: Props) {
                 href={`/productos/${rutaDeSku(producto!.sku)}`}
                 className="min-w-0 flex-1 text-sm font-medium text-ink hover:text-accent hover:underline"
               >
-                {producto!.nombre} × {Math.min(solicitado.cantidad, producto!.stock_web)}
+                {producto!.nombre} × {Math.min(solicitado.cantidad, topeDeCompra(producto!))}
               </Link>
               <span className="shrink-0 text-sm text-ink-soft tabular-nums">
-                {(producto!.precio_web * Math.min(solicitado.cantidad, producto!.stock_web)).toLocaleString("es-CL", {
+                {(producto!.precio_web * Math.min(solicitado.cantidad, topeDeCompra(producto!))).toLocaleString("es-CL", {
                   style: "currency",
                   currency: "CLP",
                 })}
@@ -113,7 +114,7 @@ export default async function CarritoCompartido({ searchParams }: Props) {
           esPropio={esPropio}
           items={disponibles.map(({ producto, solicitado }) => ({
             producto: producto!,
-            cantidad: Math.min(solicitado.cantidad, producto!.stock_web),
+            cantidad: Math.min(solicitado.cantidad, topeDeCompra(producto!)),
           }))}
         />
       ) : encargos.length === 0 ? (

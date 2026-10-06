@@ -15,6 +15,7 @@ import { useSesion } from "@/context/sesion-context";
 import { crearClienteNavegador } from "@/lib/supabase-browser";
 import { esServicioTecnico } from "@/lib/servicios";
 import { resolverPreciosMayoristas, type DatosMayorista } from "@/lib/mayorista-precios";
+import { topeDeCompra } from "@/lib/por-llegar";
 
 const CLAVE_LOCALSTORAGE = "sevelin-carrito";
 
@@ -44,6 +45,12 @@ export interface ItemCarrito {
    *  se paga en línea. Lo marca actualizarPrecios(); queda sin seleccionar y
    *  el carrito ofrece cotizarlo por WhatsApp. */
   es_pedido_encargo?: boolean;
+  /** "Por llegar" (06-10-2026): con stock_web en 0 la línea es una RESERVA
+   *  pagada, hasta stock_por_llegar unidades. Los tres campos los mantiene
+   *  al día actualizarPrecios(); el tope sale de topeDeCompra(). */
+  por_llegar?: boolean;
+  stock_por_llegar?: number;
+  fecha_llegada_estimada?: string | null;
 }
 
 /** Cuenta mayorista aprobada con productos en el carrito (supabase/39). */
@@ -198,7 +205,10 @@ export function CarritoProvider({ children }: { children: ReactNode }) {
     if (producto.precio_a_consultar || producto.es_pedido_encargo) return;
     setItems((prev) => {
       const existente = prev.find((item) => item.sku === producto.sku);
-      const tope = producto.stock_web;
+      /* Lo que hay en tienda o, si no queda nada y viene en camino, lo que
+         viene. Antes era solo stock_web: una reserva entraba con cantidad 0. */
+      const tope = topeDeCompra(producto);
+      if (tope <= 0) return prev;
       if (existente) {
         const nuevaCantidad = Math.min(existente.cantidad + cantidad, tope);
         return prev.map((item) =>
@@ -214,9 +224,12 @@ export function CarritoProvider({ children }: { children: ReactNode }) {
           precio_antes: producto.precio_antes ?? null,
           imagen: producto.imagen_urls?.[0] ?? null,
           stock_web: producto.stock_web,
-          cantidad: Math.min(cantidad, tope),
+          cantidad: Math.max(1, Math.min(cantidad, tope)),
           seleccionado: true,
           es_servicio: esServicioTecnico(producto),
+          por_llegar: !!producto.por_llegar,
+          stock_por_llegar: producto.stock_por_llegar ?? 0,
+          fecha_llegada_estimada: producto.fecha_llegada_estimada ?? null,
         },
       ];
     });
@@ -231,7 +244,7 @@ export function CarritoProvider({ children }: { children: ReactNode }) {
       prev
         .map((item) =>
           item.sku === sku
-            ? { ...item, cantidad: Math.max(1, Math.min(cantidad, item.stock_web)) }
+            ? { ...item, cantidad: Math.max(1, Math.min(cantidad, topeDeCompra(item))) }
             : item
         )
         .filter((item) => item.cantidad > 0)
@@ -281,6 +294,9 @@ export function CarritoProvider({ children }: { children: ReactNode }) {
           precio_antes: number | null;
           stock_web: number;
           es_pedido_encargo?: boolean;
+          por_llegar?: boolean;
+          stock_por_llegar?: number;
+          fecha_llegada_estimada?: string | null;
           mayorista?: DatosMayorista | null;
         }>;
         mayorista?: { pedido_minimo: number } | null;
@@ -309,11 +325,26 @@ export function CarritoProvider({ children }: { children: ReactNode }) {
               ? item
               : { ...item, precio_web: p.precio_web, precio_antes: null, es_pedido_encargo: true, seleccionado: false };
           }
-          if (p.precio_web === item.precio_web && (p.precio_antes ?? null) === (item.precio_antes ?? null) && p.stock_web === item.stock_web && !item.es_pedido_encargo) {
+          /* Por llegar: el estado y el tope se toman del servidor. La cantidad se
+             ajusta al tope (y nunca queda en 0: los carritos guardados antes
+             del 06-10-2026 podían traer una reserva con cantidad 0). */
+          const llegada = {
+            por_llegar: !!p.por_llegar,
+            stock_por_llegar: Number(p.stock_por_llegar) || 0,
+            fecha_llegada_estimada: p.fecha_llegada_estimada ?? null,
+          };
+          const tope = topeDeCompra({ stock_web: p.stock_web, ...llegada });
+          const cantidad = Math.max(1, tope > 0 ? Math.min(item.cantidad, tope) : item.cantidad);
+          if (
+            p.precio_web === item.precio_web && (p.precio_antes ?? null) === (item.precio_antes ?? null) &&
+            p.stock_web === item.stock_web && !item.es_pedido_encargo && cantidad === item.cantidad &&
+            llegada.por_llegar === !!item.por_llegar && llegada.stock_por_llegar === (item.stock_por_llegar ?? 0) &&
+            llegada.fecha_llegada_estimada === (item.fecha_llegada_estimada ?? null)
+          ) {
             return item;
           }
           // es_pedido_encargo en false: si el dueño lo pasó a stock propio, vuelve a poder comprarse.
-          return { ...item, precio_web: p.precio_web, precio_antes: p.precio_antes, stock_web: p.stock_web, es_pedido_encargo: false };
+          return { ...item, precio_web: p.precio_web, precio_antes: p.precio_antes, stock_web: p.stock_web, es_pedido_encargo: false, cantidad, ...llegada };
         })
       );
       return cambiados;

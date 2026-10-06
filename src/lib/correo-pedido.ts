@@ -2,6 +2,7 @@ import { DIRECCION_TIENDA } from './distancia';
 import { formatoCLP } from './formato';
 import { escaparHtml } from './escapar-html';
 import { fechaRetiroLegible } from './retiro-agendado';
+import { fechaLlegadaLegible } from './por-llegar';
 import { URL_RESENA_GOOGLE } from './resena-google';
 import type { PedidoWeb } from './tipos';
 
@@ -131,6 +132,21 @@ export function correoConfirmacionPedido(
           ? `te los llevas ese mismo día, cuando traigas tu equipo`
           : entregaProductos);
 
+  /* Reservas de algo "por llegar" (06-10-2026): el correo no puede dar a
+     entender que eso se retira o se despacha ya. Se nombra cada producto, con
+     su fecha estimada, y qué pasa con el resto del pedido. */
+  const porLlegar = pedido.items.filter((it) => it.por_llegar);
+  const hayOtrosProductos = pedido.items.some((it) => !it.por_llegar && !it.es_servicio);
+  const bloquePorLlegar = porLlegar.length === 0 ? '' : `
+    <div style="margin:0 0 16px;padding:12px 14px;border:1px solid #f59e0b;border-radius:10px;">
+      <p style="margin:0 0 6px;font-size:14px;font-weight:700;color:${TEXTO};">🚚 ${porLlegar.length === 1 ? 'Un producto de tu pedido está por llegar' : 'Productos de tu pedido que están por llegar'}</p>
+      ${porLlegar.map((it) => {
+        const fecha = fechaLlegadaLegible(it.fecha_llegada_estimada);
+        return `<p style="margin:0 0 4px;font-size:14px;color:${TEXTO_SUAVE};">• <strong style="color:${TEXTO};">${it.nombre}</strong>${fecha ? ` — llega aprox. el ${fecha}` : ''}</p>`;
+      }).join('')}
+      <p style="margin:8px 0 0;font-size:14px;color:${TEXTO_SUAVE};">Ya quedó pagado y reservado a tu nombre. <strong style="color:${TEXTO};">Te avisamos por correo apenas esté en la tienda</strong>${pedido.metodo_envio === 'RETIRO' ? ', listo para retiro' : ' y coordinamos la entrega'}.${hayOtrosProductos && pedido.metodo_envio === 'RETIRO' ? ' Mientras tanto puedes pasar a buscar el resto de tu pedido.' : ''}${hayOtrosProductos && pedido.metodo_envio !== 'RETIRO' ? ' Tu pedido se despacha completo cuando llegue; si quieres antes lo que ya está, escríbenos por WhatsApp.' : ''} La fecha es estimada. Si no llega, te devolvemos el 100%.</p>
+    </div>`;
+
   const contenido = `
     <p style="margin:0 0 16px;font-size:14px;color:${TEXTO_SUAVE};">${nombre}, recibimos tu pago. Este es el resumen de tu pedido <strong style="color:${TEXTO};">${pedido.numero_pedido}</strong>.</p>
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">
@@ -140,6 +156,7 @@ export function correoConfirmacionPedido(
       <tr><td style="padding:6px 0 0;font-size:16px;font-weight:700;color:${TEXTO};">Total</td><td style="padding:6px 0 0;font-size:16px;font-weight:700;color:${TEXTO};text-align:right;">${formatoCLP.format(pedido.total)}</td></tr>
     </table>
     ${bloqueEntrega}
+    ${bloquePorLlegar}
     ${bloqueReseña()}
   `;
 

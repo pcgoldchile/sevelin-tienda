@@ -12,6 +12,7 @@ import { AvisoPagoTarjeta } from "@/components/aviso-pago-tarjeta";
 import { ModalCotizar } from "@/components/modal-cotizar";
 import { PrecioAntes } from "@/components/precio-oferta";
 import { AvisoMayoristaCarrito, PistaMayoristaLinea } from "@/components/aviso-mayorista-carrito";
+import { esReservaPorLlegar, fechaLlegadaLegible, topeDeCompra } from "@/lib/por-llegar";
 
 export default function CarritoPage() {
   const {
@@ -146,6 +147,12 @@ export default function CarritoPage() {
                     <PrecioAntes precioAntes={item.precio_antes} precio={item.precio_web} className="text-xs" />
                   </span>
                   <PistaMayoristaLinea item={item} />
+                  {/* Reserva de algo por llegar: se dice en la línea, con su fecha. */}
+                  {!item.es_pedido_encargo && esReservaPorLlegar(item) && (
+                    <span className="text-xs font-medium text-amber-400">
+                      🚚 Por llegar{fechaLlegadaLegible(item.fecha_llegada_estimada) ? ` · aprox. el ${fechaLlegadaLegible(item.fecha_llegada_estimada)}` : ""}. Lo reservas pagando ahora y te avisamos por correo cuando esté en la tienda.
+                    </span>
+                  )}
                   {item.es_pedido_encargo ? (
                     <EncargoEnCarrito nombre={item.nombre} sku={item.sku} onQuitar={() => quitarItem(item.sku)} />
                   ) : (
@@ -179,7 +186,7 @@ export default function CarritoPage() {
                       <button
                         type="button"
                         onClick={() => cambiarCantidad(item.sku, item.cantidad + 1)}
-                        disabled={item.cantidad >= item.stock_web}
+                        disabled={item.cantidad >= topeDeCompra(item)}
                         className="flex h-9 w-9 shrink-0 items-center justify-center text-ink-soft transition-colors hover:text-primary disabled:pointer-events-none disabled:opacity-40"
                         aria-label={`Sumar cantidad de ${item.nombre}`}
                       >

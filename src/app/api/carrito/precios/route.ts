@@ -42,12 +42,21 @@ export async function POST(req: NextRequest) {
       stock_web: number;
       /** Encargo: no se paga en línea, el carrito lo saca de la compra. */
       es_pedido_encargo?: boolean;
+      /** Por llegar: con stock_web en 0 la línea es una reserva, hasta stock_por_llegar. */
+      por_llegar?: boolean;
+      stock_por_llegar?: number;
+      fecha_llegada_estimada?: string | null;
       mayorista?: { precio: number; desde: number } | null;
     }> = {};
     productos.forEach((p) => {
       if (!p) return;
       precios[p.sku] = { precio_web: p.precio_web, precio_antes: p.precio_antes ?? null, stock_web: p.stock_web };
       if (p.es_pedido_encargo) precios[p.sku].es_pedido_encargo = true;
+      if (p.por_llegar) {
+        precios[p.sku].por_llegar = true;
+        precios[p.sku].stock_por_llegar = Math.max(0, Number(p.stock_por_llegar) || 0);
+        precios[p.sku].fecha_llegada_estimada = p.fecha_llegada_estimada ?? null;
+      }
     });
 
     const supabaseSesion = await crearClienteServidor();

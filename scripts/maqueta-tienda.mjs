@@ -9,11 +9,14 @@
 //   http://localhost:54399/maqueta/entrar?quien=cliente     cuenta normal
 //   http://localhost:54399/maqueta/entrar?quien=salir       sin sesión
 // Ver lo que guardó la tienda:  http://localhost:54399/maqueta/tabla/pedidos_web
+// Pagar un pedido (Khipu falso):  http://localhost:54399/maqueta/pagar?pedido=WEB-900001
+// "Ya llegó" un por llegar:       http://localhost:54399/maqueta/llego?id=990001
+// Llamadas que recibió el POS:    http://localhost:54399/maqueta/tabla/llamadas_pos
 // Ofertas de prueba:            http://localhost:54399/maqueta/ofertas?estado=vigentes   (o proximas, ninguna)
 import http from 'node:http';
 import { spawn } from 'node:child_process';
 import { readFileSync } from 'node:fs';
-import { randomBytes } from 'node:crypto';
+import { randomBytes, createHmac } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
@@ -31,6 +34,18 @@ const USUARIOS = {
 };
 const productos = JSON.parse(readFileSync(path.join(RAIZ, 'scripts/maqueta-tienda-productos.json'), 'utf8'))
   .map((p) => ({ precio_oferta: null, oferta_desde: null, oferta_hasta: null, meta_titulo_web: null, meta_descripcion_web: null, ...p }));
+/* Por llegar (06-10-2026): dos productos de prueba. Uno sin unidades (se RESERVA, hasta 6) y
+   otro con 1 en tienda y 4 por llegar (se compra normal, tope 1). */
+{
+  const base = productos.find((p) => p.stock_web > 0 && !p.es_pedido_encargo && !p.precio_a_consultar && (p.imagen_urls || []).length);
+  const enDias = (n) => new Date(Date.now() + n * 86400000).toLocaleDateString('en-CA', { timeZone: 'America/Santiago' });
+  productos.push(
+    { ...base, id: 990001, producto_pos_id: 990001, sku: 'maqueta-por-llegar-reserva', nombre: 'Ventilador Industrial 18" (por llegar)', precio_web: 14990,
+      stock_web: 0, por_llegar: true, stock_por_llegar: 6, fecha_llegada_estimada: enDias(2), es_pedido_encargo: false, categoria: 'Hogar y Estilo de Vida', subcategoria: 'Ventiladores' },
+    { ...base, id: 990002, producto_pos_id: 990002, sku: 'maqueta-por-llegar-con-stock', nombre: 'Balanza de Baño 180 kg (queda 1, vienen más)', precio_web: 7990,
+      stock_web: 1, por_llegar: true, stock_por_llegar: 4, fecha_llegada_estimada: enDias(5), es_pedido_encargo: false, categoria: 'Hogar y Estilo de Vida', subcategoria: 'Balanzas' },
+  );
+}
 // Precio mayorista [precio, desde] por id del POS, solo para los que vienen en la muestra.
 // Con cuatro valores, los dos últimos son el segundo escalón [precio, desde] (supabase/40).
 const MAYORISTA = { 104: [3400, 5, 3100, 10], 126: [7000, 3], 162: [26000, 3], 100: [6100, 5], 207: [3500, 5, 3200, 20], 197: [2500, 5], 287: [1600, 10], 222: [8500, 3], 109: [9000, 3], 141: [7300, 3] };
@@ -48,7 +63,7 @@ const tablas = {
   cuentas_mayoristas: [cuentaMayorista('mayorista', 'APROBADA'), cuentaMayorista('pendiente', 'PENDIENTE')],
   ajustes_mayorista: [{ id: 1, pedido_minimo: 100000 }],
   perfiles_clientes: Object.values(USUARIOS).map((u) => ({ id: u.id, nombre: u.nombre, apellido: u.apellido, telefono: '+56 900000000', carrito: null, creado_en: ahora() })),
-  pedidos_web: [], carritos_web: [], eventos_web: [], visitas_activas: [], registro_errores: [], avisos_producto: [],
+  pedidos_web: [], carritos_web: [], eventos_web: [], visitas_activas: [], registro_errores: [], avisos_producto: [], llamadas_pos: [],
   cotizaciones_web: [], correos_sin_recordatorio: [], solicitudes_arco: [],
 };
 let correlativoPedido = 900000;
@@ -210,6 +225,59 @@ const servidor = http.createServer(async (req, res) => {
     return responder(200, { estado: estado || 'ninguna', con_oferta: productos.filter((p) => p.precio_oferta).map((p) => ({ sku: p.sku, normal: p.precio_web, oferta: p.precio_oferta })) });
   }
 
+  // --- POS falso (06-10-2026): descuenta stock o anota la reserva, como sql/87 del POS ---
+  if (url.pathname === '/pos/ajustar-stock' && req.method === 'POST') {
+    const cuerpo = await leerCuerpo(req);
+    tablas.llamadas_pos.push({ ruta: 'ajustar-stock', cuerpo, en: ahora() });
+    const items = cuerpo?.items || [];
+    for (const it of items) {
+      const p = productos.find((x) => Number(x.producto_pos_id) === Number(it.producto_id));
+      if (!p) continue;
+      if (it.reserva ? !(p.por_llegar && p.stock_por_llegar >= it.cantidad) : p.stock_web < it.cantidad) {
+        return responder(409, { error: it.reserva ? `No se puede reservar "${p.nombre}"` : `Stock insuficiente de "${p.nombre}"` });
+      }
+    }
+    for (const it of items) {
+      const p = productos.find((x) => Number(x.producto_pos_id) === Number(it.producto_id));
+      if (!p) continue;
+      if (it.reserva) { p.stock_por_llegar -= it.cantidad; p.reservado_web = (p.reservado_web || 0) + it.cantidad; }
+      else p.stock_web -= it.cantidad;
+    }
+    return responder(200, { ok: true });
+  }
+  if (url.pathname === '/pos/registrar-venta-web' && req.method === 'POST') {
+    tablas.llamadas_pos.push({ ruta: 'registrar-venta-web', cuerpo: await leerCuerpo(req), en: ahora() });
+    return responder(201, { ok: true, venta_id: 1 });
+  }
+
+  // --- Pagar un pedido: lo que haría Khipu al confirmarse la transferencia ---
+  if (url.pathname === '/maqueta/pagar') {
+    const pedido = tablas.pedidos_web.find((p) => p.numero_pedido === url.searchParams.get('pedido')) || tablas.pedidos_web[tablas.pedidos_web.length - 1];
+    if (!pedido) return responder(404, { error: 'No hay pedidos en la maqueta' });
+    const cuerpo = JSON.stringify({ payment_id: pedido.khipu_payment_id });
+    const ts = Date.now();
+    const firma = createHmac('sha256', 'maqueta').update(`${ts}.${cuerpo}`).digest('base64');
+    const r = await fetch(`${URL_TIENDA}/api/khipu-webhook`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-khipu-signature': `t=${ts},s=${firma}` }, body: cuerpo });
+    return responder(200, { pedido: pedido.numero_pedido, webhook: await r.json().catch(() => null), estado: pedido.estado });
+  }
+  // --- "Ya llegó": el POS apaga por_llegar y el webhook de sincronización avisa a la lista de espera ---
+  if (url.pathname === '/maqueta/llego') {
+    const p = productos.find((x) => Number(x.producto_pos_id) === Number(url.searchParams.get('id')));
+    if (!p) return responder(404, { error: 'Producto no encontrado' });
+    const llegan = p.stock_por_llegar + (p.reservado_web || 0);
+    const antes = { id: p.producto_pos_id, nombre: p.nombre, sku: p.sku, por_llegar: true };
+    const registro = { id: p.producto_pos_id, nombre: p.nombre, sku: p.sku, precio_unitario: p.precio_web, stock: p.stock_web + llegan - (p.reservado_web || 0),
+      publicado_web: true, imagen_urls: p.imagen_urls, categoria_web: p.categoria, subcategoria_web: p.subcategoria, por_llegar: false, stock_por_llegar: 0, fecha_llegada_estimada: null };
+    const r = await fetch(`${URL_TIENDA}/api/sync/producto`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-sync-secret': 'maqueta-sync' },
+      body: JSON.stringify({ type: 'UPDATE', table: 'productos', record: registro, old_record: antes }) });
+    return responder(200, { sync: await r.json().catch(() => null), avisos: tablas.avisos_producto });
+  }
+  if (/^\/khipu\/v3\/payments\/[^/]+$/.test(url.pathname) && req.method === 'GET') {
+    const id = decodeURIComponent(url.pathname.split('/').pop());
+    const pedido = tablas.pedidos_web.find((p) => p.khipu_payment_id === id);
+    return pedido ? responder(200, { payment_id: id, status: 'done', transaction_id: pedido.numero_pedido }) : responder(404, { message: 'Pago no encontrado' });
+  }
+
   // --- Khipu falso: el pago "queda creado" y vuelve a la página del pedido ---
   if (url.pathname === '/khipu/v3/payments' && req.method === 'POST') {
     const cuerpo = await leerCuerpo(req);
@@ -294,7 +362,7 @@ servidor.listen(PUERTO_SUPABASE, () => {
     RESEND_API_KEY: '', FLOW_API_KEY: '', FLOW_SECRET_KEY: '', OPENFACTURA_API_KEY: '',
     GOOGLE_GEOCODING_API_KEY: '', GOOGLE_DISTANCE_MATRIX_API_KEY: '', GOOGLE_PLACES_API_KEY: '',
     CHILEXPRESS_API_KEY_COBERTURAS: '', CHILEXPRESS_API_KEY_COTIZADOR: '', CHILEXPRESS_API_KEY_ENVIOS: '', COSTO_ENVIO_CHILEXPRESS_MOCK: '6500',
-    STARKEN_RUT: '', STARKEN_CLAVE: '', POS_INTERNAL_API_URL: '', SYNC_SECRET: 'maqueta-sync', CRON_SECRET: 'maqueta-cron',
+    STARKEN_RUT: '', STARKEN_CLAVE: '', POS_INTERNAL_API_URL: `${URL_SUPABASE}/pos/ajustar-stock`, SYNC_SECRET: 'maqueta-sync', CRON_SECRET: 'maqueta-cron',
     UPSTASH_REDIS_REST_URL: '', UPSTASH_REDIS_REST_TOKEN: '',
     NEXT_PUBLIC_FACEBOOK_PIXEL_ID: '', NEXT_PUBLIC_TURNSTILE_SITE_KEY: '',
   };

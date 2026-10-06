@@ -17,7 +17,13 @@ export async function ajustarStockPos(items: ItemPedido[]): Promise<void> {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-sync-secret': secreto },
     body: JSON.stringify({
-      items: items.map((item) => ({ producto_id: item.producto_pos_id, cantidad: item.cantidad })),
+      /* reserva: línea pagada de algo "por llegar". El POS no descuenta stock
+         (no hay): la anota como reservada (sevelin-pos-oficial/sql/87). */
+      items: items.map((item) => ({
+        producto_id: item.producto_pos_id,
+        cantidad: item.cantidad,
+        ...(item.por_llegar ? { reserva: true } : {}),
+      })),
     }),
   });
 

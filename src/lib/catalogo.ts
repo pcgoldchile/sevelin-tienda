@@ -422,13 +422,21 @@ export async function buscarCatalogo(filtros: {
   const clave: OrdenCatalogo = esOrdenCatalogoValido(filtros.orden) ? filtros.orden : 'relevancia';
   const { columna, ascending } = ORDEN_CATALOGO[clave];
 
+  /* CON TEXTO SE BUSCA EN TODO LO PUBLICADO (dueño, 06-10-2026: buscó
+     "balanza" y la de encargo no aparecía). Navegando por categoría se sigue
+     mostrando solo lo que se puede llevar hoy: los encargos y lo que está
+     por llegar tienen su propia sección. Pero quien escribe un nombre quiere
+     saber si existe, aunque sea para cotizarlo o reservarlo; la tarjeta dice
+     cuál es cuál ("Por encargo" / "Por llegar"). */
+  const qTexto = (filtros.q || '').replace(/[^\p{L}\p{N} ]/gu, '').trim();
   let query = supabaseWeb
     .from('productos_web')
     .select('*')
     .eq('publicado_web', true)
-    .eq('es_pedido_encargo', false)
-    .gt('stock_web', 0)
     .order(columna, { ascending });
+  query = qTexto
+    ? query.or('stock_web.gt.0,es_pedido_encargo.eq.true,por_llegar.eq.true')
+    : query.eq('es_pedido_encargo', false).gt('stock_web', 0);
 
   if (filtros.categoria) query = query.eq('categoria', filtros.categoria);
   // Solo tiene sentido junto con categoria (los nombres de subcategoría no
@@ -450,5 +458,11 @@ export async function buscarCatalogo(filtros: {
   // La base ordena por el precio NORMAL; con ofertas, el orden por precio
   // tiene que seguir al precio que se muestra.
   if (columna === 'precio_web') productos.sort((x, y) => (ascending ? 1 : -1) * (x.precio_web - y.precio_web));
+  /* En una búsqueda sin orden elegido va primero lo que se puede llevar hoy,
+     después lo que está por llegar y al final lo que es por encargo. */
+  if (qTexto && clave === 'relevancia') {
+    const grupo = (p: ProductoWeb) => (p.es_pedido_encargo ? 2 : p.stock_web > 0 ? 0 : 1);
+    productos.sort((x, y) => grupo(x) - grupo(y));
+  }
   return productos;
 }
