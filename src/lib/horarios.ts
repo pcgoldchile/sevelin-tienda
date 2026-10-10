@@ -2,7 +2,7 @@
  * Horarios de corte de la operación diaria.
  *
  *   - Despacho a domicilio: solo sale el mismo día si la compra entra
- *     ANTES de las 18:00. Después, se programa para el día hábil siguiente.
+ *     ANTES de las 20:00. Después, se programa para el día hábil siguiente.
  *   - Retiro en tienda: se puede retirar el mismo día hasta las 21:00.
  *
  * TODO se evalúa en hora de Chile, nunca con la hora del navegador del
@@ -35,7 +35,7 @@ export const HORARIO_LEGIBLE = 'Lunes a domingo, de 10:00 a 13:00 y de 14:00 a 2
 export const AVISO_DOMINGO =
   'Los domingos atendemos, pero conviene escribirnos o llamarnos antes para confirmar.';
 
-export const CORTE_DESPACHO_HORA = 18; // 18:00
+export const CORTE_DESPACHO_HORA = 20; // 20:00 (dueño, 10-10-2026; antes 18:00)
 export const CORTE_RETIRO_HORA = 21; // 21:00
 
 export interface EstadoHorario {

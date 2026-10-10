@@ -119,7 +119,7 @@ export function Header({
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-1.5 text-xs font-medium sm:px-6 lg:px-8">
           <p className="flex items-center gap-1.5">
             <Truck className="h-3.5 w-3.5 shrink-0" aria-hidden />
-            <span>Entrega en Arica el mismo día <span className="hidden sm:inline">si compras antes de las 18:00</span> · Envíos a todo Chile</span>
+            <span>Entrega en Arica el mismo día <span className="hidden sm:inline">si compras antes de las 20:00</span> · Envíos a todo Chile</span>
           </p>
           <nav aria-label="Información" className="hidden shrink-0 items-center gap-4 md:flex">
             <Link href="/venta-mayorista" className="font-semibold transition-opacity hover:opacity-80">Venta mayorista</Link>

@@ -119,7 +119,7 @@ export default async function Ofertas() {
           <li className="flex items-start gap-2.5 rounded-2xl border border-border bg-surface-sunken/60 p-3.5">
             <Truck className="mt-0.5 h-4 w-4 shrink-0 text-accent" aria-hidden />
             <span className="text-sm text-ink-soft">
-              <strong className="text-ink">En Arica lo recibes hoy.</strong> Si compras antes de las 18:00 te lo llevamos el mismo día.
+              <strong className="text-ink">En Arica lo recibes hoy.</strong> Si compras antes de las 20:00 te lo llevamos el mismo día.
             </span>
           </li>
           <li className="flex items-start gap-2.5 rounded-2xl border border-border bg-surface-sunken/60 p-3.5">
