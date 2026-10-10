@@ -86,6 +86,40 @@ export async function obtenerProductoPublicado(sku: string): Promise<ProductoWeb
 }
 
 /**
+ * El enlace de hoy de un producto al que le cambiaron el nombre (10-10-2026).
+ *
+ * Un producto sin SKU en el POS tiene como enlace su nombre más su número
+ * (`selladora-de-bolsa-fs-200-azul-325`, ver `slugDeRespaldo` en
+ * api/sync/producto). Al renombrarlo en el POS el enlace cambia con él, que
+ * es lo que el dueño quiere ("que el enlace se guíe por el nombre"), pero el
+ * enlace viejo quedaba en 404: se perdía lo que Google ya tenía indexado y
+ * los links mandados por WhatsApp o Facebook.
+ *
+ * El número del final no cambia nunca, así que con él se encuentra el
+ * producto y la ficha redirige al enlace nuevo. Solo responde si el enlace
+ * vigente también termina en ese número: así un enlace cualquiera que acabe
+ * en un número (`/productos/cable-hdmi-2`) no cae en un producto ajeno.
+ *
+ * Devuelve null cuando no hay a dónde redirigir.
+ */
+export async function skuVigenteDeEnlaceViejo(enlace: string): Promise<string | null> {
+  const numero = /-(\d{1,9})$/.exec(enlace || '')?.[1];
+  if (!numero) return null;
+
+  const { data, error } = await supabaseWeb
+    .from('productos_web')
+    .select('sku')
+    .eq('producto_pos_id', Number(numero))
+    .eq('publicado_web', true)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  const vigente = (data?.sku as string | undefined) || '';
+  if (!vigente || vigente === enlace || !vigente.endsWith(`-${numero}`)) return null;
+  return vigente;
+}
+
+/**
  * Todo lo publicado que no sea pedido por encargo, haya stock o no.
  * La usa el sitemap: un agotado con ficha viva debe poder indexarse, que
  * es justamente lo que lo mantiene en Google mientras vuelve a haber.

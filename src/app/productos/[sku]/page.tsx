@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { after } from "next/server";
-import { obtenerProductoPublicado, productosComplementarios, productosRelacionados } from "@/lib/catalogo";
+import { obtenerProductoPublicado, productosComplementarios, productosRelacionados, skuVigenteDeEnlaceViejo } from "@/lib/catalogo";
 import { CarruselProductos } from "@/components/carrusel-productos";
 import { OpcionesAgotado } from "@/components/opciones-agotado";
 import { skuDesdeRuta, rutaDeSku } from "@/lib/sku-url";
@@ -95,6 +95,13 @@ export default async function FichaProducto({ params }: PropsPagina) {
         <p className="text-ink-soft">El catálogo no está disponible en este momento.</p>
       </main>
     );
+  }
+  // Enlace viejo de un producto renombrado: va a su enlace de hoy en vez de
+  // dar "no encontrado" (ver skuVigenteDeEnlaceViejo). Si la búsqueda falla,
+  // se queda en el 404 de siempre.
+  if (!producto) {
+    const vigente = await skuVigenteDeEnlaceViejo(skuDesdeRuta(sku)).catch(() => null);
+    if (vigente) permanentRedirect(`/productos/${rutaDeSku(vigente)}`);
   }
   // Los productos de Encargo viven solo en /pedidos-por-encargo — mismo
   // criterio de "sección aparte" que el resto del catálogo (ver
