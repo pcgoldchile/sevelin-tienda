@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { after } from "next/server";
 import { obtenerEncargoPorSku } from "@/lib/encargos";
-import { skuDesdeRuta } from "@/lib/sku-url";
+import { skuVigenteDeEnlaceViejo } from "@/lib/catalogo";
+import { skuDesdeRuta, rutaDeSku } from "@/lib/sku-url";
 import { formatoCLP } from "@/lib/formato";
 import { sanitizarDescripcionHtml } from "@/lib/sanitizar-html";
 import { registrarVistaProducto } from "@/lib/eventos-web";
@@ -37,7 +38,13 @@ export default async function FichaEncargo({ params }: PropsPagina) {
       </main>
     );
   }
-  if (!producto) notFound();
+  // Enlace viejo (era el código de barras, ver src/lib/enlaces-codigo.ts):
+  // va a su enlace de hoy. Si la búsqueda falla, se queda en el 404 de siempre.
+  if (!producto) {
+    const vigente = await skuVigenteDeEnlaceViejo(skuDesdeRuta(sku)).catch(() => null);
+    if (vigente) permanentRedirect(`/pedidos-por-encargo/${rutaDeSku(vigente)}`);
+    notFound();
+  }
 
   after(() => registrarVistaProducto(producto.producto_pos_id));
 

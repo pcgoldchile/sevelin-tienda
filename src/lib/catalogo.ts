@@ -2,6 +2,7 @@ import { supabaseWeb } from './supabase-web';
 import type { ProductoWeb } from './tipos';
 // Oferta con fechas (supabase/37): TODA lectura de productos pasa por aplicarOferta.
 import { aplicarOferta } from './oferta';
+import { productoDeCodigoViejo } from './enlaces-codigo';
 
 /**
  * Catálogo público: SIEMPRE filtra por publicado_web=true y stock_web>0
@@ -100,10 +101,15 @@ export async function obtenerProductoPublicado(sku: string): Promise<ProductoWeb
  * vigente también termina en ese número: así un enlace cualquiera que acabe
  * en un número (`/productos/cable-hdmi-2`) no cae en un producto ajeno.
  *
+ * Los 32 enlaces que eran un código (ver enlaces-codigo.ts) no terminan en
+ * el número: para esos el producto sale de la lista, y como la lista ya dice
+ * de quién es el enlace, no se exige que el vigente termine en el número.
+ *
  * Devuelve null cuando no hay a dónde redirigir.
  */
 export async function skuVigenteDeEnlaceViejo(enlace: string): Promise<string | null> {
-  const numero = /-(\d{1,9})$/.exec(enlace || '')?.[1];
+  const deCodigo = productoDeCodigoViejo(enlace);
+  const numero = deCodigo ? String(deCodigo) : /-(\d{1,9})$/.exec(enlace || '')?.[1];
   if (!numero) return null;
 
   const { data, error } = await supabaseWeb
@@ -115,7 +121,8 @@ export async function skuVigenteDeEnlaceViejo(enlace: string): Promise<string | 
 
   if (error) throw new Error(error.message);
   const vigente = (data?.sku as string | undefined) || '';
-  if (!vigente || vigente === enlace || !vigente.endsWith(`-${numero}`)) return null;
+  if (!vigente || vigente === enlace) return null;
+  if (!deCodigo && !vigente.endsWith(`-${numero}`)) return null;
   return vigente;
 }
 
