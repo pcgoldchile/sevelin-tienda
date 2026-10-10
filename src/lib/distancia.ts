@@ -49,12 +49,16 @@ import { obtenerDetalleLugar } from './places';
  */
 
 /**
- * Origen de todos los despachos — HOY es "Avenida Linderos 3736, Arica"
- * (02-09-2026): el dueño todavía no se muda al local de San Rafael 896,
- * está operando desde Linderos mientras tanto. Cuando se mude, este valor
- * y `TIENDA_LAT`/`TIENDA_LON` en Vercel vuelven a San Rafael 896 (ver ese
- * historial más abajo — NO se le cambia el nombre a la constante ni se
- * borra el registro, solo se actualiza el valor).
+ * Origen de todos los despachos y dirección que se le muestra al cliente
+ * (checkout, correos, aviso "listo para retiro", página del QR de retiro).
+ *
+ * Desde el 09-10-2026 es el local de San Rafael 896 (el dueño confirmó la
+ * mudanza el 10-10-2026: "ya atiendo ahí desde ayer"). La entrada es por la
+ * calle Robinson Rojas y va escrita en el texto porque el cliente llega
+ * buscando la puerta, no el número. Entre el 02-09 y el 08-10-2026 fue
+ * "Avenida Linderos 3736, Arica" (local temporal); en ese período Vercel
+ * tuvo `TIENDA_LAT`/`TIENDA_LON` fijados a Linderos, y se quitaron con la
+ * mudanza para que mande el valor por defecto de más abajo.
  *
  * NO se codifican coordenadas a mano. Se resuelven geocodificando la
  * propia dirección de la tienda con el MISMO servicio que las
@@ -68,7 +72,7 @@ import { obtenerDetalleLugar } from './places';
  * en cada despacho. Resolver origen y destino con el mismo geocodificador
  * también evita que un sesgo del servicio afecte solo a un extremo.
  */
-export const DIRECCION_TIENDA = 'Avenida Linderos 3736, Arica';
+export const DIRECCION_TIENDA = 'San Rafael 896, Arica, entrada por calle Robinson Rojas';
 
 /**
  * Coordenadas ROOFTOP de Google Geocoding para "San Rafael 896, Arica,

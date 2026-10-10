@@ -1,7 +1,7 @@
 /**
  * Tarifas de despacho a domicilio según la distancia REAL por carretera
- * desde la tienda (ver src/lib/distancia.ts — hoy Avenida Linderos 3736,
- * mientras el dueño no se muda a San Rafael 896).
+ * desde la tienda (ver src/lib/distancia.ts — San Rafael 896 desde el
+ * 09-10-2026; antes, Avenida Linderos 3736).
  *
  * Reemplaza la tarifa plana única de la v6: el negocio necesita que un
  * despacho a la vuelta de la esquina y uno al valle de Azapa no cuesten lo

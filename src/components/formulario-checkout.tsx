@@ -619,10 +619,10 @@ export function FormularioCheckout({
             <span className="tabular-nums">{formatoCLP.format(subtotalSeleccionado)}</span>
           </div>
           <div className="flex flex-col gap-0.5">
-            {/* El detalle (ej. "Retiro en tienda (Avenida Linderos 3736, Arica)")
+            {/* El detalle (ej. "Retiro en tienda (San Rafael 896, Arica, …)")
                 va en su propia línea, no entre paréntesis junto al precio —
                 pegado ahí se leía como una sola frase confusa
-                ("Envío (Retiro en tienda (Avenida Linderos 3736, Arica)) Gratis"). */}
+                ("Envío (Retiro en tienda (San Rafael 896, Arica, …)) Gratis"). */}
             <div className="flex justify-between text-ink-soft">
               <span>Envío</span>
               <span className="tabular-nums">
