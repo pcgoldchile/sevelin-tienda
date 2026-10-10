@@ -10,8 +10,8 @@
  */
 
 /**
- * Bloques dentro del horario REAL de atención: lunes a domingo, 11:00 a
- * 13:00 y 14:00 a 20:00 (ver TRAMOS_ATENCION en src/lib/horarios.ts).
+ * Bloques dentro del horario REAL de atención: lunes a domingo, 10:00 a
+ * 13:00 y 14:00 a 21:00 (ver TRAMOS_ATENCION en src/lib/horarios.ts).
  *
  * No hay ningún bloque entre las 13:00 y las 14:00 a propósito: ese es el
  * cierre de colación, y ofrecerlo mandaría gente a una puerta cerrada por
@@ -22,10 +22,10 @@
  * después a incumplirla.
  */
 export const BLOQUES_RETIRO = [
-  "11:00-13:00",
+  "10:00-13:00",
   "14:00-16:00",
   "16:00-18:00",
-  "18:00-20:00",
+  "18:00-21:00",
 ] as const;
 
 export type BloqueRetiro = (typeof BLOQUES_RETIRO)[number];

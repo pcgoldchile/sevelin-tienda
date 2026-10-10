@@ -98,7 +98,7 @@ const PREGUNTAS: { pregunta: string; respuesta: string }[] = [
   {
     pregunta: "¿Cuál es el horario de atención?",
     respuesta:
-      "Atendemos de lunes a domingo, de 11:00 a 13:00 y de 14:00 a 20:00 (cerramos de 13:00 a 14:00 por colación). Los domingos atendemos, pero conviene escribirnos o llamarnos antes para confirmar.",
+      "Atendemos de lunes a domingo, de 10:00 a 13:00 y de 14:00 a 21:00 (cerramos de 13:00 a 14:00 por colación). Los domingos atendemos, pero conviene escribirnos o llamarnos antes para confirmar.",
   },
   {
     pregunta: "¿Qué significa que un producto esté \"por llegar\"?",
@@ -152,7 +152,7 @@ const PREGUNTAS: { pregunta: string; respuesta: string }[] = [
   {
     pregunta: "¿Puedo retirar mi pedido en la tienda?",
     respuesta:
-      "Sí, y es gratis. Puedes retirar de lunes a domingo, de 11:00 a 13:00 y de 14:00 a 20:00, incluso si compras desde otra ciudad para que un familiar o conocido lo retire por ti en Arica. Al comprar puedes decirnos qué día piensas pasar —es opcional y no te compromete— y te mandamos un recordatorio esa mañana con el pedido preparado.",
+      "Sí, y es gratis. Puedes retirar de lunes a domingo, de 10:00 a 13:00 y de 14:00 a 21:00, incluso si compras desde otra ciudad para que un familiar o conocido lo retire por ti en Arica. Al comprar puedes decirnos qué día piensas pasar —es opcional y no te compromete— y te mandamos un recordatorio esa mañana con el pedido preparado.",
   },
   {
     pregunta: "¿Cómo los contacto?",

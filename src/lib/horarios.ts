@@ -3,7 +3,7 @@
  *
  *   - Despacho a domicilio: solo sale el mismo día si la compra entra
  *     ANTES de las 18:00. Después, se programa para el día hábil siguiente.
- *   - Retiro en tienda: se puede retirar el mismo día hasta las 20:00.
+ *   - Retiro en tienda: se puede retirar el mismo día hasta las 21:00.
  *
  * TODO se evalúa en hora de Chile, nunca con la hora del navegador del
  * cliente: alguien comprando desde otro huso vería un corte equivocado, y
@@ -16,27 +16,27 @@
 export const ZONA_CHILE = 'America/Santiago';
 
 /**
- * Horario real de atención (confirmado por el dueño el 12-09-2026):
- * lunes a domingo, de 11:00 a 13:00 y de 14:00 a 20:00.
+ * Horario real de atención (confirmado por el dueño el 10-10-2026, local de San Rafael 896; antes 11 a 13 y 14 a 20):
+ * lunes a domingo, de 10:00 a 13:00 y de 14:00 a 21:00.
  *
  * Vive acá y en un solo lugar porque lo usan los bloques de retiro
  * agendado, los avisos del checkout y las Preguntas Frecuentes. Tenerlo
  * escrito en tres partes garantiza que dos queden desactualizadas.
  */
 export const TRAMOS_ATENCION = [
-  { desde: 11, hasta: 13 },
-  { desde: 14, hasta: 20 },
+  { desde: 10, hasta: 13 },
+  { desde: 14, hasta: 21 },
 ] as const;
 
 export const APERTURA_HORA = TRAMOS_ATENCION[0].desde;
-export const HORARIO_LEGIBLE = 'Lunes a domingo, de 11:00 a 13:00 y de 14:00 a 20:00';
+export const HORARIO_LEGIBLE = 'Lunes a domingo, de 10:00 a 13:00 y de 14:00 a 21:00';
 
 /** El domingo se atiende, pero conviene confirmar antes de venir. */
 export const AVISO_DOMINGO =
   'Los domingos atendemos, pero conviene escribirnos o llamarnos antes para confirmar.';
 
 export const CORTE_DESPACHO_HORA = 18; // 18:00
-export const CORTE_RETIRO_HORA = 20; // 20:00
+export const CORTE_RETIRO_HORA = 21; // 21:00
 
 export interface EstadoHorario {
   /** Hora local de Chile en el momento de evaluar (0-23). */
@@ -113,7 +113,7 @@ export function estadoHorario(referencia: Date = new Date()): EstadoHorario {
       : `Pasadas las ${CORTE_DESPACHO_HORA}:00 el despacho se programa para ${proximoDiaAtencion(diaSemana)}. ` +
         '(Despacho realizado directamente por Sevelin — escríbenos por WhatsApp o correo al finalizar tu compra para coordinar y acelerar la entrega.)',
     /* Antes decía "puedes retirar hoy mismo" también a las 8 de la mañana,
-       cuando la tienda abre a las 11 — el cliente salía y se encontraba
+       cuando la tienda todavía no abre — el cliente salía y se encontraba
        con la puerta cerrada. Ahora el aviso distingue los tres momentos
        del día y nombra la pausa de colación, que es la otra forma de
        llegar a una puerta cerrada. */

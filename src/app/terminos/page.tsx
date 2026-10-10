@@ -63,8 +63,8 @@ export default function Terminos() {
             propio no cubre los valles de Azapa y Lluta; si vives allá, escríbenos y lo coordinamos.
           </p>
           <p className="mt-2">
-            <strong className="text-ink">Retiro en tienda:</strong> de lunes a domingo, de 11:00 a 13:00 y
-            de 14:00 a 20:00. Los domingos atendemos, pero conviene confirmar antes por WhatsApp.
+            <strong className="text-ink">Retiro en tienda:</strong> de lunes a domingo, de 10:00 a 13:00 y
+            de 14:00 a 21:00. Los domingos atendemos, pero conviene confirmar antes por WhatsApp.
           </p>
           <p className="mt-2">
             Al comprar puedes indicarnos qué día y en qué horario piensas pasar a retirar. Ese dato es
