@@ -4,6 +4,23 @@
 > arquitectura completo (todas las fases) vive en `README-ECOMMERCE-SEVELIN.md`, en el repo del POS
 > (`sevelin-pos-oficial`) — este documento es el estado de ESTE repo (`sevelin-tienda`) nada más.
 
+**Fecha:** 10-10-2026 · **Local nuevo (San Rafael 896) y enlaces viejos que redirigen.**
+
+Detalle en `docs/CHANGELOG-V132.md` del POS.
+
+- **Dirección (`c36b683`):** `DIRECCION_TIENDA` = "San Rafael 896, Arica, entrada por calle Robinson Rojas". Verificado
+  en producción (`/api/cotizar-envio`). ⚠️ **`TIENDA_LAT` y `TIENDA_LON` siguen en Vercel con las coordenadas de
+  Linderos**: hay que quitarlas y redesplegar para que el despacho local se mida desde el local nuevo (el valor por
+  defecto del código ya es San Rafael 896). La sesión no tuvo permiso para tocar las variables de Vercel.
+- **Enlaces (`7c292d1`):** `skuVigenteDeEnlaceViejo()` en `src/lib/catalogo.ts`. Un producto sin SKU tiene enlace
+  `nombre-id`; al renombrarlo, el enlace viejo ahora responde 308 al vigente (se busca por el número del final, y solo
+  si el enlace vigente termina en ese mismo número). El dueño quiere que el enlace siga al nombre.
+- Sin decidir: pasar a nombre los ~32 enlaces que hoy son un código (`/productos/4710483939365`). Cambia el `id` del
+  feed de Merchant para esos productos.
+- Visto de pasada: `/por-llegar` muestra "Llega aprox. el 8 oct" cuando la fecha ya pasó; no hay texto para "atrasado".
+
+---
+
 **Fecha:** 06-10-2026 (noche) · **Por llegar: el cliente elige cómo recibe, y aviso "listo para retiro".**
 
 Detalle en `docs/CHANGELOG-V129.md` del POS. Regla del dueño: el retiro es gratis y el cliente espera el correo
