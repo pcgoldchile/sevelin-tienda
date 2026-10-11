@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { expirarPedidosCreados } from '@/lib/pedidos';
+import { HORAS_PARA_PAGAR } from '@/lib/link-pago';
 
-/** 24h sin pago confirmado — tiempo de sobra: la sesión de pago de Flow
- * expira mucho antes que eso, así que a las 24h ya no queda ninguna
- * posibilidad real de que el cliente vuelva a completar ESE checkout. */
-const HORAS_ANTES_DE_EXPIRAR = 24;
+/** 24h sin pago confirmado. Para Khipu y Webpay es tiempo de sobra (su sesión
+ * de pago caduca mucho antes). Para el link de pago es lo justo: ahí la
+ * confirmación es manual, y quien paga un sábado en la noche no puede
+ * encontrar su pedido anulado antes de que alguien vea el comprobante. Como
+ * este cron corre una vez al día, en la práctica son entre 24 y 48 horas. */
+const HORAS_ANTES_DE_EXPIRAR = HORAS_PARA_PAGAR;
 
 function verificarCron(req: NextRequest): boolean {
   const secreto = process.env.CRON_SECRET;

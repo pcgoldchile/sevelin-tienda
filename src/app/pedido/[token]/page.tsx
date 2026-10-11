@@ -7,8 +7,13 @@ import { FACTURA_HABILITADA } from "@/lib/factura";
 import { URL_RESENA_GOOGLE } from "@/lib/resena-google";
 import { AvisoResenaGoogle } from "@/components/aviso-resena-google";
 import { SeguimientoPago } from "@/components/seguimiento-pago";
-import { ReintentarPago } from "@/components/reintentar-pago";
+import { ReintentarPago, type OpcionDePago } from "@/components/reintentar-pago";
+import { PagoConLink } from "@/components/pago-con-link";
 import { fechaLlegadaLegible } from "@/lib/por-llegar";
+import { khipuHabilitado } from "@/lib/khipu";
+import { HORAS_PARA_PAGAR, LINK_PAGO_TUU_URL, medioTarjetaDisponible } from "@/lib/link-pago";
+import { nombreTipoDePagoWebpay } from "@/lib/webpay";
+import type { PedidoWeb } from "@/lib/tipos";
 
 interface PropsPagina {
   /* El parámetro es `token_publico`, NO el número de pedido: los números
@@ -16,6 +21,10 @@ interface PropsPagina {
      uno y viera el pedido de otra persona. Ver
      supabase/26-token-publico-pedido.sql. */
   params: Promise<{ token: string }>;
+  /* `?pago=` lo pone la ruta de retorno de Webpay cuando el pago no quedó
+     hecho (rechazado, anulado, tiempo, error, revisar). Solo cambia el texto
+     que se muestra: el estado real siempre sale de la base. */
+  searchParams: Promise<{ pago?: string }>;
 }
 
 const PAGO_CONFIRMADO = ["PAGADO", "PREPARANDO", "ENVIADO", "ENTREGADO"];
@@ -41,6 +50,29 @@ const MENSAJE_ESTADO: Record<string, string> = {
   EXPIRADO: "Este pedido quedó sin confirmar el pago y ya no está vigente. Si quieres estos productos, agrégalos de nuevo al carrito.",
 };
 
+/* Lo que se le dice a quien todavía no paga depende de cómo eligió pagar y
+   de por qué volvió sin pagar. Nunca se promete "estamos confirmando" si no
+   hay nada en camino. */
+function mensajeEsperandoPago(pedido: PedidoWeb, motivo: string | undefined): string {
+  if (motivo === "revisar") {
+    return "Tu banco autorizó el pago, pero no pudimos dejar el pedido registrado. Ya nos llegó el aviso y lo estamos revisando: no vuelvas a pagar. Escríbenos por WhatsApp con tu número de pedido.";
+  }
+  if (pedido.metodo_pago === "WEBPAY") {
+    if (motivo === "rechazado") return "Tu pago con tarjeta fue rechazado y no se hizo ningún cargo. Puedes intentarlo de nuevo.";
+    if (motivo === "anulado") return "Anulaste el pago en Webpay y no se hizo ningún cargo. Tu pedido sigue guardado.";
+    if (motivo === "tiempo") return "Se acabó el tiempo para pagar en Webpay y no se hizo ningún cargo. Tu pedido sigue guardado.";
+    if (motivo === "error") return "No pudimos confirmar tu pago con Transbank. Si te llegó un cargo, escríbenos por WhatsApp antes de volver a pagar.";
+    return "Tu pedido está esperando el pago con tarjeta.";
+  }
+  if (pedido.metodo_pago === "LINK_TUU") {
+    return "Tu pedido está guardado y esperando el pago con tarjeta. Sigue los pasos de abajo.";
+  }
+  return MENSAJE_ESTADO.CREADO;
+}
+
+/* El cliente no tiene por qué saber qué es "CREADO". */
+const NOMBRE_ESTADO: Record<string, string> = { CREADO: "ESPERANDO PAGO" };
+
 const ESTILO_ESTADO: Record<string, string> = {
   CREADO: "bg-surface-sunken text-ink-soft",
   PAGADO: "bg-success-soft text-success",
@@ -52,8 +84,9 @@ const ESTILO_ESTADO: Record<string, string> = {
   EXPIRADO: "bg-surface-sunken text-ink-soft",
 };
 
-export default async function EstadoPedido({ params }: PropsPagina) {
+export default async function EstadoPedido({ params, searchParams }: PropsPagina) {
   const { token } = await params;
+  const { pago: motivoPago } = await searchParams;
 
   // Mismo criterio que el resto de la tienda: si Supabase Web no responde,
   // se muestra un estado de error en vez de tumbar la página con un 500.
@@ -79,16 +112,66 @@ export default async function EstadoPedido({ params }: PropsPagina) {
   const skusListos = new Set((pedido.retiro_avisos || []).flatMap((aviso) => aviso.skus || []));
   const faltanPorAvisar = productosDelPedido.some((item) => !skusListos.has(item.sku));
 
+  /* Cómo se puede terminar de pagar este pedido HOY (supabase/42). Se lee en
+     el servidor: depende de credenciales que no cruzan al navegador. */
+  const esperaPago = pedido.estado === "CREADO";
+  const medioTarjeta = esperaPago ? medioTarjetaDisponible() : null;
+  const porLink = esperaPago && pedido.metodo_pago === "LINK_TUU" && medioTarjeta === "LINK_TUU";
+  const opcionTarjeta: OpcionDePago | null = medioTarjeta ? { medio: "TARJETA", texto: "Pagar con tarjeta" } : null;
+  const opcionKhipu: OpcionDePago | null = khipuHabilitado() ? { medio: "KHIPU", texto: "Pagar por transferencia" } : null;
+  const eligioTarjeta = pedido.metodo_pago === "WEBPAY" || pedido.metodo_pago === "LINK_TUU";
+  /* Primero el medio que ya había elegido. Con el link, la tarjeta ya está
+     explicada arriba (PagoConLink): acá solo queda la alternativa. */
+  const opcionesDePago = (porLink
+    ? [opcionKhipu]
+    : eligioTarjeta ? [opcionTarjeta, opcionKhipu] : [opcionKhipu, opcionTarjeta]
+  ).filter((o): o is OpcionDePago => o !== null);
+  const comprobanteWebpay = pedido.metodo_pago === "WEBPAY" && PAGO_CONFIRMADO.includes(pedido.estado) ? pedido.pago_detalle : null;
+
   return (
     <main className="mx-auto max-w-2xl px-4 py-10 sm:px-6 lg:px-8">
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-3xl font-semibold tracking-tight text-ink">Pedido {pedido.numero_pedido}</h1>
         <span className={`rounded-full px-3 py-1 text-xs font-semibold ${ESTILO_ESTADO[pedido.estado] || "bg-surface-sunken text-ink-soft"}`}>
-          {pedido.estado}
+          {NOMBRE_ESTADO[pedido.estado] || pedido.estado}
         </span>
       </div>
-      <p className="mt-2 text-sm text-ink-soft">{MENSAJE_ESTADO[pedido.estado] || `Estado: ${pedido.estado}`}</p>
-      <SeguimientoPago token={token} estadoActual={pedido.estado} />
+      <p className="mt-2 text-sm text-ink-soft">
+        {esperaPago ? mensajeEsperandoPago(pedido, motivoPago) : MENSAJE_ESTADO[pedido.estado] || `Estado: ${pedido.estado}`}
+      </p>
+      {/* Con Webpay no hay nada "en camino" que esperar: o se confirmó al
+          volver, o no se pagó. El seguimiento es para Khipu (webhook) y para
+          el link de pago (lo confirma una persona). */}
+      {pedido.metodo_pago !== "WEBPAY" && (
+        <SeguimientoPago token={token} estadoActual={pedido.estado} confirmacionManual={pedido.metodo_pago === "LINK_TUU"} />
+      )}
+
+      {/* Rechazo de Webpay: Transbank pide decirle al cliente la orden y las
+          causas posibles, no solo "falló". */}
+      {esperaPago && pedido.metodo_pago === "WEBPAY" && motivoPago === "rechazado" && (
+        <div className="mt-5 rounded-2xl border border-red-300/60 bg-red-50 p-4 text-sm text-red-900">
+          <p className="font-semibold">
+            Orden de compra {pedido.pago_detalle?.orden_compra || pedido.numero_pedido} rechazada
+          </p>
+          <p className="mt-1">Las posibles causas de este rechazo son:</p>
+          <ul className="mt-1 list-disc pl-5">
+            <li>Error en el ingreso de los datos de tu tarjeta de crédito o débito (fecha o código de seguridad).</li>
+            <li>Tu tarjeta de crédito o débito no cuenta con saldo suficiente.</li>
+            <li>Tarjeta aún no habilitada en el sistema financiero.</li>
+          </ul>
+        </div>
+      )}
+
+      {/* Link de pago de Haulmer: cómo pagar y cómo avisar. */}
+      {porLink && (
+        <PagoConLink
+          numeroPedido={pedido.numero_pedido}
+          total={pedido.total}
+          linkPago={LINK_PAGO_TUU_URL}
+          whatsapp={whatsapp || null}
+          horasParaPagar={HORAS_PARA_PAGAR}
+        />
+      )}
 
       {/* "Si es posible, mándanos un mensaje o llámanos para gestionar tu pedido
           rápido" (dueño, 03-10-2026, tras una compra real). El WhatsApp sale con
@@ -161,7 +244,49 @@ export default async function EstadoPedido({ params }: PropsPagina) {
       {/* Rescate de una venta ya decidida: el cliente llegó al banco y algo
           lo interrumpió. Sin esto tendría que armar el carrito de nuevo, y
           casi nadie lo hace. Solo en CREADO — el servidor lo revalida. */}
-      {pedido.estado === "CREADO" && <ReintentarPago token={token} />}
+      {esperaPago && motivoPago !== "revisar" && (
+        <ReintentarPago
+          token={token}
+          opciones={opcionesDePago}
+          {...(porLink
+            ? { titulo: "¿Prefieres pagar por transferencia?", detalle: "Se confirma sola, al momento. Te llevamos al sitio de tu banco con el mismo pedido." }
+            : {})}
+        />
+      )}
+
+      {/* Comprobante del pago con Webpay. Transbank ya no muestra un voucher
+          propio: lo tiene que mostrar el comercio, con estos datos. */}
+      {comprobanteWebpay && (
+        <div className="mt-6 rounded-2xl border border-success/40 bg-success/10 p-5">
+          <p className="text-sm font-semibold text-ink">Comprobante de pago con tarjeta</p>
+          <dl className="mt-3 grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
+            {[
+              ["Comercio", "Sevelin"],
+              ["Número de pedido", pedido.numero_pedido],
+              ["Orden de compra", comprobanteWebpay.orden_compra || pedido.numero_pedido],
+              ["Monto", `${formatoCLP.format(pedido.total)} (pesos chilenos)`],
+              ["Código de autorización", comprobanteWebpay.codigo_autorizacion || "—"],
+              [
+                "Fecha de la transacción",
+                comprobanteWebpay.fecha
+                  ? new Intl.DateTimeFormat("es-CL", { dateStyle: "long", timeStyle: "short", timeZone: "America/Santiago" }).format(new Date(comprobanteWebpay.fecha))
+                  : "—",
+              ],
+              ["Tipo de pago", nombreTipoDePagoWebpay(comprobanteWebpay.tipo_pago_codigo)],
+              ["Cantidad de cuotas", String(comprobanteWebpay.cuotas || 0)],
+              ["Tarjeta terminada en", comprobanteWebpay.tarjeta ? `···· ${comprobanteWebpay.tarjeta}` : "—"],
+            ].map(([etiqueta, valor]) => (
+              <div key={etiqueta} className="flex justify-between gap-3 sm:block">
+                <dt className="text-ink-soft">{etiqueta}</dt>
+                <dd className="font-medium tabular-nums text-ink">{valor}</dd>
+              </div>
+            ))}
+          </dl>
+          {comprobanteWebpay.ambiente === "integracion" && (
+            <p className="mt-3 text-xs font-semibold text-amber-600">Pago de PRUEBA (ambiente de integración de Transbank): no se cobró dinero real.</p>
+          )}
+        </div>
+      )}
 
       <div className="mt-6 rounded-2xl bg-surface p-5 shadow-elevated-md">
         <ul className="flex flex-col gap-2">
@@ -225,7 +350,11 @@ export default async function EstadoPedido({ params }: PropsPagina) {
           // un pedido pagado por transferencia mostraba "tu comprobante de
           // pago de Flow" — encontrado en la primera compra real con Khipu.
           <p className="mt-4 text-sm text-ink-soft">
-            Tu comprobante de pago de {pedido.metodo_pago === 'KHIPU' ? 'Khipu' : 'Flow'} respalda esta compra.
+            {pedido.metodo_pago === 'WEBPAY'
+              ? 'El comprobante de pago con tarjeta de más arriba respalda esta compra.'
+              : pedido.metodo_pago === 'LINK_TUU'
+                ? 'El comprobante de tu pago con tarjeta respalda esta compra.'
+                : `Tu comprobante de pago de ${pedido.metodo_pago === 'KHIPU' ? 'Khipu' : 'Flow'} respalda esta compra.`}
             {whatsapp && (
               <>
                 {" "}{FACTURA_HABILITADA ? "¿Necesitas boleta o factura?" : "¿Necesitas tu boleta?"}{" "}

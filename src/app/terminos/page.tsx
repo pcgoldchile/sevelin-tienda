@@ -1,6 +1,7 @@
 import { HAY_RECARGO, RECARGO_CHECKOUT_TARJETA } from "@/lib/precios-medio-pago";
 import { FLOW_HABILITADO } from "@/lib/flow";
 import { FACTURA_HABILITADA } from "@/lib/factura";
+import { medioTarjetaDisponible } from "@/lib/link-pago";
 
 export const metadata = {
   // El layout raíz ya agrega " — Sevelin" con su template.
@@ -46,7 +47,11 @@ export default function Terminos() {
         <section>
           <h2 className="mb-1.5 text-base font-semibold text-ink">Medios de pago</h2>
           <p>
-            {FLOW_HABILITADO
+            {medioTarjetaDisponible() === "WEBPAY"
+              ? "En la tienda online el pago se procesa por transferencia bancaria a través de Khipu, o con tarjeta de débito, crédito o prepago a través de Webpay de Transbank. No almacenamos los datos de tu tarjeta en ningún momento."
+              : medioTarjetaDisponible() === "LINK_TUU"
+              ? "En la tienda online el pago se procesa por transferencia bancaria a través de Khipu, o con tarjeta de débito o crédito a través de nuestro link de pago (procesado por Haulmer). El pago con tarjeta se confirma manualmente y el pedido queda confirmado cuando te avisamos por correo; si no se paga dentro de 24 horas, el pedido se anula sin costo. No almacenamos los datos de tu tarjeta en ningún momento."
+              : FLOW_HABILITADO
               ? "En la tienda online el pago se procesa a través de Flow (tarjetas de crédito y débito) o Khipu (transferencia bancaria). No almacenamos los datos de tu tarjeta en ningún momento."
               : "En la tienda online el pago se procesa por transferencia bancaria a través de Khipu. Si prefieres pagar con tarjeta de crédito o débito, puedes hacerlo directamente en nuestra tienda, o escribirnos para coordinar un link de pago. No almacenamos los datos de tu tarjeta en ningún momento."}
           </p>

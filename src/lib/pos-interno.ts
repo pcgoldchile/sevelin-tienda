@@ -65,6 +65,8 @@ export async function registrarVentaWebEnPos(pedido: {
   cliente_telefono: string | null;
   metodo_envio: string | null;
   metodo_pago: string | null;
+  /* Pago con tarjeta (supabase/42): si fue débito o crédito. */
+  pago_detalle?: { tipo?: string | null } | null;
   total: number;
   costo_envio?: number | null;
   direccion_envio: { calle?: string; numero?: string; comuna?: string } | null;
@@ -86,6 +88,15 @@ export async function registrarVentaWebEnPos(pedido: {
   const esRetiro = (pedido.metodo_envio || '').toUpperCase().includes('RETIRO');
   const dir = pedido.direccion_envio;
 
+  /* Pago con tarjeta (supabase/42): Webpay o el link de pago de Haulmer. El POS
+     anota la venta como débito o crédito y calcula ÉL la comisión, que es
+     quien tiene las tarifas de cada medio; por eso viaja el total cobrado
+     (con el despacho) y por dónde entró, no un monto de comisión. */
+  const conTarjeta = pedido.metodo_pago === 'WEBPAY' || pedido.metodo_pago === 'LINK_TUU';
+  const metodoPagoPos = !conTarjeta
+    ? 'Transferencia'
+    : pedido.pago_detalle?.tipo === 'CREDITO' ? 'Tarjeta Crédito' : 'Tarjeta Débito';
+
   try {
     const respuesta = await fetch(url, {
       method: 'POST',
@@ -96,7 +107,8 @@ export async function registrarVentaWebEnPos(pedido: {
         cliente: [pedido.cliente_nombre, pedido.cliente_apellido].filter(Boolean).join(' ').trim() || null,
         cliente_correo: pedido.cliente_email,
         cliente_telefono: pedido.cliente_telefono,
-        metodo_pago: 'Transferencia',
+        metodo_pago: metodoPagoPos,
+        ...(conTarjeta ? { maquina_tarjeta: pedido.metodo_pago, monto_cobrado: Math.round(Number(pedido.total) || 0) } : {}),
         tipo_entrega: esRetiro ? 'retiro' : 'despacho',
         direccion_envio: esRetiro || !dir ? null : [dir.calle, dir.numero, dir.comuna].filter(Boolean).join(' '),
         /* Lo que el cliente pagó por el despacho (sql/77 del POS). Sin esto

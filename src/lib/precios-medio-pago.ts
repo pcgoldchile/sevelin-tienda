@@ -43,8 +43,10 @@ export const RECARGO_CHECKOUT_TARJETA = 0;
  *  normal cuando el recargo está apagado. */
 export const HAY_RECARGO = RECARGO_CHECKOUT_TARJETA > 0;
 
-/** Los dos medios que ofrece el checkout web (ver formulario-checkout.tsx). */
-export type MetodoPagoWeb = "FLOW" | "KHIPU";
+/** Los medios del checkout web (ver formulario-checkout.tsx). El recargo, cuando
+ *  está encendido, es solo de FLOW: Webpay y el link de pago van a precio
+ *  normal (el dueño absorbe la comisión, decisión del 09-09-2026). */
+export type MetodoPagoWeb = "FLOW" | "KHIPU" | "WEBPAY" | "LINK_TUU";
 
 /**
  * Precio unitario que paga quien elige tarjeta en el checkout web.

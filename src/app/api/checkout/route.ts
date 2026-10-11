@@ -1,18 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { obtenerProductoPorSku } from '@/lib/catalogo';
-import { crearPedido, guardarPagoFlow, guardarPagoKhipu, marcarPedidoFallido } from '@/lib/pedidos';
+import { crearPedido, guardarPagoFlow, guardarPagoKhipu, guardarPagoLink, guardarPagoWebpay, marcarPedidoFallido } from '@/lib/pedidos';
 import { esBloqueValido, normalizarFechaRetiro } from '@/lib/retiro-agendado';
 import { esServicioTecnico } from '@/lib/servicios';
 import { crearPagoFlow, FLOW_HABILITADO } from '@/lib/flow';
 import { crearPagoKhipu, khipuHabilitado } from '@/lib/khipu';
-import { recargoTotal } from '@/lib/precios-medio-pago';
+import { recargoTotal, type MetodoPagoWeb } from '@/lib/precios-medio-pago';
+import { crearTransaccionWebpay } from '@/lib/webpay';
+import { HORAS_PARA_PAGAR, LINK_PAGO_TUU_URL, medioTarjetaDisponible } from '@/lib/link-pago';
+import { correoAvisoPagoPorConfirmar, correoPedidoEsperaPagoLink } from '@/lib/correo-pedido';
+import { correoDeAlertas } from '@/lib/pago-confirmado';
+import { obtenerImagenesPorProductoPosId } from '@/lib/catalogo';
+import { enviarCorreo } from '@/lib/resend';
 import { confirmarEnvio } from '@/lib/envio';
 import { crearClienteServidor } from '@/lib/supabase-server';
 import { marcarCarritoConvertido } from '@/lib/carritos-web';
 import { contextoMayorista, preciosMayoristasDe } from '@/lib/mayorista';
 import { resolverPreciosMayoristas } from '@/lib/mayorista-precios';
 import { esReservaPorLlegar, partirPorLlegada, topeDeCompra, type EntregaPorLlegar } from '@/lib/por-llegar';
-import type { DatosFactura, DireccionEnvio, ItemPedido } from '@/lib/tipos';
+import type { DatosFactura, DireccionEnvio, ItemPedido, PedidoWeb } from '@/lib/tipos';
 import { FACTURA_HABILITADA } from '@/lib/factura';
 
 interface CuerpoCheckout {
@@ -44,9 +50,10 @@ interface CuerpoCheckout {
      llegar y va con despacho (supabase/41): 'DOS_ENVIOS' cobra los dos
      despachos; cualquier otra cosa es un solo envío cuando llegue todo. */
   entregaPorLlegar?: string;
-  // 'FLOW' (webpay/tarjetas) por defecto si no llega nada — Khipu solo se
-  // acepta si khipuHabilitado() (ver src/lib/khipu.ts), para que un valor
-  // suelto en el body de alguien probando la API no rompa nada.
+  // 'KHIPU' (transferencia) o 'TARJETA'. Con tarjeta el SERVIDOR decide por
+  // dónde se cobra: Webpay si está habilitado, o el link de pago de Haulmer
+  // mientras tanto (ver src/lib/link-pago.ts). Un medio que no está
+  // disponible nunca se acepta, venga lo que venga en el body.
   metodoPago?: string;
   nota?: string;
   factura?: Partial<DatosFactura>;
@@ -300,15 +307,22 @@ export async function POST(req: NextRequest) {
 
   /* El medio de pago se resuelve ANTES de crear el pedido porque decide el
      precio cuando el recargo está encendido (ver src/lib/precios-medio-pago.ts).
-     Hoy Flow está apagado (FLOW_HABILITADO), así que todo va por Khipu. */
-  const usarKhipu = khipuHabilitado() && (cuerpo.metodoPago === 'KHIPU' || !FLOW_HABILITADO);
+     Con tarjeta (supabase/42) se cobra por Webpay si está habilitado y, si
+     no, por el link de pago; sin tarjeta, por Khipu. Flow sigue apagado. */
+  const pidioTarjeta = ['TARJETA', 'WEBPAY', 'LINK_TUU'].includes(String(cuerpo.metodoPago || '').toUpperCase());
+  const medioTarjeta = medioTarjetaDisponible();
+  let metodoPago: MetodoPagoWeb | null = null;
+  if (pidioTarjeta && medioTarjeta) metodoPago = medioTarjeta;
+  else if (khipuHabilitado() && (cuerpo.metodoPago === 'KHIPU' || !FLOW_HABILITADO)) metodoPago = 'KHIPU';
+  else if (FLOW_HABILITADO) metodoPago = 'FLOW';
+  else if (medioTarjeta) metodoPago = medioTarjeta;   // sin Khipu, queda la tarjeta
+  const usarKhipu = metodoPago === 'KHIPU';
 
   /* Si no queda ningún medio de pago disponible se corta ACÁ, antes de crear
      el pedido: un pedido sin forma de pagarse es basura en la base y un
-     cliente esperando una redirección que nunca llega. Pasa si Flow está
-     apagado y además falta la credencial de Khipu. */
-  if (!usarKhipu && !FLOW_HABILITADO) {
-    console.error('[checkout] Sin medios de pago disponibles: Flow apagado y Khipu sin credencial.');
+     cliente esperando una redirección que nunca llega. */
+  if (!metodoPago) {
+    console.error('[checkout] Sin medios de pago disponibles: ni Khipu, ni tarjeta, ni Flow.');
     return NextResponse.json(
       { error: 'En este momento no podemos procesar pagos en línea. Escríbenos por WhatsApp y coordinamos tu compra.' },
       { status: 503 }
@@ -318,8 +332,9 @@ export async function POST(req: NextRequest) {
   /* Autoridad real del recargo, igual que el precio, el stock y el envío: se
      calcula sobre `items`, que ya vienen revalidados contra productos_web,
      nunca sobre lo que el cliente dijo que costaban. */
-  const recargoMedioPago = recargoTotal(items, usarKhipu ? 'KHIPU' : 'FLOW');
+  const recargoMedioPago = recargoTotal(items, metodoPago);
 
+  let pedidoCreado: PedidoWeb;
   let numeroPedido: string;
   let tokenPublico: string;
   let total: number;
@@ -351,6 +366,7 @@ export async function POST(req: NextRequest) {
       clienteUserId: user?.id ?? null,
       consentimiento: true,
     });
+    pedidoCreado = pedido;
     numeroPedido = pedido.numero_pedido;
     tokenPublico = pedido.token_publico;
     total = pedido.total;
@@ -367,12 +383,49 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, numero_pedido: numeroPedido, token_publico: tokenPublico, url_pago: pago.url });
     }
 
+    if (metodoPago === 'WEBPAY') {
+      const transaccion = await crearTransaccionWebpay({ numeroPedido, tokenPublico, monto: total });
+      await guardarPagoWebpay(numeroPedido, transaccion.token, transaccion.ordenCompra);
+      /* Al formulario de Transbank se llega por POST con el token en
+         token_ws: el navegador arma ese formulario (ver src/lib/ir-a-webpay.ts). */
+      return NextResponse.json({
+        ok: true, numero_pedido: numeroPedido, token_publico: tokenPublico,
+        webpay: { url: transaccion.url, token: transaccion.token },
+      });
+    }
+
+    if (metodoPago === 'LINK_TUU') {
+      /* Link de pago de Haulmer: no hay a dónde redirigir con el monto puesto.
+         El pedido queda CREADO esperando que el dueño confirme el pago, y el
+         cliente va a la página de su pedido, que le dice cómo pagar. Los dos
+         correos son de mejor esfuerzo: si fallan, la página igual lo explica. */
+      await guardarPagoLink(numeroPedido);
+      const pedidoLink: PedidoWeb = { ...pedidoCreado, metodo_pago: 'LINK_TUU' };
+      const sitio = (process.env.NEXT_PUBLIC_SITE_URL || 'https://sevelin.cl').replace(/\/+$/, '');
+      const whatsapp = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER;
+      const imagenes = await obtenerImagenesPorProductoPosId(items.map((it) => it.producto_pos_id)).catch(() => ({}));
+      const paraCliente = correoPedidoEsperaPagoLink(pedidoLink, imagenes, {
+        pedido: `${sitio}/pedido/${tokenPublico}`,
+        linkPago: LINK_PAGO_TUU_URL,
+        whatsapp: whatsapp
+          ? `https://wa.me/${whatsapp}?text=${encodeURIComponent(`Hola, pagué con tarjeta el pedido ${numeroPedido}. Les envío el comprobante.`)}`
+          : null,
+        horasParaPagar: HORAS_PARA_PAGAR,
+      });
+      const paraDueno = correoAvisoPagoPorConfirmar(pedidoLink);
+      await Promise.all([
+        enviarCorreo({ to: email, subject: paraCliente.subject, html: paraCliente.html }),
+        enviarCorreo({ to: correoDeAlertas(), subject: paraDueno.subject, html: paraDueno.html }),
+      ]).catch(() => {});
+      return NextResponse.json({ ok: true, numero_pedido: numeroPedido, token_publico: tokenPublico, url_pago: `/pedido/${tokenPublico}` });
+    }
+
     const pago = await crearPagoFlow({ numeroPedido, tokenPublico, monto: total, email });
     await guardarPagoFlow(numeroPedido, pago.token, pago.flowOrder);
     return NextResponse.json({ ok: true, numero_pedido: numeroPedido, token_publico: tokenPublico, url_pago: `${pago.url}?token=${pago.token}` });
   } catch (err) {
-    // El pedido ya existe (CREADO) pero Flow no respondió: se marca FALLIDO
-    // en vez de dejarlo colgado en CREADO para siempre.
+    // El pedido ya existe (CREADO) pero la pasarela no respondió: se marca
+    // FALLIDO en vez de dejarlo colgado en CREADO para siempre.
     await marcarPedidoFallido(numeroPedido).catch(() => {});
     const mensaje = err instanceof Error ? err.message : 'No se pudo iniciar el pago';
     return NextResponse.json({ error: mensaje, numero_pedido: numeroPedido }, { status: 502 });

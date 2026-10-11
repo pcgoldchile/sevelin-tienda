@@ -55,7 +55,10 @@ const CSP = [
   "frame-src https://challenges.cloudflare.com",
   "frame-ancestors 'none'",
   "base-uri 'self'",
-  "form-action 'self'",
+  // webpay3g*.transbank.cl: al formulario de pago de Webpay Plus se llega
+  // por POST con el token (supabase/42). Sin esto el navegador bloquea ese
+  // envío y el cliente se queda en el checkout sin poder pagar con tarjeta.
+  "form-action 'self' https://webpay3g.transbank.cl https://webpay3gint.transbank.cl",
   "object-src 'none'",
   ...(SUPABASE_MAQUETA ? [] : ["upgrade-insecure-requests"]),
 ].join('; ');

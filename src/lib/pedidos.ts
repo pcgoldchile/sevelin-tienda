@@ -1,6 +1,6 @@
 import { supabaseWeb } from './supabase-web';
 import { VERSION_POLITICA_PRIVACIDAD } from './politica-privacidad';
-import type { DatosFactura, DireccionEnvio, ItemPedido, PedidoWeb } from './tipos';
+import type { DatosFactura, DireccionEnvio, ItemPedido, PagoDetalle, PedidoWeb } from './tipos';
 import type { MetodoEnvio } from './envio';
 import type { EntregaPorLlegar } from './por-llegar';
 
@@ -222,6 +222,94 @@ export async function guardarPagoKhipu(numeroPedido: string, khipuPaymentId: str
     .eq('numero_pedido', numeroPedido);
 
   if (error) lanzarErrorBD('guardarPagoKhipu', error);
+}
+
+/* ============================================================
+   PAGO CON TARJETA (supabase/42)
+   ============================================================ */
+
+/** El cliente eligió pagar por el link de Haulmer: el pedido sigue CREADO,
+ * esperando que el dueño confirme el pago desde el POS. */
+export async function guardarPagoLink(numeroPedido: string): Promise<void> {
+  const { error } = await supabaseWeb
+    .from('pedidos_web')
+    .update({ metodo_pago: 'LINK_TUU' })
+    .eq('numero_pedido', numeroPedido)
+    .eq('estado', 'CREADO');
+
+  if (error) lanzarErrorBD('guardarPagoLink', error);
+}
+
+/** Guarda el token del intento de pago en curso. Cada intento trae uno nuevo,
+ * y es lo que permite encontrar el pedido cuando Transbank devuelve al cliente. */
+export async function guardarPagoWebpay(numeroPedido: string, token: string, ordenCompra: string): Promise<void> {
+  const { error } = await supabaseWeb
+    .from('pedidos_web')
+    .update({ metodo_pago: 'WEBPAY', webpay_token: token, pago_detalle: { origen: 'WEBPAY', orden_compra: ordenCompra } })
+    .eq('numero_pedido', numeroPedido)
+    .eq('estado', 'CREADO');
+
+  if (error) lanzarErrorBD('guardarPagoWebpay', error);
+}
+
+/** Solo para la ruta de retorno de Webpay, que recibe el token desde Transbank. */
+export async function obtenerPedidoPorTokenWebpay(token: string): Promise<PedidoWeb | null> {
+  if (!/^[0-9a-f]{64}$/i.test(token)) return null;
+
+  const { data, error } = await supabaseWeb
+    .from('pedidos_web')
+    .select('*')
+    .eq('webpay_token', token)
+    .maybeSingle();
+
+  if (error) lanzarErrorBD('obtenerPedidoPorTokenWebpay', error);
+  return data;
+}
+
+/**
+ * Guarda el comprobante del pago con tarjeta. Con `confirmado`, además anota
+ * la hora. Va condicionado a CREADO: el comprobante se escribe ANTES de pasar
+ * el pedido a PAGADO, y nunca pisa el de un pedido que ya se pagó.
+ */
+export async function guardarDetallePago(
+  numeroPedido: string,
+  detalle: PagoDetalle,
+  opciones: { confirmado?: boolean } = {}
+): Promise<void> {
+  const { error } = await supabaseWeb
+    .from('pedidos_web')
+    .update({
+      pago_detalle: detalle,
+      ...(opciones.confirmado ? { pago_confirmado_en: new Date().toISOString() } : {}),
+    })
+    .eq('numero_pedido', numeroPedido)
+    .eq('estado', 'CREADO');
+
+  if (error) lanzarErrorBD('guardarDetallePago', error);
+}
+
+/**
+ * Pedidos que llevan un rato en CREADO (el cliente llegó a pagar y no terminó)
+ * y todavía no recibieron su recordatorio. `desdeHoras`/`hastaHoras` acotan la
+ * edad: ni tan nuevo que siga pagando, ni tan viejo que ya esté por anularse.
+ */
+export async function pedidosSinPagarParaRecordar(desdeHoras: number, hastaHoras: number): Promise<PedidoWeb[]> {
+  const ahora = Date.now();
+  const { data, error } = await supabaseWeb
+    .from('pedidos_web')
+    .select('*')
+    .eq('estado', 'CREADO')
+    .is('recordatorio_pago_enviado_en', null)
+    .not('cliente_email', 'is', null)
+    .lte('creado_en', new Date(ahora - desdeHoras * 60 * 60 * 1000).toISOString())
+    .gt('creado_en', new Date(ahora - hastaHoras * 60 * 60 * 1000).toISOString());
+
+  if (error) lanzarErrorBD('pedidosSinPagarParaRecordar', error);
+  return data || [];
+}
+
+export async function marcarRecordatorioPagoEnviado(id: number): Promise<void> {
+  await supabaseWeb.from('pedidos_web').update({ recordatorio_pago_enviado_en: new Date().toISOString() }).eq('id', id);
 }
 
 export async function marcarPedidoFallido(numeroPedido: string): Promise<void> {

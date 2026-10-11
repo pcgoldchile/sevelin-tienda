@@ -585,3 +585,127 @@ export function correoMayoristaAprobado(datos: {
     html: envoltorio('Cuenta mayorista aprobada', contenido),
   };
 }
+
+/* ============================================================
+   PAGO CON TARJETA Y PEDIDOS SIN PAGAR (supabase/42, 11-10-2026)
+   ============================================================ */
+
+function botonCorreo(url: string, texto: string): string {
+  return `<a href="${url}" style="display:inline-block;background:${AZUL};color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:999px;font-size:14px;font-weight:600;">${texto}</a>`;
+}
+
+function filasConFotoDe(pedido: PedidoWeb, imagenes: Record<number, string | undefined>): string {
+  return pedido.items
+    .map((it) => filaItemConFoto(it.nombre, it.cantidad, it.precio_web * it.cantidad, imagenes[it.producto_pos_id]))
+    .join('');
+}
+
+function filaTotal(etiqueta: string, monto: number, destacado = false): string {
+  const estilo = destacado ? `font-size:16px;font-weight:700;color:${TEXTO};` : `font-size:14px;color:${TEXTO_SUAVE};`;
+  return `
+    <tr>
+      <td style="padding:6px 0;${estilo}">${etiqueta}</td>
+      <td style="padding:6px 0;${estilo}text-align:right;white-space:nowrap;">${formatoCLP.format(monto)}</td>
+    </tr>`;
+}
+
+/** Al cliente, apenas elige pagar con tarjeta por el link de pago: el pedido
+ * queda esperando y este correo le deja a mano el monto exacto, el link y qué
+ * hacer después, por si cierra la pestaña antes de pagar. */
+export function correoPedidoEsperaPagoLink(
+  pedido: PedidoWeb,
+  imagenes: Record<number, string | undefined>,
+  enlaces: { pedido: string; linkPago: string; whatsapp: string | null; horasParaPagar: number }
+): { subject: string; html: string } {
+  const nombre = escaparHtml(pedido.cliente_nombre || '');
+  const contenido = `
+    <p style="margin:0 0 16px;font-size:14px;color:${TEXTO_SUAVE};">
+      ${nombre ? `Hola ${nombre}, ` : ''}recibimos tu pedido <strong style="color:${TEXTO};">${pedido.numero_pedido}</strong>.
+      Para dejarlo confirmado falta el pago con tarjeta.
+    </p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 18px;background:#f4f7fc;border-radius:10px;">
+      <tr><td style="padding:18px 20px;">
+        <p style="margin:0 0 4px;font-size:12px;color:${TEXTO_SUAVE};text-transform:uppercase;letter-spacing:.06em;">Monto a pagar</p>
+        <p style="margin:0 0 14px;font-size:26px;font-weight:700;color:${TEXTO};">${formatoCLP.format(pedido.total)}</p>
+        <p style="margin:0 0 6px;font-size:14px;color:${TEXTO};"><strong>1.</strong> Abre el link de pago y escribe ese monto exacto.</p>
+        <p style="margin:0 0 6px;font-size:14px;color:${TEXTO};"><strong>2.</strong> Paga con tu tarjeta de débito o crédito.</p>
+        <p style="margin:0 0 16px;font-size:14px;color:${TEXTO};"><strong>3.</strong> Envíanos el comprobante por WhatsApp con tu número de pedido.</p>
+        ${botonCorreo(enlaces.linkPago, 'Pagar con tarjeta')}
+      </td></tr>
+    </table>
+    <p style="margin:0 0 16px;font-size:13px;color:${TEXTO_SUAVE};">
+      Confirmamos tu pago a mano, normalmente en pocos minutos dentro de nuestro horario (${HORARIO_LEGIBLE}).
+      Apenas quede confirmado te llega otro correo. Tienes ${enlaces.horasParaPagar} horas para pagar; después el pedido se anula solo.
+    </p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:10px;">${filasConFotoDe(pedido, imagenes)}</table>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;">
+      ${pedido.costo_envio > 0 ? filaTotal('Envío', pedido.costo_envio) : ''}
+      ${filaTotal('Total', pedido.total, true)}
+    </table>
+    <p style="margin:0;font-size:13px;color:${TEXTO_SUAVE};">
+      <a href="${enlaces.pedido}" style="color:${AZUL};">Ver mi pedido</a>${enlaces.whatsapp ? ` · <a href="${enlaces.whatsapp}" style="color:${AZUL};">Enviar el comprobante por WhatsApp</a>` : ''}
+    </p>
+  `;
+  return {
+    subject: `Tu pedido ${pedido.numero_pedido} espera el pago — Sevelin`,
+    html: envoltorio('Falta un paso: el pago con tarjeta', contenido),
+  };
+}
+
+/** Al dueño: hay un pedido esperando que confirme un pago hecho por el link.
+ * Sin este aviso el pedido solo se vería entrando a Pedidos Web. */
+export function correoAvisoPagoPorConfirmar(pedido: PedidoWeb): { subject: string; html: string } {
+  const filas = pedido.items.map((it) => filaItem(it.nombre, it.cantidad, it.precio_web * it.cantidad)).join('');
+  const cliente = escaparHtml([pedido.cliente_nombre, pedido.cliente_apellido].filter(Boolean).join(' ') || 'Sin nombre');
+  const contenido = `
+    <p style="margin:0 0 16px;font-size:14px;color:${TEXTO_SUAVE};">
+      El pedido <strong style="color:${TEXTO};">${pedido.numero_pedido}</strong> eligió pagar con tarjeta por tu link de pago.
+      <strong style="color:${TEXTO};">Todavía no está pagado.</strong>
+    </p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 16px;background:#f4f7fc;border-radius:10px;">
+      <tr><td style="padding:16px 20px;">
+        <p style="margin:0 0 4px;font-size:12px;color:${TEXTO_SUAVE};text-transform:uppercase;letter-spacing:.06em;">Tiene que llegarte un pago de</p>
+        <p style="margin:0;font-size:24px;font-weight:700;color:${TEXTO};">${formatoCLP.format(pedido.total)}</p>
+      </td></tr>
+    </table>
+    <p style="margin:0 0 6px;font-size:14px;color:${TEXTO};"><strong>Qué hacer:</strong></p>
+    <p style="margin:0 0 4px;font-size:14px;color:${TEXTO_SUAVE};">1. Espera el comprobante del cliente por WhatsApp, o revisa el pago en tu panel de Haulmer.</p>
+    <p style="margin:0 0 16px;font-size:14px;color:${TEXTO_SUAVE};">2. En el POS: Página Web → Pedidos Web → <strong style="color:${TEXTO};">Confirmar pago</strong>. Recién ahí baja el stock, se anota la venta y el cliente recibe su correo.</p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">${filas}</table>
+    <p style="margin:0;font-size:13px;color:${TEXTO};"><strong>Cliente:</strong> ${cliente} · ${escaparHtml(pedido.cliente_telefono || 'sin teléfono')} · ${escaparHtml(pedido.cliente_email || 'sin correo')}</p>
+    <p style="margin:10px 0 0;font-size:12px;color:${TEXTO_SUAVE};">Si nadie paga, el pedido se anula solo. No se descontó stock.</p>
+  `;
+  return {
+    subject: `Pedido ${pedido.numero_pedido} espera un pago con tarjeta de ${formatoCLP.format(pedido.total)}`,
+    html: envoltorio('Pago con tarjeta por confirmar', contenido),
+  };
+}
+
+/** Recordatorio de un pedido que quedó sin pagar (cron recordar-carritos).
+ * El botón lleva a la página del pedido, que deja terminar el pago sin volver
+ * a llenar nada. Una sola vez por pedido, con su enlace de baja. */
+export function correoPedidoSinPagar(
+  pedido: PedidoWeb,
+  imagenes: Record<number, string | undefined>,
+  enlaces: { pedido: string; baja: string }
+): { subject: string; html: string } {
+  const nombre = escaparHtml(pedido.cliente_nombre || '');
+  const contenido = `
+    <p style="margin:0 0 16px;font-size:14px;color:${TEXTO_SUAVE};">
+      ${nombre ? `Hola ${nombre}, ` : ''}tu pedido <strong style="color:${TEXTO};">${pedido.numero_pedido}</strong> quedó a un paso:
+      solo falta el pago. Tus productos y tus datos siguen guardados.
+    </p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:10px;">${filasConFotoDe(pedido, imagenes)}</table>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;">
+      ${pedido.costo_envio > 0 ? filaTotal('Envío', pedido.costo_envio) : ''}
+      ${filaTotal('Total', pedido.total, true)}
+    </table>
+    ${botonCorreo(enlaces.pedido, 'Terminar mi compra')}
+    <p style="margin:18px 0 0;font-size:13px;color:${TEXTO_SUAVE};">El pedido se anula solo si no se paga. Si ya pagaste, no hagas nada: te llega la confirmación apenas la registremos.</p>
+    <p style="margin:18px 0 0;font-size:12px;color:${TEXTO_SUAVE};">Te escribimos una sola vez por este pedido. Si no quieres recibir más recordatorios como este, <a href="${enlaces.baja}" style="color:${TEXTO_SUAVE};">date de baja aquí</a>.</p>
+  `;
+  return {
+    subject: `Tu pedido ${pedido.numero_pedido} quedó sin pagar — Sevelin`,
+    html: envoltorio('¿Te faltó terminar tu compra?', contenido),
+  };
+}

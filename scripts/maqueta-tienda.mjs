@@ -10,6 +10,11 @@
 //   http://localhost:54399/maqueta/entrar?quien=salir       sin sesión
 // Ver lo que guardó la tienda:  http://localhost:54399/maqueta/tabla/pedidos_web
 // Pagar un pedido (Khipu falso):  http://localhost:54399/maqueta/pagar?pedido=WEB-900001
+// Confirmar un pago con tarjeta por el link (lo que hace el botón del POS):
+//                                 http://localhost:54399/maqueta/confirmar-pago?pedido=WEB-900001&tipo=CREDITO
+// Webpay: sin nada, la tienda ofrece el link de pago (como en producción hoy). Con
+//   node scripts/maqueta-tienda.mjs --webpay
+// ofrece Webpay contra el AMBIENTE DE INTEGRACIÓN real de Transbank (tarjetas de prueba, sin plata).
 // "Ya llegó" un por llegar:       http://localhost:54399/maqueta/llego?id=990001
 // Llamadas que recibió el POS:    http://localhost:54399/maqueta/tabla/llamadas_pos
 // Ofertas de prueba:            http://localhost:54399/maqueta/ofertas?estado=vigentes   (o proximas, ninguna)
@@ -261,6 +266,14 @@ const servidor = http.createServer(async (req, res) => {
     const r = await fetch(`${URL_TIENDA}/api/khipu-webhook`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-khipu-signature': `t=${ts},s=${firma}` }, body: cuerpo });
     return responder(200, { pedido: pedido.numero_pedido, webhook: await r.json().catch(() => null), estado: pedido.estado });
   }
+  // --- "Confirmar pago" del POS para un pedido que eligió el link de pago (supabase/42) ---
+  if (url.pathname === '/maqueta/confirmar-pago') {
+    const pedido = tablas.pedidos_web.find((p) => p.numero_pedido === url.searchParams.get('pedido')) || tablas.pedidos_web[tablas.pedidos_web.length - 1];
+    if (!pedido) return responder(404, { error: 'No hay pedidos en la maqueta' });
+    const r = await fetch(`${URL_TIENDA}/api/pos/confirmar-pago`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-sync-secret': url.searchParams.get('secreto') || 'maqueta-sync' },
+      body: JSON.stringify({ numero_pedido: pedido.numero_pedido, tipo: url.searchParams.get('tipo') || 'DEBITO', referencia: url.searchParams.get('referencia') || '' }) });
+    return responder(200, { pedido: pedido.numero_pedido, estado_http: r.status, respuesta: await r.json().catch(() => null), estado: pedido.estado, metodo_pago: pedido.metodo_pago, pago_detalle: pedido.pago_detalle || null });
+  }
   // --- "Ya llegó": el POS apaga por_llegar y el webhook de sincronización avisa a la lista de espera ---
   if (url.pathname === '/maqueta/llego') {
     const p = productos.find((x) => Number(x.producto_pos_id) === Number(url.searchParams.get('id')));
@@ -366,6 +379,10 @@ servidor.listen(PUERTO_SUPABASE, () => {
     STARKEN_RUT: '', STARKEN_CLAVE: '', POS_INTERNAL_API_URL: `${URL_SUPABASE}/pos/ajustar-stock`, SYNC_SECRET: 'maqueta-sync', CRON_SECRET: 'maqueta-cron',
     UPSTASH_REDIS_REST_URL: '', UPSTASH_REDIS_REST_TOKEN: '',
     NEXT_PUBLIC_FACEBOOK_PIXEL_ID: '', NEXT_PUBLIC_TURNSTILE_SITE_KEY: '',
+    /* Webpay (supabase/42): apagado, salvo que se pida con --webpay. Ahí va contra el ambiente de
+       integración de Transbank con sus credenciales públicas; nunca contra producción. */
+    WEBPAY_AMBIENTE: process.argv.includes('--webpay') ? 'integracion' : '', WEBPAY_PRUEBAS: process.argv.includes('--webpay') ? '1' : '',
+    WEBPAY_COMMERCE_CODE: '', WEBPAY_API_KEY_SECRET: '', WEBPAY_API_BASE: '',
   };
   const next = spawn(process.execPath, [path.join(RAIZ, 'node_modules/next/dist/bin/next'), 'dev', '-p', String(PUERTO_TIENDA)], { cwd: RAIZ, env, stdio: 'inherit' });
   next.on('exit', (codigo) => { servidor.close(); process.exit(codigo ?? 0); });

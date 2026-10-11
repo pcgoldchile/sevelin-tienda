@@ -11,6 +11,7 @@ import { TarjetasConfianza } from "@/components/tarjetas-confianza";
 import { TarjetaProducto } from "@/components/tarjeta-producto";
 import { ScrollReveal } from "@/components/fx/scroll-reveal";
 import { AvisoPagoTarjeta } from "@/components/aviso-pago-tarjeta";
+import { medioTarjetaDisponible } from "@/lib/link-pago";
 
 // ISR: el catálogo no cambia segundo a segundo (se sincroniza vía webhook
 // desde el POS), así que 60s de cache es suficiente para una navegación
@@ -101,7 +102,7 @@ export default async function Home() {
           tarjeta tiene que enterarse de que puede ANTES de recorrer el
           catálogo, no después de decidir que no le sirve la tienda. */}
       <div className="mx-auto w-full max-w-6xl px-4 pt-10 sm:px-6 lg:px-8">
-        <AvisoPagoTarjeta />
+        <AvisoPagoTarjeta enSitio={medioTarjetaDisponible() !== null} />
       </div>
 
       <section className="mx-auto w-full max-w-6xl px-4 py-14 sm:px-6 lg:px-8">

@@ -123,11 +123,13 @@ export async function correoDadoDeBaja(correo: string): Promise<boolean> {
 /** Da de baja el correo del carrito de ese token. Devuelve el correo, o null
  * si el token no existe o no tiene correo. */
 export async function darDeBajaRecordatorios(token: string): Promise<string | null> {
-  const { data } = await supabaseWeb
-    .from('carritos_web')
-    .select('correo')
-    .eq('token', token)
-    .maybeSingle();
+  /* El recordatorio de un pedido sin pagar (supabase/42) trae la llave pública
+     del pedido, 32 hexadecimales; el de un carrito, su token corto. No se
+     pueden confundir: tienen largo y alfabeto distintos. */
+  const esDePedido = /^[0-9a-f]{32}$/.test(token);
+  const { data } = esDePedido
+    ? await supabaseWeb.from('pedidos_web').select('correo:cliente_email').eq('token_publico', token).maybeSingle()
+    : await supabaseWeb.from('carritos_web').select('correo').eq('token', token).maybeSingle();
   const correo = (data?.correo || '').trim().toLowerCase();
   if (!correo) return null;
   const { error } = await supabaseWeb.from('correos_sin_recordatorio').upsert({ correo }, { onConflict: 'correo' });

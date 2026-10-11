@@ -1,3 +1,5 @@
+import { LINK_PAGO_TUU_ENCENDIDO } from "@/lib/tarjeta-en-sitio";
+
 /**
  * Aviso de "también puedes pagar con tarjeta".
  *
@@ -14,7 +16,49 @@
  * dice el paso siguiente concreto —compartir el carrito— porque el
  * carrito ya tiene el botón que genera ese enlace.
  */
-export function AvisoPagoTarjeta({ conCarrito = false }: { conCarrito?: boolean }) {
+export function AvisoPagoTarjeta({
+  conCarrito = false,
+  enSitio = LINK_PAGO_TUU_ENCENDIDO,
+}: {
+  conCarrito?: boolean;
+  /* Desde supabase/42 se puede pagar con tarjeta en la página (Webpay, o el
+     link de pago mientras tanto). Las páginas de servidor lo confirman con
+     medioTarjetaDisponible(); el carrito, que corre en el navegador, usa el
+     interruptor. Con tarjeta en el sitio el aviso deja de mandar a WhatsApp:
+     lo dice y listo. */
+  enSitio?: boolean;
+}) {
+  if (enSitio) {
+    return (
+      <section className="@container relative overflow-hidden rounded-2xl border border-primary/35 bg-surface/70 p-5 @md:p-6">
+        <span aria-hidden className="absolute inset-y-0 left-0 w-1 bg-primary" />
+        <div className="flex items-center gap-2.5">
+          <svg
+            aria-hidden
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="h-6 w-6 shrink-0 text-primary"
+          >
+            <rect x="2" y="5" width="20" height="14" rx="2.5" />
+            <path d="M2 10h20" />
+            <path d="M6 15h4" />
+          </svg>
+          <h2 className="font-display text-sm font-bold uppercase tracking-wide text-ink @md:text-base">
+            Paga con tarjeta o transferencia
+          </h2>
+        </div>
+        <p className="mt-2 max-w-xl text-sm leading-relaxed text-ink-soft">
+          Al finalizar tu compra eliges cómo pagar: <strong className="text-ink">tarjeta de débito o crédito</strong>, o
+          transferencia bancaria. El precio es el mismo con cualquiera de los dos.
+        </p>
+      </section>
+    );
+  }
+
   // Mismo origen que el resto de los contactos (footer, botón flotante):
   // el número nunca se escribe a mano acá. Sin la variable, el aviso no
   // se muestra — prometer "escríbenos" sin un enlace que funcione es peor

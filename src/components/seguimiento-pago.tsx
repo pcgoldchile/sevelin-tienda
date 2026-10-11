@@ -30,7 +30,23 @@ import { useRouter } from "next/navigation";
 const INTERVALO_MS = 3000;
 const LIMITE_MS = 3 * 60 * 1000;
 
-export function SeguimientoPago({ token, estadoActual }: { token: string; estadoActual: string }) {
+/* Pago con tarjeta por el link de Haulmer (supabase/42): lo confirma una
+   persona desde el POS, no una pasarela, así que puede tardar varios minutos.
+   Se consulta más espaciado y por más rato. */
+const INTERVALO_MANUAL_MS = 10000;
+const LIMITE_MANUAL_MS = 30 * 60 * 1000;
+
+export function SeguimientoPago({
+  token,
+  estadoActual,
+  confirmacionManual = false,
+}: {
+  token: string;
+  estadoActual: string;
+  confirmacionManual?: boolean;
+}) {
+  const intervalo = confirmacionManual ? INTERVALO_MANUAL_MS : INTERVALO_MS;
+  const limite = confirmacionManual ? LIMITE_MANUAL_MS : LIMITE_MS;
   const router = useRouter();
   const [agotado, setAgotado] = useState(false);
 
@@ -41,7 +57,7 @@ export function SeguimientoPago({ token, estadoActual }: { token: string; estado
     const desde = Date.now();
 
     const timer = setInterval(async () => {
-      if (Date.now() - desde > LIMITE_MS) {
+      if (Date.now() - desde > limite) {
         clearInterval(timer);
         if (vivo) setAgotado(true);
         return;
@@ -59,13 +75,13 @@ export function SeguimientoPago({ token, estadoActual }: { token: string; estado
         // siguiente intento lo resuelve, y si nunca resuelve, el límite de
         // tiempo corta igual.
       }
-    }, INTERVALO_MS);
+    }, intervalo);
 
     return () => {
       vivo = false;
       clearInterval(timer);
     };
-  }, [token, estadoActual, router]);
+  }, [token, estadoActual, router, intervalo, limite]);
 
   if (estadoActual !== "CREADO") return null;
 
@@ -85,7 +101,7 @@ export function SeguimientoPago({ token, estadoActual }: { token: string; estado
             aria-hidden
             className="h-3.5 w-3.5 shrink-0 animate-spin rounded-full border-2 border-accent border-t-transparent"
           />
-          <span>Actualizando automáticamente…</span>
+          <span>{confirmacionManual ? "Esta página se actualiza sola cuando confirmemos tu pago." : "Actualizando automáticamente…"}</span>
         </>
       )}
     </div>

@@ -2,6 +2,12 @@ import Link from "next/link";
 import { HAY_RECARGO, RECARGO_CHECKOUT_TARJETA } from "@/lib/precios-medio-pago";
 import { FLOW_HABILITADO } from "@/lib/flow";
 import { FACTURA_HABILITADA } from "@/lib/factura";
+import { medioTarjetaDisponible } from "@/lib/link-pago";
+
+/* Pago con tarjeta en la página (supabase/42): Webpay, o el link de pago de
+   Haulmer mientras Transbank termina de habilitarlo. */
+const MEDIO_TARJETA = medioTarjetaDisponible();
+const TARJETA_EN_LA_PAGINA = FLOW_HABILITADO || MEDIO_TARJETA !== null;
 
 /* Contenido confirmado por el dueño el 08-09-2026 — ver
    docs/FAQ-PROPUESTA.md. Nada acá se inventa: cada respuesta sale de algo
@@ -22,7 +28,7 @@ const MEDIOS_DE_PAGO: [string, string][] = [
   ["Transferencia bancaria", "En la página (Khipu) o coordinada por WhatsApp"],
   [
     "Tarjeta de débito, crédito o prepago",
-    FLOW_HABILITADO ? "En la página, o en la tienda" : "En la tienda, o con un link de pago que te enviamos",
+    TARJETA_EN_LA_PAGINA ? "En la página, o en la tienda" : "En la tienda, o con un link de pago que te enviamos",
   ],
   ...(HAY_RECARGO
     ? ([["Tarjeta en la página", `Precio publicado + ${Math.round(RECARGO_CHECKOUT_TARJETA * 100)}%`]] as [string, string][])
@@ -122,7 +128,9 @@ const PREGUNTAS: { pregunta: string; respuesta: string }[] = [
   },
   {
     pregunta: "¿Qué medios de pago aceptan?",
-    respuesta: FLOW_HABILITADO
+    respuesta: MEDIO_TARJETA
+      ? "Efectivo, transferencia bancaria, tarjetas de débito y tarjetas de crédito. En la tienda online puedes pagar por transferencia bancaria (vía Khipu, que te lleva al sitio de tu banco) o con tarjeta de débito o crédito. Eliges el medio al finalizar la compra."
+      : FLOW_HABILITADO
       ? "Efectivo, transferencia bancaria, tarjetas de débito y tarjetas de crédito. En la tienda online puedes pagar con transferencia bancaria (vía Khipu) o con tarjeta de crédito o débito (Webpay, vía Flow). También podemos enviarte un link de pago si prefieres coordinar por WhatsApp."
       : "Efectivo, transferencia bancaria, tarjetas de débito y tarjetas de crédito. En la tienda online, por ahora el pago es por transferencia bancaria a través de Khipu, que te lleva al sitio de tu banco para autorizarla. Si prefieres pagar con tarjeta, puedes hacerlo en nuestra tienda, o escribirnos por WhatsApp para enviarte un link de pago.",
   },
@@ -134,7 +142,11 @@ const PREGUNTAS: { pregunta: string; respuesta: string }[] = [
   },
   {
     pregunta: "¿Puedo pagar con tarjeta de crédito o débito?",
-    respuesta: FLOW_HABILITADO
+    respuesta: MEDIO_TARJETA === "WEBPAY"
+      ? "Sí. Puedes pagar con tarjeta de débito, crédito o prepago al finalizar tu compra en la página, a través de Webpay de Transbank, o en nuestra tienda cuando retires."
+      : MEDIO_TARJETA === "LINK_TUU"
+      ? "Sí. Al finalizar tu compra en la página eliges «Tarjeta de débito o crédito»: pagas en nuestro link de pago y nos envías el comprobante por WhatsApp. Confirmamos tu pago a mano, normalmente en pocos minutos dentro del horario de la tienda, y te avisamos por correo. También puedes pagar con tarjeta en nuestra tienda cuando retires."
+      : FLOW_HABILITADO
       ? "Sí. Puedes pagar con tarjeta directamente en el checkout de la página, o en nuestra tienda cuando retires."
       : "Sí. Puedes pagar con tu tarjeta de crédito o débito directamente en nuestra tienda, o pedirnos un link de pago por WhatsApp y pagar desde tu casa. En la página, por ahora el pago en línea es solo por transferencia bancaria — estamos habilitando el pago con tarjeta y avisaremos cuando esté disponible.",
   },

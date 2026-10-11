@@ -17,6 +17,7 @@ import { BotonAgregarFoto } from "@/components/boton-agregar-foto";
 import { EtiquetaProductoBadge } from "@/components/etiqueta-producto-badge";
 import { InfoEnvioProducto } from "@/components/info-envio-producto";
 import { AvisoPagoTarjeta } from "@/components/aviso-pago-tarjeta";
+import { medioTarjetaDisponible } from "@/lib/link-pago";
 import { AvisoUrgenciaStock } from "@/components/aviso-urgencia-stock";
 import { AvisoPorLlegar } from "@/components/aviso-por-llegar";
 import { AvisameProducto } from "@/components/avisame-producto";
@@ -382,7 +383,7 @@ export default async function FichaProducto({ params }: PropsPagina) {
               cliente piensa "¿con qué pago?". Enterarse de que puede pagar
               con tarjeta después de irse de la ficha no sirve de nada. */}
           {/* Sin compra en línea no hay pago con tarjeta que anunciar. */}
-          {!producto.precio_a_consultar && <AvisoPagoTarjeta />}
+          {!producto.precio_a_consultar && <AvisoPagoTarjeta enSitio={medioTarjetaDisponible() !== null} />}
 
           {producto.descripcion_web && (
             <div className="descripcion-producto rounded-2xl border border-border bg-surface/60 p-5 sm:p-6">

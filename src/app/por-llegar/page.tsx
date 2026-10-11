@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { listarPorLlegar } from "@/lib/encargos";
 import { PorLlegarNavegable } from "@/components/por-llegar-navegable";
 import { AvisoPagoTarjeta } from "@/components/aviso-pago-tarjeta";
+import { medioTarjetaDisponible } from "@/lib/link-pago";
 import { Truck, ShieldCheck, BellRing } from "lucide-react";
 
 export const revalidate = 60;
@@ -70,7 +71,7 @@ export default async function PorLlegar() {
       </ul>
 
       <div className="mt-5">
-        <AvisoPagoTarjeta />
+        <AvisoPagoTarjeta enSitio={medioTarjetaDisponible() !== null} />
       </div>
 
       {error ? (

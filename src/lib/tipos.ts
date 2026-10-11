@@ -203,6 +203,31 @@ export type EstadoPedido =
   // el sistema nunca reembolsa ni cancela por su cuenta.
   | 'ERROR_STOCK_SIN_DESPACHO';
 
+/**
+ * Comprobante de un pago con tarjeta (`pedidos_web.pago_detalle`, supabase/42).
+ * Con Webpay lo llena Transbank al confirmar; con el link de pago lo llena el
+ * dueño al apretar "Confirmar pago" en el POS. Nunca guarda el número
+ * completo de la tarjeta: Transbank solo entrega los 4 últimos dígitos.
+ */
+export interface PagoDetalle {
+  origen: 'WEBPAY' | 'LINK_TUU';
+  /** Lo que el POS necesita para anotar la venta y su comisión. */
+  tipo?: 'DEBITO' | 'CREDITO' | 'PREPAGO';
+  // --- Webpay ---
+  orden_compra?: string;
+  codigo_autorizacion?: string | null;
+  tipo_pago_codigo?: string | null;
+  cuotas?: number | null;
+  monto_cuota?: number | null;
+  tarjeta?: string | null;
+  fecha?: string | null;
+  ambiente?: 'produccion' | 'integracion';
+  /** Último intento que Transbank rechazó; el pedido sigue esperando pago. */
+  rechazo?: { en: string; codigo: number | null; estado: string } | null;
+  // --- Link de pago ---
+  referencia?: string | null;
+}
+
 /** Espejo de `pedidos_web` — ver README-ECOMMERCE-SEVELIN.md sección 4.2. */
 export interface PedidoWeb {
   id: number;
@@ -278,7 +303,14 @@ export interface PedidoWeb {
   // 'FLOW' (webpay/tarjetas) o 'KHIPU' (transferencia bancaria) — ver
   // supabase/22-khipu.sql y src/lib/khipu.ts. Default 'FLOW' para pedidos
   // creados antes de que existiera Khipu como opción.
-  metodo_pago: 'FLOW' | 'KHIPU';
+  // Desde supabase/42: 'LINK_TUU' (tarjeta por el link de pago de Haulmer,
+  // se confirma a mano desde el POS) y 'WEBPAY' (tarjeta por Webpay Plus).
+  metodo_pago: 'FLOW' | 'KHIPU' | 'LINK_TUU' | 'WEBPAY';
+  /* Pago con tarjeta (supabase/42). Ausentes en pedidos anteriores. */
+  webpay_token?: string | null;
+  pago_detalle?: PagoDetalle | null;
+  pago_confirmado_en?: string | null;
+  recordatorio_pago_enviado_en?: string | null;
   flow_token: string | null;
   flow_order: number | null;
   khipu_payment_id: string | null;

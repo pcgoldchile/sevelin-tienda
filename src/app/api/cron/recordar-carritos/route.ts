@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseWeb } from '@/lib/supabase-web';
 import { obtenerProductoPorSku } from '@/lib/catalogo';
 import { enviarCorreo } from '@/lib/resend';
-import { correoCarritoAbandonado } from '@/lib/correo-pedido';
+import { correoCarritoAbandonado, correoPedidoSinPagar } from '@/lib/correo-pedido';
+import { obtenerImagenesPorProductoPosId } from '@/lib/catalogo';
+import { marcarRecordatorioPagoEnviado, pedidosSinPagarParaRecordar } from '@/lib/pedidos';
+import { HORAS_PARA_PAGAR } from '@/lib/link-pago';
 import { correoDadoDeBaja, esCorreoDeRobot, urlBajaRecordatorios, urlCarrito, type ItemCarritoWeb } from '@/lib/carritos-web';
 
 /** Cuánto esperar desde que el cliente dejó el correo (o lo actualizó por
@@ -10,6 +13,40 @@ import { correoDadoDeBaja, esCorreoDeRobot, urlBajaRecordatorios, urlCarrito, ty
  * molestar a alguien que sigue comprando en ese momento, pero dentro de la
  * ventana de 24h en que el carrito sigue vivo. */
 const RETRASO_RECORDATORIO_MS = 60 * 60 * 1000;
+
+/** Lo mismo para un pedido que llegó a crearse y quedó sin pagar: una hora de
+ * margen, por si sigue pagando o el dueño está por confirmar un pago hecho
+ * con el link. */
+const HORAS_ANTES_DE_RECORDAR_PAGO = 1;
+
+/**
+ * PEDIDOS SIN PAGAR (supabase/42, 11-10-2026).
+ * Hasta ahora el recordatorio de abandono se apagaba apenas el carrito se
+ * convertía en pedido, así que quien llegaba al banco (o al link de pago) y
+ * no terminaba no recibía nada: 4 de los 8 pedidos por Khipu vencieron así.
+ * El correo lleva a la página del pedido, que deja terminar el pago sin
+ * volver a llenar nada. Una vez por pedido; respeta la baja y a los robots.
+ */
+async function recordarPedidosSinPagar(): Promise<{ revisados: number; enviados: number }> {
+  const sitio = (process.env.NEXT_PUBLIC_SITE_URL || 'https://sevelin.cl').replace(/\/+$/, '');
+  const pedidos = await pedidosSinPagarParaRecordar(HORAS_ANTES_DE_RECORDAR_PAGO, HORAS_PARA_PAGAR);
+  let enviados = 0;
+
+  for (const pedido of pedidos) {
+    const correo = (pedido.cliente_email || '').trim();
+    if (correo && !esCorreoDeRobot(correo) && !(await correoDadoDeBaja(correo))) {
+      const imagenes = await obtenerImagenesPorProductoPosId(pedido.items.map((it) => it.producto_pos_id)).catch(() => ({}));
+      const { subject, html } = correoPedidoSinPagar(pedido, imagenes, {
+        pedido: `${sitio}/pedido/${pedido.token_publico}`,
+        baja: urlBajaRecordatorios(pedido.token_publico),
+      });
+      if (await enviarCorreo({ to: correo, subject, html })) enviados++;
+    }
+    // Se marca igual aunque no saliera (baja, robot o fallo del envío): una sola pasada por pedido.
+    await marcarRecordatorioPagoEnviado(pedido.id);
+  }
+  return { revisados: pedidos.length, enviados };
+}
 
 function verificarCron(req: NextRequest): boolean {
   const secreto = process.env.CRON_SECRET;
@@ -84,5 +121,14 @@ export async function GET(req: NextRequest) {
     .lt('creado_en', hace90Dias)
     .not('correo', 'is', null);
 
-  return NextResponse.json({ ok: true, revisados: candidatos?.length || 0, enviados });
+  /* Va al final y con su propio try: si la columna de supabase/42 todavía no
+     existe o algo falla, los recordatorios de carrito de arriba ya salieron. */
+  let pedidosSinPagar = { revisados: 0, enviados: 0 };
+  try {
+    pedidosSinPagar = await recordarPedidosSinPagar();
+  } catch (err) {
+    console.error('[recordar-carritos] pedidos sin pagar:', err instanceof Error ? err.message : err);
+  }
+
+  return NextResponse.json({ ok: true, revisados: candidatos?.length || 0, enviados, pedidos_sin_pagar: pedidosSinPagar });
 }

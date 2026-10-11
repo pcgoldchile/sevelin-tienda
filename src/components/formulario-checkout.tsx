@@ -6,7 +6,8 @@ import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { NeonSpinner } from "@/components/neon-spinner";
 import { formatoCLP } from "@/lib/formato";
-import { HAY_RECARGO, RECARGO_CHECKOUT_TARJETA, recargoTotal } from "@/lib/precios-medio-pago";
+import { HAY_RECARGO, RECARGO_CHECKOUT_TARJETA, recargoTotal, type MetodoPagoWeb } from "@/lib/precios-medio-pago";
+import { irAWebpay } from "@/lib/ir-a-webpay";
 import { useCarrito } from "@/context/carrito-context";
 import { useSesion } from "@/context/sesion-context";
 import { CODIGOS_PAIS, CODIGO_PAIS_POR_DEFECTO } from "@/lib/codigos-pais";
@@ -29,9 +30,14 @@ const CAMPO =
 export function FormularioCheckout({
   khipuHabilitado = false,
   flowHabilitado = true,
+  medioTarjeta = null,
 }: {
   khipuHabilitado?: boolean;
   flowHabilitado?: boolean;
+  /* Pago con tarjeta (supabase/42): 'WEBPAY' cuando Transbank ya cobra, o
+     'LINK_TUU' (el link de pago de Haulmer) mientras tanto. Lo decide el
+     servidor; null = hoy no hay tarjeta en el sitio. */
+  medioTarjeta?: "WEBPAY" | "LINK_TUU" | null;
 }) {
   // Editar cantidades/quitar ítems ya vive en /carrito (estilo MercadoLibre)
   // — acá solo se paga lo que llegó seleccionado, "Tu pedido" es de solo
@@ -48,12 +54,28 @@ export function FormularioCheckout({
   /* Arranca en el medio que de verdad esté disponible: con Flow apagado, el
      valor inicial "FLOW" habría mostrado un total con recargo (cuando lo
      haya) por un medio que ni siquiera se ofrece. */
-  const [metodoPago, setMetodoPago] = useState<"FLOW" | "KHIPU">(
-    flowHabilitado ? "FLOW" : "KHIPU"
-  );
+  /* Los medios que de verdad se ofrecen, en el orden en que se muestran. El
+     primero queda elegido: Webpay cuando ya cobra (es lo que la mayoría
+     busca); con el link de pago va primero la transferencia, que se confirma
+     sola, y el link —que confirmamos a mano— queda como segunda opción. */
+  const mediosDePago: { valor: MetodoPagoWeb; titulo: string; detalle: string }[] = [
+    ...(medioTarjeta === "WEBPAY"
+      ? [{ valor: "WEBPAY" as const, titulo: "Tarjeta de débito o crédito", detalle: "Webpay de Transbank. Pagas en su formulario seguro." }]
+      : []),
+    ...(khipuHabilitado
+      ? [{ valor: "KHIPU" as const, titulo: "Transferencia bancaria", detalle: "Vía Khipu. Te llevamos al sitio de tu banco." }]
+      : []),
+    ...(medioTarjeta === "LINK_TUU"
+      ? [{ valor: "LINK_TUU" as const, titulo: "Tarjeta de débito o crédito", detalle: "Con nuestro link de pago. Confirmamos tu pago a mano, en pocos minutos dentro del horario de la tienda." }]
+      : []),
+    ...(flowHabilitado
+      ? [{ valor: "FLOW" as const, titulo: "Tarjeta de crédito o débito", detalle: "Webpay, vía Flow" }]
+      : []),
+  ];
+  const [metodoPago, setMetodoPago] = useState<MetodoPagoWeb>(mediosDePago[0]?.valor ?? "KHIPU");
   /* El selector solo tiene sentido si hay DOS medios entre los cuales
      elegir. Con uno solo se muestra un aviso informativo. */
-  const eleccionDeMedio = khipuHabilitado && flowHabilitado;
+  const eleccionDeMedio = mediosDePago.length > 1;
   const [calculandoEnvio, setCalculandoEnvio] = useState(false);
   const [errorEnvio, setErrorEnvio] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
@@ -517,7 +539,8 @@ export function FormularioCheckout({
           // en cualquier otro método.
           retiroFecha: todoPorLlegar && !hayServicios ? null : retiroFecha || null,
           retiroBloque: todoPorLlegar && !hayServicios ? null : retiroBloque || null,
-          metodoPago,
+          // Con tarjeta el servidor decide por dónde se cobra (Webpay o el link).
+          metodoPago: metodoPago === "WEBPAY" || metodoPago === "LINK_TUU" ? "TARJETA" : metodoPago,
           nota: datos.get("nota"),
           consentimientoPrivacidad: aceptaPrivacidad,
           carritoAbandonoId: carritoAbandonoIdRef.current || undefined,
@@ -543,6 +566,11 @@ export function FormularioCheckout({
       if (!respuesta.ok) throw new Error(data.error || "No se pudo iniciar el pago");
 
       quitarSeleccionados();
+      // Webpay: al formulario de Transbank se llega por POST con el token.
+      if (data.webpay?.url && data.webpay?.token) {
+        irAWebpay(data.webpay.url, data.webpay.token);
+        return;
+      }
       window.location.href = data.url_pago;
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo iniciar el pago");
@@ -1352,10 +1380,7 @@ export function FormularioCheckout({
         {eleccionDeMedio && (
           <fieldset className="flex flex-col gap-3">
             <legend className="mb-1 text-xs font-semibold uppercase tracking-wider text-ink-faint">Método de pago</legend>
-            {[
-              { valor: "FLOW" as const, titulo: "Tarjeta de crédito o débito", detalle: "Webpay, vía Flow" },
-              { valor: "KHIPU" as const, titulo: "Transferencia bancaria", detalle: "Vía Khipu" },
-            ].map((opcion) => {
+            {mediosDePago.map((opcion) => {
               const elegido = metodoPago === opcion.valor;
               /* Cada opción muestra su propio total, para que la diferencia
                  se vea ANTES de elegir y no como una sorpresa al final. */
@@ -1382,7 +1407,7 @@ export function FormularioCheckout({
                     </span>
                     <span className={`text-xs leading-snug ${elegido ? "text-ink" : "text-ink-soft"}`}>
                       {opcion.detalle}
-                      {opcion.valor === "KHIPU" && " · sin recargo"}
+                      {HAY_RECARGO && opcion.valor !== "FLOW" && " · sin recargo"}
                     </span>
                   </span>
                 </label>
@@ -1442,8 +1467,12 @@ export function FormularioCheckout({
               "Flow" fijo, y con Flow apagado habría anunciado una redirección
               a un sitio al que ya no se va. */}
           {enviando
-            ? `Redirigiendo a ${metodoPago === "KHIPU" ? "Khipu" : "Flow"}…`
-            : `Pagar ${formatoCLP.format(total)}`}
+            ? metodoPago === "LINK_TUU"
+              ? "Creando tu pedido…"
+              : `Redirigiendo a ${metodoPago === "KHIPU" ? "Khipu" : metodoPago === "WEBPAY" ? "Webpay" : "Flow"}…`
+            : metodoPago === "LINK_TUU"
+              ? `Continuar al pago de ${formatoCLP.format(total)}`
+              : `Pagar ${formatoCLP.format(total)}`}
         </motion.button>
       </form>
     </div>
