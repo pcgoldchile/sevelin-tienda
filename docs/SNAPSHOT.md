@@ -4,6 +4,18 @@
 > arquitectura completo (todas las fases) vive en `README-ECOMMERCE-SEVELIN.md`, en el repo del POS
 > (`sevelin-pos-oficial`) — este documento es el estado de ESTE repo (`sevelin-tienda`) nada más.
 
+**Fecha:** 11-10-2026 · **Los 32 enlaces que eran un código pasaron al nombre.**
+
+- **Enlaces-código (`7620af4`):** `src/lib/enlaces-codigo.ts` es una lista cerrada de 32 códigos viejos (18 códigos de
+  barras de tarjetas de video por encargo y 14 códigos internos del POS) con el número del producto al que apuntaban.
+  `skuVigenteDeEnlaceViejo()` la consulta primero, y `/pedidos-por-encargo/[sku]` ahora también redirige. En el POS esos
+  productos quedaron sin SKU (el código pasó a `codigo_barras`), así que su enlace es `nombre-id`. Verificado en
+  producción: `/productos/GMTS46151`, `/productos/123` y `/pedidos-por-encargo/4710483939365` responden 308.
+- Precios nuevos de los monitores reacondicionados: llegaron por la sincronización de siempre, sin cambio de código.
+- Pendiente del POS #93: ofrecer pago con tarjeta en la tienda (Haulmer o Webpay). Hoy la tienda cobra solo por Khipu.
+
+---
+
 **Fecha:** 10-10-2026 · **Local nuevo (San Rafael 896) y enlaces viejos que redirigen.**
 
 Detalle en `docs/CHANGELOG-V132.md` del POS.
