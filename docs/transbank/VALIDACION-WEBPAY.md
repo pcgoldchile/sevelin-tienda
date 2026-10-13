@@ -22,8 +22,9 @@ Cuál es el antiguo y cuál el nuevo se deduce por el orden de los números; el 
 | 2 | Código de comercio (12 dígitos, empieza con 5970) | Estaba en el portal de clientes | Encontrado el 13-10-2026: `597053105173` |
 | 3 | Integración en la tienda | Claude | Hecha y publicada el 13-10-2026 (commit `32ce25f`), con Webpay apagado |
 | 4 | Pagos de prueba para la validación | Claude | Hechos el 13-10-2026 (abajo). **Sirven hasta el 20-10-2026** |
-| 5 | Formulario de validación | Carlos (con lo de abajo) | Falta: necesita el código del paso 2 |
-| 6 | Transbank manda la llave secreta | Transbank, 24 horas hábiles | — |
+| 5 | Formulario de validación | Carlos y Claude | **Enviado el 13-10-2026** por el formulario antiguo (Typeform) |
+| 5b | Responder el correo de confirmación de Transbank | Carlos | **Falta**: lo mandan al contacto registrado del código |
+| 6 | Transbank manda la llave secreta | Transbank, 24 horas hábiles | Esperando |
 | 7 | Poner código y llave en Vercel | Carlos (la llave no la escribe Claude) | — |
 | 8 | Compra real de $50 | Carlos, con su tarjeta | — |
 
@@ -32,7 +33,15 @@ después del 20-10-2026, hay que repetir el paso 4 (son 10 minutos).
 
 ## Paso 5: el formulario
 
-Hay dos entradas y sirve cualquiera. Las dos piden lo mismo.
+**Enviado el 13-10-2026 por el formulario antiguo.** El validador nuevo respondía "no encontrado" (404 en
+`/api/request/identify`) para los dos códigos: son demasiado nuevos. Integraciones de Transbank lo confirmó por
+WhatsApp ese día y recomendó el Typeform. Respuesta de Transbank al enviar: mandan un correo al contacto comercial
+y técnico registrados pidiendo una confirmación, y después la API Key, dentro de 24 horas hábiles.
+
+En el Typeform conviene esperar a que cada pregunta termine de aparecer antes de marcar una opción: si la pantalla
+todavía se mueve, el clic cae en la opción de al lado (pasó con "producto" y se corrigió antes de enviar).
+
+Hay dos entradas. Las dos piden lo mismo.
 
 - Nuevo: <https://validador.transbankdevelopers.cl>
 - Antiguo: <https://form.typeform.com/to/ibXdg6Av> (el de "SDK o API"; el otro es para plugins)
