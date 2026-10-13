@@ -9,7 +9,7 @@ Webservices"). El código de comercio todavía no llega: en el contrato ese camp
 |---|---|---|---|
 | 1 | Hazte cliente y firma del contrato | Carlos | Hecho el 13-10-2026 |
 | 2 | Código de comercio (12 dígitos, empieza con 5970) | Transbank lo manda por correo desde `soporte@transbank.cl` | **Esperando** (revisar también spam) |
-| 3 | Integración en la tienda | Claude | Hecha, sin publicar (commit `32ce25f`) |
+| 3 | Integración en la tienda | Claude | Hecha y publicada el 13-10-2026 (commit `32ce25f`), con Webpay apagado |
 | 4 | Pagos de prueba para la validación | Claude | Hechos el 13-10-2026 (abajo). **Sirven hasta el 20-10-2026** |
 | 5 | Formulario de validación | Carlos (con lo de abajo) | Falta: necesita el código del paso 2 |
 | 6 | Transbank manda la llave secreta | Transbank, 24 horas hábiles | — |
@@ -79,8 +79,9 @@ Todos por $4.000. La hora de Chile es 3 horas menos.
 
 ## Pasos 7 y 8: encender Webpay
 
-1. El código de la tienda y del POS tiene que estar publicado (hoy no lo está) y aplicadas
-   `supabase/42` en la base de la tienda y `sql/91` en la del POS.
+1. El código de la tienda y del POS ya está publicado, y aplicadas `supabase/42` en la base de la
+   tienda y `sql/91` en la del POS (13-10-2026). Mientras tanto la tienda cobra tarjeta con el link
+   de pago de Haulmer.
 2. En Vercel, proyecto de la tienda, ambiente Production:
    `WEBPAY_AMBIENTE=produccion`, `WEBPAY_COMMERCE_CODE` y `WEBPAY_API_KEY_SECRET`. Después, un
    redeploy.

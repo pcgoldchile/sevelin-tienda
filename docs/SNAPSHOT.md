@@ -4,6 +4,24 @@
 > arquitectura completo (todas las fases) vive en `README-ECOMMERCE-SEVELIN.md`, en el repo del POS
 > (`sevelin-pos-oficial`) — este documento es el estado de ESTE repo (`sevelin-tienda`) nada más.
 
+**Fecha:** 13-10-2026 · **Pago con tarjeta publicado (link de pago como puente; Webpay listo y apagado).**
+
+- **Tarjeta en el checkout (`32ce25f`, publicado el 13-10-2026, `supabase/42` aplicada):** al pagar se elige
+  "Tarjeta de débito o crédito" o "Transferencia bancaria". Con tarjeta el servidor decide por dónde se cobra
+  (`medioTarjetaDisponible()` en `src/lib/link-pago.ts`): Webpay si está habilitado; si no, el link de Haulmer.
+  Hoy es el link: el pedido queda CREADO ("esperando pago") y el dueño lo confirma desde el POS
+  (`POST /api/pos/confirmar-pago`). Verificado en producción: el checkout muestra las dos opciones,
+  `/api/webpay/retorno` responde 303 a la portada (Webpay apagado) y `/api/pos/confirmar-pago` 401 sin secreto.
+- **Webpay Plus (`src/lib/webpay.ts`, `src/app/api/webpay/retorno/route.ts`):** integrado contra la API REST v1.2 y
+  apagado. Se enciende en Vercel con `WEBPAY_AMBIENTE=produccion`, `WEBPAY_COMMERCE_CODE` y `WEBPAY_API_KEY_SECRET`;
+  ese día el link se apaga solo. El ambiente de pruebas nunca corre en producción (`configWebpay()`).
+- **Validación con Transbank (`docs/transbank/VALIDACION-WEBPAY.md`):** contrato firmado el 13-10-2026; falta el
+  código de comercio, que Transbank manda por correo. Los 6 pagos de prueba que pide el formulario están hechos y
+  **vencen el 20-10-2026**. Para repetirlos: config `tienda-maqueta-webpay` del POS (`maqueta-tienda.mjs --webpay`).
+- Falta: una compra real de prueba con el link (dueño) y, al encender Webpay, la compra real de $50 que exige Transbank.
+
+---
+
 **Fecha:** 11-10-2026 · **Los 32 enlaces que eran un código pasaron al nombre.**
 
 - **Enlaces-código (`7620af4`):** `src/lib/enlaces-codigo.ts` es una lista cerrada de 32 códigos viejos (18 códigos de
