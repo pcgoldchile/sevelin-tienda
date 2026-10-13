@@ -1,14 +1,25 @@
 # Webpay Plus: validación con Transbank y paso a producción
 
 Estado al 13-10-2026. Contrato firmado ese día (folio 676755: "Ventas por Internet" y "Webpay Plus -
-Webservices"). El código de comercio todavía no llega: en el contrato ese campo está en blanco.
+Webservices"). En el contrato el código de comercio viene en blanco y Transbank no lo mandó por correo.
+
+**Códigos de comercio (vistos el 13-10-2026 en el portal, Solicitar Productos → Mis Productos).** Hay DOS
+Webpay Plus activos, porque el dueño contrató dos veces (el 11/12-10 y otra vez el 13-10 creyendo que el
+primero no había resultado):
+
+| En el portal | Con el prefijo 5970 | Qué se hace |
+|---|---|---|
+| `53105173` | `597053105173` | **El que se valida y se usa** (decisión del dueño, 13-10-2026) |
+| `53105261` | `597053105261` | Duplicado: pedir a Transbank que lo dé de baja |
+
+Cuál es el antiguo y cuál el nuevo se deduce por el orden de los números; el portal no muestra fechas.
 
 ## El camino completo
 
 | Paso | Qué es | Quién | Estado |
 |---|---|---|---|
 | 1 | Hazte cliente y firma del contrato | Carlos | Hecho el 13-10-2026 |
-| 2 | Código de comercio (12 dígitos, empieza con 5970) | Transbank lo manda por correo desde `soporte@transbank.cl` | **Esperando** (revisar también spam) |
+| 2 | Código de comercio (12 dígitos, empieza con 5970) | Estaba en el portal de clientes | Encontrado el 13-10-2026: `597053105173` |
 | 3 | Integración en la tienda | Claude | Hecha y publicada el 13-10-2026 (commit `32ce25f`), con Webpay apagado |
 | 4 | Pagos de prueba para la validación | Claude | Hechos el 13-10-2026 (abajo). **Sirven hasta el 20-10-2026** |
 | 5 | Formulario de validación | Carlos (con lo de abajo) | Falta: necesita el código del paso 2 |
@@ -28,7 +39,7 @@ Hay dos entradas y sirve cualquiera. Las dos piden lo mismo.
 
 | Pregunta | Respuesta |
 |---|---|
-| Código de comercio | El que llegue por correo. Si trae 8 dígitos, se le antepone `5970` |
+| Código de comercio | `597053105173` (en el portal sale con 8 dígitos; se le antepone `5970`) |
 | RUT asociado | El tuyo, sin puntos y con guion |
 | Nombre, correo y teléfono | Los tuyos |
 | ¿Validas para un PSP? | No |
