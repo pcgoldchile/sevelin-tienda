@@ -23,9 +23,9 @@ Cuál es el antiguo y cuál el nuevo se deduce por el orden de los números; el 
 | 3 | Integración en la tienda | Claude | Hecha y publicada el 13-10-2026 (commit `32ce25f`), con Webpay apagado |
 | 4 | Pagos de prueba para la validación | Claude | Hechos el 13-10-2026 (abajo). **Sirven hasta el 20-10-2026** |
 | 5 | Formulario de validación | Carlos y Claude | **Enviado el 13-10-2026** por el formulario antiguo (Typeform) |
-| 5b | Responder el correo de confirmación de Transbank | Carlos | **Falta**: lo mandan al contacto registrado del código |
-| 6 | Transbank manda la llave secreta | Transbank, 24 horas hábiles | Esperando |
-| 7 | Poner código y llave en Vercel | Carlos (la llave no la escribe Claude) | — |
+| 5b | Responder el correo de confirmación de Transbank | Carlos | Hecho |
+| 6 | Transbank manda la llave secreta | Transbank, 24 horas hábiles | Llegó el 14-10-2026 |
+| 7 | Poner código y llave en Vercel | Carlos (la llave no la escribe Claude) | Hecho el 14-10-2026: las 3 variables en Production, y redeploy con este commit |
 | 8 | Compra real de $50 | Carlos, con su tarjeta | — |
 
 Transbank rechaza la validación si los pagos de prueba tienen más de 7 días. Si el código llega
