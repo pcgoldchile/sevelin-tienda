@@ -55,15 +55,14 @@ export function FormularioCheckout({
      valor inicial "FLOW" habría mostrado un total con recargo (cuando lo
      haya) por un medio que ni siquiera se ofrece. */
   /* Los medios que de verdad se ofrecen, en el orden en que se muestran. El
-     primero queda elegido: Webpay cuando ya cobra (es lo que la mayoría
-     busca); con el link de pago va primero la transferencia, que se confirma
-     sola, y el link —que confirmamos a mano— queda como segunda opción. */
+     primero queda elegido: la transferencia por Khipu (dueño, 14-10-2026),
+     y la tarjeta —Webpay o el link de pago— queda como segunda opción. */
   const mediosDePago: { valor: MetodoPagoWeb; titulo: string; detalle: string }[] = [
-    ...(medioTarjeta === "WEBPAY"
-      ? [{ valor: "WEBPAY" as const, titulo: "Tarjeta de débito o crédito", detalle: "Webpay de Transbank. Pagas en su formulario seguro." }]
-      : []),
     ...(khipuHabilitado
       ? [{ valor: "KHIPU" as const, titulo: "Transferencia bancaria", detalle: "Vía Khipu. Te llevamos al sitio de tu banco." }]
+      : []),
+    ...(medioTarjeta === "WEBPAY"
+      ? [{ valor: "WEBPAY" as const, titulo: "Tarjeta de débito o crédito", detalle: "Webpay de Transbank. Pagas en su formulario seguro." }]
       : []),
     ...(medioTarjeta === "LINK_TUU"
       ? [{ valor: "LINK_TUU" as const, titulo: "Tarjeta de débito o crédito", detalle: "Con nuestro link de pago. Confirmamos tu pago a mano, en pocos minutos dentro del horario de la tienda." }]
