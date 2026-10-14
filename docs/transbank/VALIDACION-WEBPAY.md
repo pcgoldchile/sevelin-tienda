@@ -26,7 +26,7 @@ Cuál es el antiguo y cuál el nuevo se deduce por el orden de los números; el 
 | 5b | Responder el correo de confirmación de Transbank | Carlos | Hecho |
 | 6 | Transbank manda la llave secreta | Transbank, 24 horas hábiles | Llegó el 14-10-2026 |
 | 7 | Poner código y llave en Vercel | Carlos (la llave no la escribe Claude) | Hecho el 14-10-2026: las 3 variables en Production, y redeploy con este commit |
-| 8 | Compra real de $50 | Carlos, con su tarjeta | — |
+| 8 | Compra real de $50 | Carlos, con su tarjeta | Hecha el 14-10-2026: pedido WEB-000016, débito, ambiente producción; llegó al POS como venta #269. Producto de prueba (#347 del POS) despublicado y archivado |
 
 Transbank rechaza la validación si los pagos de prueba tienen más de 7 días. Si el código llega
 después del 20-10-2026, hay que repetir el paso 4 (son 10 minutos).
