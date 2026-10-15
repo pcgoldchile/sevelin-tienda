@@ -1,12 +1,14 @@
 import type { EtiquetaProducto } from "@/lib/tipos";
 
 /** Badge de la etiqueta que el dueño marca a mano desde el POS (modal de
- * producto → "Tienda web" → Etiqueta destacada). Mismos 3 valores en POS y
- * tienda — ver etiquetaWebTexto() en sevelin-pos-oficial/js/productos.js. */
+ * producto → "Tienda web" → Etiqueta destacada). Mismos 4 valores en POS y
+ * tienda — ver etiquetaWebTexto() en sevelin-pos-oficial/js/productos.js.
+ * LIQUIDACION (supabase/43) además junta el producto en /liquidacion. */
 const ESTILO: Record<EtiquetaProducto, { texto: string; clase: string }> = {
   NOVEDAD: { texto: "🆕 Novedad", clase: "bg-primary text-surface-sunken" },
   TENDENCIA: { texto: "🔥 Tendencia", clase: "bg-accent text-white" },
   OFERTA: { texto: "⚡ Oferta irresistible", clase: "bg-amber-400 text-surface-sunken" },
+  LIQUIDACION: { texto: "🏷️ Liquidación", clase: "bg-rose-600 text-white" },
 };
 
 export function EtiquetaProductoBadge({ etiqueta, className = "" }: { etiqueta: EtiquetaProducto | null | undefined; className?: string }) {

@@ -11,6 +11,7 @@ import { Footer } from "@/components/footer";
 import { BannerFiestasPatrias } from "@/components/banner-fiestas-patrias";
 import { FranjaOfertas } from "@/components/franja-ofertas";
 import { estadoOfertas, type EstadoOfertas } from "@/lib/ofertas";
+import { hayLiquidacion } from "@/lib/liquidacion";
 import { WhatsappFlotante } from "@/components/whatsapp-flotante";
 import { FondoCinematico } from "@/components/fx/fondo-cinematico";
 import { VisitTracker } from "@/components/visit-tracker";
@@ -83,6 +84,14 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     console.error("[RootLayout] No se pudo leer el estado de las ofertas:", err instanceof Error ? err.message : err);
   }
 
+  // Liquidación: el enlace del menú solo aparece si hay algo que liquidar
+  let conLiquidacion = false;
+  try {
+    conLiquidacion = await hayLiquidacion();
+  } catch (err) {
+    console.error("[RootLayout] No se pudo saber si hay liquidación:", err instanceof Error ? err.message : err);
+  }
+
   return (
     <html
       lang="es"
@@ -116,7 +125,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
                     competir por espacio fijo arriba de la pantalla. */}
                 <BannerFiestasPatrias />
                 <FranjaOfertas inicial={ofertas} />
-                <Header categorias={categorias} arbolCategorias={arbolCategorias} />
+                <Header categorias={categorias} arbolCategorias={arbolCategorias} conLiquidacion={conLiquidacion} />
                 <div id="contenido">{children}</div>
                 <Footer />
                 <WhatsappFlotante />

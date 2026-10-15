@@ -51,6 +51,9 @@ const productos = JSON.parse(readFileSync(path.join(RAIZ, 'scripts/maqueta-tiend
       stock_web: 1, por_llegar: true, stock_por_llegar: 4, fecha_llegada_estimada: enDias(5), es_pedido_encargo: false, categoria: 'Hogar y Estilo de Vida', subcategoria: 'Balanzas' },
   );
 }
+// Liquidación (supabase/43, 15-10-2026): dos productos con la etiqueta, para /liquidacion y el enlace del menú.
+productos.filter((p) => p.stock_web > 0 && !p.es_pedido_encargo && !p.precio_a_consultar && p.categoria !== 'Servicios Técnicos')
+  .slice(3, 5).forEach((p) => { p.etiqueta_web = 'LIQUIDACION'; });
 // Precio mayorista [precio, desde] por id del POS, solo para los que vienen en la muestra.
 // Con cuatro valores, los dos últimos son el segundo escalón [precio, desde] (supabase/40).
 const MAYORISTA = { 104: [3400, 5, 3100, 10], 126: [7000, 3], 162: [26000, 3], 100: [6100, 5], 207: [3500, 5, 3200, 20], 197: [2500, 5], 287: [1600, 10], 222: [8500, 3], 109: [9000, 3], 141: [7300, 3] };

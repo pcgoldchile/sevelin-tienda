@@ -73,7 +73,7 @@ export interface ProductoWeb {
 
 /** Etiqueta destacada de producto — el dueño marca como mucho una por
  * producto desde el modal del POS ("Tienda web" → Etiqueta destacada). */
-export type EtiquetaProducto = 'NOVEDAD' | 'TENDENCIA' | 'OFERTA';
+export type EtiquetaProducto = 'NOVEDAD' | 'TENDENCIA' | 'OFERTA' | 'LIQUIDACION';
 
 /** Dirección de envío del checkout de invitado — se guarda tal cual en `pedidos_web.direccion_envio`
  * (columna JSONB, por eso `region` no necesitó una migración aparte). */

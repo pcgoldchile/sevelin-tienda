@@ -40,8 +40,11 @@ const ORDEN_CATEGORIAS_PRINCIPALES = [
 export function Header({
   categorias,
   arbolCategorias,
+  conLiquidacion = false,
 }: {
   categorias: string[];
+  /** Hay productos en liquidación: muestra el enlace a /liquidacion (supabase/43). */
+  conLiquidacion?: boolean;
   /** categoría → subcategorías (vacío si esa categoría no tiene ninguna) —
    * ver listarArbolCategorias() en src/lib/catalogo.ts. */
   arbolCategorias: Record<string, string[]>;
@@ -373,6 +376,11 @@ export function Header({
           {/* Por llegar va ANTES de Encargos: lo que ya viene en camino
               está más cerca de concretarse que lo que hay que encargar, y
               se lee primero. */}
+          {conLiquidacion && (
+            <Link href="/liquidacion" className={ENLACE_NAV}>
+              Liquidación
+            </Link>
+          )}
           <Link
             href="/por-llegar"
             className={ENLACE_NAV}
@@ -484,6 +492,12 @@ export function Header({
                   </div>
                 );
               })}
+
+              {conLiquidacion && (
+                <Link href="/liquidacion" className="block py-1.5 text-sm font-medium text-ink-soft" onClick={() => setMenuMovilAbierto(false)}>
+                  Liquidación
+                </Link>
+              )}
 
               <Link href="/por-llegar" className="block py-1.5 text-sm font-medium text-ink-soft" onClick={() => setMenuMovilAbierto(false)}>
                 Por llegar
