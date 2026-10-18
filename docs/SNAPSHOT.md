@@ -4,6 +4,21 @@
 > arquitectura completo (todas las fases) vive en `README-ECOMMERCE-SEVELIN.md`, en el repo del POS
 > (`sevelin-pos-oficial`) — este documento es el estado de ESTE repo (`sevelin-tienda`) nada más.
 
+**Fecha:** 18-10-2026 · **Panel "Filtrar" en /productos (HDMI, VGA, parlantes, tamaño, marca, precio…).**
+
+- **Filtros del catálogo (`supabase/44` aplicada; pareja de `sevelin-pos-oficial/sql/103`, v159):** el dueño marca en la
+  ficha del POS las casillas de cada producto (a mano o con "✨ Rellenar con IA") y llegan a
+  `productos_web.caracteristicas` con la sincronización de siempre; `condicion` (nuevo/reacondicionado) viaja ahora también.
+  `src/lib/filtros.ts` tiene el esquema (`GRUPOS_FILTRO`, **copia exacta** de `CARACTERISTICAS_TIENDA` del POS) y el
+  motor: entre grupos se cumplen todos; dentro de un grupo "de varios" (puertos) se piden todos los marcados y en uno "de
+  uno solo" (tamaño) cualquiera. Marca, precio y estado salen de columnas existentes. Panel en
+  `src/components/panel-filtros.tsx` (columna en el computador, plegado en el celular); cada casilla es un enlace
+  `?f_<grupo>=<valor>` que se puede compartir. Sin panel en Servicios Técnicos, Hogar y en las búsquedas.
+- Las casillas de los productos publicados quedaron **propuestas, sin escribir**: esperan el OK del dueño (ver el
+  CHANGELOG-V159 del POS). Hasta entonces el panel muestra solo marca, precio y estado.
+
+---
+
 **Fecha:** 13-10-2026 · **Pago con tarjeta publicado (link de pago como puente; Webpay listo y apagado).**
 
 - **Tarjeta en el checkout (`32ce25f`, publicado el 13-10-2026, `supabase/42` aplicada):** al pagar se elige

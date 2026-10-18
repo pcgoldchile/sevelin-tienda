@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { OrdenCatalogo } from "@/lib/catalogo";
+import { enlaceConFiltros, type SeleccionFiltros } from "@/lib/filtros";
 
 const OPCIONES_ORDEN: { valor: OrdenCatalogo; etiqueta: string }[] = [
   { valor: "relevancia", etiqueta: "Relevancia" },
@@ -17,19 +18,15 @@ interface PropsSelectorOrden {
   categoria?: string;
   subcategoria?: string;
   q?: string;
+  /** Lo marcado en el panel "Filtrar": cambiar el orden no lo borra. */
+  filtros?: SeleccionFiltros;
 }
 
-export function SelectorOrden({ ordenActual, categoria, subcategoria, q }: PropsSelectorOrden) {
+export function SelectorOrden({ ordenActual, categoria, subcategoria, q, filtros }: PropsSelectorOrden) {
   const router = useRouter();
 
   function construirHref(orden: OrdenCatalogo) {
-    const params = new URLSearchParams();
-    if (categoria) params.set("categoria", categoria);
-    if (subcategoria) params.set("subcategoria", subcategoria);
-    if (q) params.set("q", q);
-    if (orden !== "relevancia") params.set("orden", orden);
-    const query = params.toString();
-    return query ? `/productos?${query}` : "/productos";
+    return enlaceConFiltros({ categoria, subcategoria, q, orden }, filtros ?? {});
   }
 
   return (

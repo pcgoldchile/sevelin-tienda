@@ -69,6 +69,11 @@ export interface ProductoWeb {
   /** Solo con oferta vigente: el precio normal, para mostrarlo tachado.
    *  null/undefined = sin oferta, precio_web es el de siempre. */
   precio_antes?: number | null;
+  /** Casillas de los filtros (supabase/44): { "entradas": ["HDMI", "VGA"] }.
+   *  Los grupos posibles están en src/lib/filtros.ts. */
+  caracteristicas?: Record<string, string[]> | null;
+  /** 'nuevo' | 'reacondicionado' (supabase/44). NULL hasta la primera sincronización. */
+  condicion?: string | null;
 }
 
 /** Etiqueta destacada de producto — el dueño marca como mucho una por
@@ -380,6 +385,9 @@ export interface ProductoPOS {
   // Segundo escalón mayorista — sql/81 del POS → supabase/40.
   precio_mayorista_2?: number | null;
   mayorista_desde_2?: number | null;
+  // Filtros del catálogo — ver sevelin-pos-oficial/sql/103 (→ supabase/44).
+  caracteristicas?: unknown;
+  condicion?: string | null;
   // SEO con IA — ver sevelin-pos-oficial/sql/33-seo-ia.sql.
   meta_titulo_web: string | null;
   meta_descripcion_web: string | null;

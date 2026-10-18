@@ -7,12 +7,18 @@ import { DESCRIPCIONES_CATEGORIA } from "@/lib/descripciones-categoria";
 import { TarjetaProducto } from "@/components/tarjeta-producto";
 import { SelectorOrden } from "@/components/selector-orden";
 import { ScrollReveal } from "@/components/fx/scroll-reveal";
+import { PanelFiltros } from "@/components/panel-filtros";
+import { aplicarFiltros, alternarFiltro, enlaceConFiltros, leerSeleccion } from "@/lib/filtros";
 
 export const revalidate = 60;
 
+/* Además de categoria/subcategoria/q/orden llegan los filtros (f_entradas=HDMI…,
+   ver src/lib/filtros.ts), que pueden venir repetidos: de ahí el string[]. */
 interface PropsPagina {
-  searchParams: Promise<{ categoria?: string; subcategoria?: string; q?: string; orden?: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
+
+const uno = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
 
 /**
  * Antes /productos?categoria=X compartía el title/description genérico
@@ -22,7 +28,9 @@ interface PropsPagina {
  * heredar el meta del layout, como siempre.
  */
 export async function generateMetadata({ searchParams }: PropsPagina): Promise<Metadata> {
-  const { categoria, subcategoria } = await searchParams;
+  const params = await searchParams;
+  const categoria = uno(params.categoria);
+  const subcategoria = uno(params.subcategoria);
   if (!categoria) return {};
 
   const titulo = subcategoria ? `${subcategoria} — ${categoria}` : categoria;
@@ -37,7 +45,11 @@ export async function generateMetadata({ searchParams }: PropsPagina): Promise<M
 }
 
 export default async function Productos({ searchParams }: PropsPagina) {
-  const { categoria, subcategoria, q, orden } = await searchParams;
+  const params = await searchParams;
+  const categoria = uno(params.categoria);
+  const subcategoria = uno(params.subcategoria);
+  const q = uno(params.q);
+  const orden = uno(params.orden);
   const ordenActual = esOrdenCatalogoValido(orden) ? orden : "relevancia";
 
   // Se registra el término tal cual lo buscó el cliente, tenga o no
@@ -64,13 +76,23 @@ export default async function Productos({ searchParams }: PropsPagina) {
     error = true;
   }
 
+  /* Panel "Filtrar": solo navegando una categoría (una búsqueda mezcla
+     categorías y sus filtros no tendrían sentido juntos). */
+  const filtro = q?.trim()
+    ? { productos, grupos: [], activos: [], seleccion: {} }
+    : aplicarFiltros(productos, categoria, subcategoria, leerSeleccion(params));
+  const visibles = filtro.productos;
+  const baseEnlace = { categoria, subcategoria, q, orden: ordenActual };
+  const conPanel = filtro.grupos.length > 0;
+
   return (
     <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
       <h1 className="font-display text-3xl font-bold uppercase tracking-tight text-ink">
         {subcategoria || categoria || (q ? `Resultados para "${q}"` : "Todos los productos")}
       </h1>
       <p className="mt-1 text-sm text-ink-soft">
-        {productos.length} producto{productos.length === 1 ? "" : "s"} disponible{productos.length === 1 ? "" : "s"}
+        {visibles.length} producto{visibles.length === 1 ? "" : "s"} disponible{visibles.length === 1 ? "" : "s"}
+        {filtro.activos.length > 0 && ` de ${productos.length}`}
       </p>
 
       {/* Párrafo real de la categoría (no solo el grid de productos) — ver
@@ -108,7 +130,7 @@ export default async function Productos({ searchParams }: PropsPagina) {
             </Link>
           ))}
         </div>
-        <SelectorOrden ordenActual={ordenActual} categoria={categoria} subcategoria={subcategoria} q={q} />
+        <SelectorOrden ordenActual={ordenActual} categoria={categoria} subcategoria={subcategoria} q={q} filtros={filtro.seleccion} />
       </div>
 
       {/* Segunda fila de chips, más chica: solo aparece dentro de una
@@ -150,12 +172,45 @@ export default async function Productos({ searchParams }: PropsPagina) {
       ) : productos.length === 0 ? (
         <p className="mt-10 text-ink-soft">No se encontraron productos con ese filtro.</p>
       ) : (
-        <div className="mt-8 grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4">
-          {productos.map((producto, i) => (
-            <ScrollReveal key={producto.id} delay={(i % 8) * 0.05} distancia={18}>
-              <TarjetaProducto producto={producto} />
-            </ScrollReveal>
-          ))}
+        <div className={conPanel ? "mt-8 gap-8 lg:grid lg:grid-cols-[240px_minmax(0,1fr)]" : "mt-8"}>
+          {conPanel && (
+            <PanelFiltros grupos={filtro.grupos} seleccion={filtro.seleccion} base={baseEnlace} totalActivos={filtro.activos.length} />
+          )}
+          <div className={conPanel ? "mt-6 lg:mt-0" : ""}>
+            {/* Lo marcado, a la vista y con su ✕ para sacarlo de a uno. */}
+            {filtro.activos.length > 0 && (
+              <div className="mb-5 flex flex-wrap gap-2">
+                {filtro.activos.map((a) => (
+                  <Link
+                    key={`${a.grupo}:${a.valor}`}
+                    href={enlaceConFiltros(baseEnlace, alternarFiltro(filtro.seleccion, a.grupo, a.valor))}
+                    scroll={false}
+                    rel="nofollow"
+                    className="rounded-full border border-primary/60 bg-primary/10 px-3 py-1 text-xs font-medium text-ink transition-colors hover:border-primary"
+                    aria-label={`Quitar ${a.nombreGrupo}: ${a.valor}`}
+                  >
+                    {a.valor} <span aria-hidden="true" className="ml-1 text-ink-soft">✕</span>
+                  </Link>
+                ))}
+              </div>
+            )}
+            {visibles.length === 0 ? (
+              <p className="text-ink-soft">
+                Ningún producto cumple con todo lo marcado.{" "}
+                <Link href={enlaceConFiltros(baseEnlace, {})} scroll={false} className="font-medium text-primary hover:underline">
+                  Quitar filtros
+                </Link>
+              </p>
+            ) : (
+              <div className={`grid grid-cols-2 gap-6 sm:grid-cols-3 ${conPanel ? "" : "lg:grid-cols-4"}`}>
+                {visibles.map((producto, i) => (
+                  <ScrollReveal key={producto.id} delay={(i % 8) * 0.05} distancia={18}>
+                    <TarjetaProducto producto={producto} />
+                  </ScrollReveal>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </main>

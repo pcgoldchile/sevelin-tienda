@@ -37,8 +37,12 @@ const USUARIOS = {
   pendiente: { id: '22222222-2222-4222-8222-222222222222', email: 'pendiente@maqueta.test', nombre: 'Pedro', apellido: 'Pendiente' },
   cliente: { id: '33333333-3333-4333-8333-333333333333', email: 'cliente@maqueta.test', nombre: 'Carla', apellido: 'Cliente' },
 };
+/* Filtros del catálogo (supabase/44, 18-10-2026): las casillas y el estado de los productos de la muestra,
+   tal como quedaron propuestos para la base real. Algunos traen además su subcategoría de hoy. */
+const CARACTERISTICAS = JSON.parse(readFileSync(path.join(RAIZ, 'scripts/maqueta-tienda-caracteristicas.json'), 'utf8'));
 const productos = JSON.parse(readFileSync(path.join(RAIZ, 'scripts/maqueta-tienda-productos.json'), 'utf8'))
-  .map((p) => ({ precio_oferta: null, oferta_desde: null, oferta_hasta: null, meta_titulo_web: null, meta_descripcion_web: null, ...p }));
+  .map((p) => ({ precio_oferta: null, oferta_desde: null, oferta_hasta: null, meta_titulo_web: null, meta_descripcion_web: null,
+    caracteristicas: {}, condicion: null, ...p, ...(CARACTERISTICAS[p.producto_pos_id] || {}) }));
 /* Por llegar (06-10-2026): dos productos de prueba. Uno sin unidades (se RESERVA, hasta 6) y
    otro con 1 en tienda y 4 por llegar (se compra normal, tope 1). */
 {

@@ -72,6 +72,18 @@ function ofertaDesdePos(producto: ProductoPOS): {
   };
 }
 
+/** { grupo: [valores] } con textos cortos; cualquier otra cosa queda vacía. */
+function caracteristicasDesdePos(valor: unknown): Record<string, string[]> {
+  if (!valor || typeof valor !== 'object' || Array.isArray(valor)) return {};
+  const limpio: Record<string, string[]> = {};
+  for (const [grupo, valores] of Object.entries(valor as Record<string, unknown>).slice(0, 30)) {
+    if (!/^[a-z0-9_]{1,40}$/.test(grupo) || !Array.isArray(valores)) continue;
+    const lista = valores.filter((v): v is string => typeof v === 'string' && v.length > 0 && v.length <= 60).slice(0, 20);
+    if (lista.length) limpio[grupo] = lista;
+  }
+  return limpio;
+}
+
 export async function POST(req: NextRequest) {
   if (!verificarSecretoSync(req)) {
     return NextResponse.json({ error: 'Secreto de sincronización inválido' }, { status: 401 });
@@ -155,6 +167,11 @@ export async function POST(req: NextRequest) {
     relacionados_pos_ids: Array.isArray(producto.relacionados_ids)
       ? producto.relacionados_ids.map(Number).filter((n) => Number.isInteger(n) && n > 0).slice(0, 12)
       : [],
+    /* Filtros del catálogo (sql/103 del POS → supabase/44). El POS ya valida
+       contra su esquema; acá solo se asegura la forma, para que un dato raro
+       no rompa el guardado del producto entero. */
+    caracteristicas: caracteristicasDesdePos(producto.caracteristicas),
+    condicion: producto.condicion === 'reacondicionado' ? 'reacondicionado' : producto.condicion === 'nuevo' ? 'nuevo' : null,
     sincronizado_en: new Date().toISOString()
   };
 

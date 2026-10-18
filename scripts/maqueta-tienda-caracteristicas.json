@@ -1,0 +1,460 @@
+{
+ "111": {
+  "caracteristicas": {
+   "conexion": [
+    "Bluetooth"
+   ],
+   "extras": [
+    "Recargable"
+   ],
+   "compatible": [
+    "PC",
+    "PlayStation",
+    "Celular"
+   ]
+  },
+  "condicion": "nuevo"
+ },
+ "157": {
+  "caracteristicas": {
+   "entradas": [
+    "HDMI",
+    "DisplayPort"
+   ],
+   "extras": [
+    "VESA (se cuelga en la pared)"
+   ],
+   "tamano": [
+    "23\" a 25\""
+   ],
+   "resolucion": [
+    "Full HD (1920×1080)"
+   ],
+   "hz": [
+    "165 Hz o más"
+   ],
+   "uso": [
+    "Gamer"
+   ]
+  },
+  "condicion": "nuevo"
+ },
+ "207": {
+  "caracteristicas": {
+   "tipo_cooler": [
+    "Ventilador de gabinete"
+   ],
+   "extras": [
+    "Iluminación RGB"
+   ]
+  },
+  "condicion": "nuevo"
+ },
+ "162": {
+  "caracteristicas": {
+   "capacidad_bateria": [
+    "20.000 mAh o más"
+   ],
+   "puertos": [
+    "USB-C"
+   ],
+   "extras": [
+    "Carga rápida",
+    "Pantalla de batería",
+    "Cable incluido o integrado"
+   ]
+  },
+  "condicion": "nuevo"
+ },
+ "125": {
+  "caracteristicas": {
+   "conectores": [
+    "HDMI",
+    "USB-C",
+    "USB-A",
+    "Red (RJ45)"
+   ],
+   "funciones": [
+    "Soporta 4K"
+   ]
+  },
+  "condicion": "nuevo"
+ },
+ "131": {
+  "caracteristicas": {
+   "entradas": [
+    "HDMI",
+    "DisplayPort"
+   ],
+   "extras": [
+    "Parlantes incluidos",
+    "VESA (se cuelga en la pared)"
+   ],
+   "tamano": [
+    "23\" a 25\""
+   ],
+   "resolucion": [
+    "Full HD (1920×1080)"
+   ],
+   "hz": [
+    "165 Hz o más"
+   ],
+   "uso": [
+    "Gamer"
+   ]
+  },
+  "condicion": "nuevo"
+ },
+ "160": {
+  "caracteristicas": {
+   "plataforma": [
+    "AMD"
+   ],
+   "tipo_memoria": [
+    "DDR4"
+   ],
+   "formato_placa": [
+    "Micro ATX"
+   ]
+  },
+  "condicion": "nuevo",
+  "subcategoria": "Placas Madre"
+ },
+ "123": {
+  "condicion": "nuevo"
+ },
+ "104": {
+  "caracteristicas": {
+   "conectores": [
+    "HDMI",
+    "VGA"
+   ]
+  },
+  "condicion": "nuevo"
+ },
+ "163": {
+  "caracteristicas": {
+   "capacidad_bateria": [
+    "10.000 mAh"
+   ],
+   "puertos": [
+    "USB-C",
+    "USB-A",
+    "Micro USB"
+   ],
+   "extras": [
+    "Carga rápida",
+    "Pantalla de batería",
+    "Cable incluido o integrado"
+   ]
+  },
+  "condicion": "nuevo"
+ },
+ "130": {
+  "caracteristicas": {
+   "conectores": [
+    "HDMI",
+    "DisplayPort"
+   ],
+   "largo": [
+    "1 a 2 m"
+   ],
+   "funciones": [
+    "Soporta 4K"
+   ]
+  },
+  "condicion": "nuevo"
+ },
+ "98": {
+  "caracteristicas": {
+   "conectores": [
+    "HDMI",
+    "VGA"
+   ]
+  },
+  "condicion": "nuevo"
+ },
+ "126": {
+  "caracteristicas": {
+   "extras": [
+    "Gamer",
+    "Iluminación RGB"
+   ]
+  },
+  "condicion": "nuevo"
+ },
+ "106": {
+  "caracteristicas": {
+   "conexion": [
+    "Con cable USB"
+   ],
+   "compatible": [
+    "PC",
+    "PlayStation"
+   ]
+  },
+  "condicion": "nuevo"
+ },
+ "96": {
+  "condicion": "nuevo"
+ },
+ "128": {
+  "caracteristicas": {
+   "entradas": [
+    "HDMI",
+    "VGA"
+   ],
+   "extras": [
+    "VESA (se cuelga en la pared)"
+   ],
+   "tamano": [
+    "21\" a 22\""
+   ],
+   "resolucion": [
+    "Full HD (1920×1080)"
+   ],
+   "hz": [
+    "100 a 144 Hz"
+   ],
+   "uso": [
+    "Oficina y hogar"
+   ]
+  },
+  "condicion": "nuevo"
+ },
+ "133": {
+  "caracteristicas": {
+   "capacidad": [
+    "128 GB"
+   ],
+   "conexion": [
+    "USB-C"
+   ]
+  },
+  "condicion": "nuevo"
+ },
+ "107": {
+  "caracteristicas": {
+   "conexion": [
+    "USB-A",
+    "SATA 2,5\""
+   ]
+  },
+  "condicion": "nuevo",
+  "subcategoria": "SSD"
+ },
+ "101": {
+  "caracteristicas": {
+   "tipo_cooler": [
+    "Disipador de procesador"
+   ],
+   "compatible": [
+    "Intel",
+    "AMD"
+   ],
+   "extras": [
+    "Iluminación RGB"
+   ]
+  },
+  "condicion": "nuevo"
+ },
+ "195": {
+  "caracteristicas": {
+   "tipo_cooler": [
+    "Disipador de procesador"
+   ],
+   "compatible": [
+    "Intel",
+    "AMD"
+   ],
+   "extras": [
+    "Iluminación RGB"
+   ]
+  },
+  "condicion": "nuevo"
+ },
+ "150": {
+  "caracteristicas": {
+   "potencia": [
+    "550 a 650 W"
+   ],
+   "certificacion": [
+    "80 Plus Bronze"
+   ]
+  },
+  "condicion": "nuevo"
+ },
+ "208": {
+  "caracteristicas": {
+   "potencia": [
+    "550 a 650 W"
+   ],
+   "certificacion": [
+    "80 Plus Bronze"
+   ]
+  },
+  "condicion": "nuevo"
+ },
+ "155": {
+  "caracteristicas": {
+   "formato_placa": [
+    "ATX",
+    "Micro ATX"
+   ],
+   "extras": [
+    "Vidrio templado"
+   ]
+  },
+  "condicion": "nuevo"
+ },
+ "103": {
+  "condicion": "nuevo"
+ },
+ "119": {
+  "caracteristicas": {
+   "conexion": [
+    "Bluetooth"
+   ]
+  },
+  "condicion": "nuevo"
+ },
+ "161": {
+  "caracteristicas": {
+   "tipo_memoria": [
+    "DDR4"
+   ],
+   "formato_ram": [
+    "PC de escritorio (DIMM)"
+   ],
+   "capacidad_ram": [
+    "8 GB"
+   ]
+  },
+  "condicion": "nuevo",
+  "subcategoria": "Memorias RAM"
+ },
+ "132": {
+  "caracteristicas": {
+   "entradas": [
+    "HDMI",
+    "VGA"
+   ],
+   "extras": [
+    "Parlantes incluidos"
+   ],
+   "tamano": [
+    "21\" a 22\""
+   ],
+   "resolucion": [
+    "Full HD (1920×1080)"
+   ],
+   "hz": [
+    "60 a 75 Hz"
+   ],
+   "uso": [
+    "Oficina y hogar"
+   ]
+  },
+  "condicion": "reacondicionado"
+ },
+ "97": {
+  "caracteristicas": {
+   "conexion": [
+    "Con cable USB"
+   ],
+   "extras": [
+    "Gamer"
+   ]
+  },
+  "condicion": "nuevo"
+ },
+ "159": {
+  "caracteristicas": {
+   "conexion": [
+    "Inalámbrico con receptor USB",
+    "Bluetooth"
+   ],
+   "extras": [
+    "Iluminación RGB",
+    "Recargable",
+    "Silencioso"
+   ]
+  },
+  "condicion": "nuevo"
+ },
+ "109": {
+  "caracteristicas": {
+   "conexion": [
+    "Cable 3,5 mm",
+    "USB"
+   ],
+   "extras": [
+    "Iluminación RGB",
+    "Gamer"
+   ]
+  },
+  "condicion": "nuevo"
+ },
+ "137": {
+  "caracteristicas": {
+   "capacidad": [
+    "64 GB"
+   ],
+   "conexion": [
+    "USB-A"
+   ]
+  },
+  "condicion": "nuevo"
+ },
+ "293": {
+  "caracteristicas": {
+   "conectores": [
+    "USB-A",
+    "SATA"
+   ]
+  },
+  "condicion": "nuevo"
+ },
+ "120": {
+  "caracteristicas": {
+   "conectores": [
+    "USB-C",
+    "USB-A"
+   ]
+  },
+  "condicion": "nuevo"
+ },
+ "245": {
+  "caracteristicas": {
+   "chip": [
+    "NVIDIA"
+   ],
+   "memoria_video": [
+    "6 GB"
+   ],
+   "salidas": [
+    "HDMI",
+    "DisplayPort"
+   ],
+   "extras": [
+    "Perfil bajo (low profile)"
+   ]
+  },
+  "condicion": "nuevo"
+ },
+ "247": {
+  "caracteristicas": {
+   "chip": [
+    "NVIDIA"
+   ],
+   "memoria_video": [
+    "8 GB"
+   ],
+   "salidas": [
+    "HDMI",
+    "DisplayPort"
+   ]
+  },
+  "condicion": "nuevo"
+ }
+}
