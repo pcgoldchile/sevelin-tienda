@@ -35,6 +35,13 @@ export default async function Cuenta() {
       </div>
 
       <div className="mt-4 flex flex-col gap-2">
+        {/* Puntos Sevelin (supabase/47) */}
+        <Link
+          href="/cuenta/puntos"
+          className="rounded-xl bg-surface px-4 py-3 text-sm font-medium text-ink shadow-elevated-md transition-colors hover:bg-surface-sunken"
+        >
+          ⭐ Mis puntos
+        </Link>
         <Link
           href="/cuenta/pedidos"
           className="rounded-xl bg-surface px-4 py-3 text-sm font-medium text-ink shadow-elevated-md transition-colors hover:bg-surface-sunken"

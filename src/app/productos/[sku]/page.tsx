@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { PUNTOS_PUBLICOS, fmtPuntos } from "@/lib/puntos-reglas";
 import { testDeServicio } from "@/lib/test-servicios";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
@@ -398,6 +399,14 @@ export default async function FichaProducto({ params }: PropsPagina) {
           {/* Justo bajo el botón de compra: es el momento exacto en que el
               cliente piensa "¿con qué pago?". Enterarse de que puede pagar
               con tarjeta después de irse de la ficha no sirve de nada. */}
+          {/* Puntos Sevelin (supabase/47): cuántos suma, con la tasa que calcula el sync. Apagado hasta el lanzamiento. */}
+          {PUNTOS_PUBLICOS && !producto.precio_a_consultar && Number(producto.tasa_puntos) > 0 && (
+            <p className="text-sm font-medium text-primary-soft">
+              ⭐ Suma {fmtPuntos(Math.floor(producto.precio_web * Number(producto.tasa_puntos)))} Puntos Sevelin{" "}
+              <Link href="/puntos" className="text-xs text-ink-faint underline">¿Qué es?</Link>
+            </p>
+          )}
+
           {/* Sin compra en línea no hay pago con tarjeta que anunciar. */}
           {!producto.precio_a_consultar && <AvisoPagoTarjeta enSitio={medioTarjetaDisponible() !== null} />}
 

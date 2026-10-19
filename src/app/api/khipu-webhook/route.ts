@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { acreditarPuntosPedidoWeb } from '@/lib/puntos';
 import { KHIPU_ESTADO_PAGADO, obtenerEstadoPagoKhipu, verificarFirmaWebhookKhipu } from '@/lib/khipu';
 import { emitirBoleta, openFacturaHabilitada } from '@/lib/openfactura';
 import { ajustarStockPos, registrarVentaWebEnPos } from '@/lib/pos-interno';
@@ -106,6 +107,8 @@ export async function POST(req: NextRequest) {
      stock— por algo que es registro, no cobro. Ver
      registrarVentaWebEnPos(). */
   await registrarVentaWebEnPos(pedido);
+  // Puntos Sevelin (supabase/47): nunca lanza.
+  await acreditarPuntosPedidoWeb(pedido);
 
   try {
     await ajustarStockPos(pedido.items);

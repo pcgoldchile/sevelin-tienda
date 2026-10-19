@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseWeb } from '@/lib/supabase-web';
 import { verificarSecretoSync } from '@/lib/verificar-secreto';
+import { tasaPuntos } from '@/lib/puntos-reglas';
 import type { ProductoPOS } from '@/lib/tipos';
 import { avisosPendientesDe, marcarAvisosNotificados } from '@/lib/avisos-producto';
 import { correoProductoLlego } from '@/lib/correo-pedido';
@@ -172,6 +173,13 @@ export async function POST(req: NextRequest) {
        no rompa el guardado del producto entero. */
     caracteristicas: caracteristicasDesdePos(producto.caracteristicas),
     condicion: producto.condicion === 'reacondicionado' ? 'reacondicionado' : producto.condicion === 'nuevo' ? 'nuevo' : null,
+    /* Puntos Sevelin (supabase/47): cuántos suma por $ según su margen. El costo NO se guarda aquí. */
+    tasa_puntos: tasaPuntos({
+      es_servicio: (producto as unknown as { es_servicio?: boolean }).es_servicio,
+      categoria: producto.categoria_web,
+      costo_unitario: (producto as unknown as { costo_unitario?: number }).costo_unitario,
+      precio: Number(producto.precio_web) || Number(producto.precio_unitario),
+    }),
     sincronizado_en: new Date().toISOString()
   };
 

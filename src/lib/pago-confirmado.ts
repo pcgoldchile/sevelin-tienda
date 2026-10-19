@@ -1,6 +1,7 @@
 import { emitirBoleta, openFacturaHabilitada } from './openfactura';
 import { ajustarStockPos, registrarVentaWebEnPos } from './pos-interno';
 import { anotarReservasDePedido } from './avisos-producto';
+import { acreditarPuntosPedidoWeb } from './puntos';
 import { guardarDatosBoleta, marcarErrorStockSinDespacho, marcarPedidoPagado, obtenerPedidoPorNumero } from './pedidos';
 import { correoAlertaPedidoExpiradoPagado, correoAlertaStockSinDespacho, correoConfirmacionPedido } from './correo-pedido';
 import { obtenerImagenesPorProductoPosId } from './catalogo';
@@ -57,6 +58,8 @@ export async function procesarPagoConfirmado(numeroPedido: string, origen: strin
   }
 
   await registrarVentaWebEnPos(pedido);
+  // Puntos Sevelin (supabase/47): nunca lanza.
+  await acreditarPuntosPedidoWeb(pedido);
 
   let sinStock = false;
   try {

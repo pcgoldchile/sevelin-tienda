@@ -78,6 +78,8 @@ export interface ProductoWeb {
   caracteristicas?: Record<string, string[]> | null;
   /** 'nuevo' | 'reacondicionado' (supabase/44). NULL hasta la primera sincronización. */
   condicion?: string | null;
+  /** Puntos Sevelin (supabase/47): puntos por cada $ (0,0025 a 0,02). La calcula el sync con el costo. */
+  tasa_puntos?: number;
 }
 
 /** Etiqueta destacada de producto — el dueño marca como mucho una por
