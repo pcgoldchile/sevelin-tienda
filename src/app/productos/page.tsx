@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { after } from "next/server";
-import { buscarCatalogo, esOrdenCatalogoValido, listarCategorias, listarSubcategorias } from "@/lib/catalogo";
+import { buscarCatalogo, buscarTexto, esOrdenCatalogoValido, listarCategorias, listarSubcategorias } from "@/lib/catalogo";
 import { registrarBusqueda } from "@/lib/eventos-web";
 import { DESCRIPCIONES_CATEGORIA } from "@/lib/descripciones-categoria";
 import { TarjetaProducto } from "@/components/tarjeta-producto";
 import { SelectorOrden } from "@/components/selector-orden";
 import { ScrollReveal } from "@/components/fx/scroll-reveal";
 import { PanelFiltros } from "@/components/panel-filtros";
-import { aplicarFiltros, alternarFiltro, enlaceConFiltros, leerSeleccion } from "@/lib/filtros";
+import { aplicarFiltros, alternarFiltro, atajosDeCategoria, enlaceConFiltros, leerSeleccion } from "@/lib/filtros";
+import { SinResultados } from "@/components/sin-resultados";
 
 export const revalidate = 60;
 
@@ -52,38 +53,43 @@ export default async function Productos({ searchParams }: PropsPagina) {
   const orden = uno(params.orden);
   const ordenActual = esOrdenCatalogoValido(orden) ? orden : "relevancia";
 
-  // Se registra el término tal cual lo buscó el cliente, tenga o no
-  // resultados — un término sin resultados también es una señal útil
-  // ("demanda no satisfecha"). after() corre después de mandar la
-  // respuesta, no retrasa la página.
-  if (q?.trim()) after(() => registrarBusqueda(q));
-
+  const conTexto = !!q?.trim();
   let productos: Awaited<ReturnType<typeof buscarCatalogo>> = [];
+  let parecidos = false;
   let categorias: string[] = [];
   let subcategorias: string[] = [];
   let error = false;
   try {
-    [productos, categorias, subcategorias] = await Promise.all([
-      buscarCatalogo({ categoria, subcategoria, q, orden: ordenActual }),
+    let busqueda: { productos: typeof productos; parecidos: boolean };
+    [busqueda, categorias, subcategorias] = await Promise.all([
+      conTexto
+        ? buscarTexto({ q: q as string, categoria, orden: ordenActual })
+        : buscarCatalogo({ categoria, subcategoria, orden: ordenActual }).then((lista) => ({ productos: lista, parecidos: false })),
       listarCategorias(),
       // Solo tiene sentido consultar subcategorías dentro de una categoría
       // elegida — fuera de una categoría no hay "la misma subcategoría" que
       // filtrar (el nombre no es único entre categorías distintas).
       categoria ? listarSubcategorias(categoria) : Promise.resolve([]),
     ]);
+    productos = busqueda.productos;
+    parecidos = busqueda.parecidos;
   } catch (err) {
     console.error("[Productos] No se pudo cargar el catálogo:", err instanceof Error ? err.message : err);
     error = true;
   }
 
-  /* Panel "Filtrar": solo navegando una categoría (una búsqueda mezcla
-     categorías y sus filtros no tendrían sentido juntos). */
-  const filtro = q?.trim()
-    ? { productos, grupos: [], activos: [], seleccion: {} }
-    : aplicarFiltros(productos, categoria, subcategoria, leerSeleccion(params));
+  // Se registra el término tal cual lo buscó el cliente y cuántos productos
+  // encontró: lo que no se encontró es "demanda no satisfecha" y el POS lo
+  // muestra aparte (Página Web → Más buscados). after() no retrasa la página.
+  if (conTexto && !error) after(() => registrarBusqueda(q as string, parecidos ? 0 : productos.length, parecidos));
+
+  /* Panel "Filtrar": con las casillas de la categoría al navegarla; en una
+     búsqueda (que mezcla categorías) con Categoría, Marca, Precio y Estado. */
+  const filtro = aplicarFiltros(productos, categoria, subcategoria, leerSeleccion(params), { mezcla: conTexto });
   const visibles = filtro.productos;
   const baseEnlace = { categoria, subcategoria, q, orden: ordenActual };
   const conPanel = filtro.grupos.length > 0;
+  const atajos = conTexto ? [] : atajosDeCategoria(productos, categoria, subcategoria);
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
@@ -91,7 +97,9 @@ export default async function Productos({ searchParams }: PropsPagina) {
         {subcategoria || categoria || (q ? `Resultados para "${q}"` : "Todos los productos")}
       </h1>
       <p className="mt-1 text-sm text-ink-soft">
-        {visibles.length} producto{visibles.length === 1 ? "" : "s"} disponible{visibles.length === 1 ? "" : "s"}
+        {conTexto
+          ? `${visibles.length} resultado${visibles.length === 1 ? "" : "s"}`
+          : `${visibles.length} producto${visibles.length === 1 ? "" : "s"} disponible${visibles.length === 1 ? "" : "s"}`}
         {filtro.activos.length > 0 && ` de ${productos.length}`}
       </p>
 
@@ -102,6 +110,16 @@ export default async function Productos({ searchParams }: PropsPagina) {
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-ink-soft">
           {DESCRIPCIONES_CATEGORIA[categoria]}
         </p>
+      )}
+
+      {/* #8: el asistente ayuda justo donde la duda es "¿cuál me sirve?" */}
+      {categoria && ["Monitores", "Cables y Adaptadores", "Cargadores"].includes(categoria) && !conTexto && (
+        <Link
+          href="/que-me-sirve"
+          className="mt-3 inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-4 py-1.5 text-sm font-medium text-ink transition-colors hover:border-primary"
+        >
+          ¿No sabes cuál te sirve? <span className="text-primary">Te ayudamos a elegir →</span>
+        </Link>
       )}
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
@@ -167,10 +185,36 @@ export default async function Productos({ searchParams }: PropsPagina) {
         </div>
       )}
 
+      {/* Atajos (#9): los filtros que más se piden en esta categoría, a un clic. */}
+      {atajos.length > 0 && (
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <span className="text-xs font-medium uppercase tracking-wider text-ink-faint">Rápido:</span>
+          {atajos.map((a) => (
+            <Link
+              key={a.etiqueta}
+              href={enlaceConFiltros(baseEnlace, a.seleccion)}
+              scroll={false}
+              rel="nofollow"
+              className="rounded-full border border-border bg-surface px-3 py-1 text-xs font-medium text-ink-soft transition-colors hover:border-primary hover:text-primary"
+            >
+              {a.etiqueta} <span className="text-ink-faint">({a.cantidad})</span>
+            </Link>
+          ))}
+        </div>
+      )}
+
+      {/* No calzó entero: se muestra lo más parecido, avisando. */}
+      {parecidos && productos.length > 0 && (
+        <p className="mt-6 rounded-lg border border-border bg-surface px-4 py-3 text-sm text-ink-soft">
+          No encontramos exactamente <strong className="text-ink">&ldquo;{q}&rdquo;</strong>. Estos son los más parecidos.
+          ¿No es lo que buscas? <a className="font-medium text-primary hover:underline" href="#te-lo-conseguimos">Te lo conseguimos</a>.
+        </p>
+      )}
+
       {error ? (
         <p className="mt-10 text-ink-soft">El catálogo no está disponible en este momento.</p>
       ) : productos.length === 0 ? (
-        <p className="mt-10 text-ink-soft">No se encontraron productos con ese filtro.</p>
+        conTexto ? <SinResultados termino={q as string} /> : <p className="mt-10 text-ink-soft">No se encontraron productos con ese filtro.</p>
       ) : (
         <div className={conPanel ? "mt-8 gap-8 lg:grid lg:grid-cols-[240px_minmax(0,1fr)]" : "mt-8"}>
           {conPanel && (
@@ -210,6 +254,7 @@ export default async function Productos({ searchParams }: PropsPagina) {
                 ))}
               </div>
             )}
+            {parecidos && <SinResultados termino={q as string} compacto />}
           </div>
         </div>
       )}

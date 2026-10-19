@@ -133,6 +133,8 @@ const TRAMOS_PRECIO: { etiqueta: string; hasta: number }[] = [
 const GRUPO_MARCA: GrupoEsquema = { id: "marca", nombre: "Marca", multiple: false, valores: [] };
 const GRUPO_PRECIO: GrupoEsquema = { id: "precio", nombre: "Precio", multiple: false, valores: TRAMOS_PRECIO.map((t) => t.etiqueta) };
 const GRUPO_ESTADO: GrupoEsquema = { id: "estado", nombre: "Estado", multiple: false, valores: ["Nuevo", "Reacondicionado"] };
+/* Solo en listas que mezclan categorías (búsqueda, ofertas, liquidación). */
+const GRUPO_CATEGORIA: GrupoEsquema = { id: "categoria", nombre: "Categoría", multiple: false, valores: [] };
 
 /** Prefijo de los parámetros del enlace: ?categoria=Monitores&f_entradas=HDMI&f_entradas=VGA */
 export const PREFIJO_FILTRO = "f_";
@@ -207,6 +209,7 @@ function valoresDelProducto(p: ProductoWeb, grupos: GrupoEsquema[]): Map<string,
   if (Number.isFinite(p.precio_web) && !p.precio_a_consultar) mapa.set("precio", [tramoDePrecio(p.precio_web)]);
   if (p.condicion === "nuevo") mapa.set("estado", ["Nuevo"]);
   if (p.condicion === "reacondicionado") mapa.set("estado", ["Reacondicionado"]);
+  if (p.categoria) mapa.set("categoria", [p.categoria]);
   return mapa;
 }
 
@@ -223,11 +226,16 @@ export function aplicarFiltros(
   productos: ProductoWeb[],
   categoria: string | undefined,
   subcategoria: string | undefined,
-  seleccionPedida: SeleccionFiltros
+  seleccionPedida: SeleccionFiltros,
+  opciones: { mezcla?: boolean } = {}
 ): { productos: ProductoWeb[]; grupos: GrupoFiltro[]; activos: FiltroActivo[]; seleccion: SeleccionFiltros } {
-  if (!categoriaTieneFiltros(categoria)) return { productos, grupos: [], activos: [], seleccion: {} };
+  /* mezcla: una lista con varias categorías (búsqueda, ofertas, liquidación).
+     Ahí no hay casillas de una categoría: van Categoría, Marca, Precio y Estado. */
+  if (!opciones.mezcla && !categoriaTieneFiltros(categoria)) return { productos, grupos: [], activos: [], seleccion: {} };
 
-  const esquema = [...gruposDeCategoria(categoria, subcategoria), GRUPO_MARCA, GRUPO_PRECIO, GRUPO_ESTADO];
+  const esquema = opciones.mezcla
+    ? [GRUPO_CATEGORIA, GRUPO_MARCA, GRUPO_PRECIO, GRUPO_ESTADO]
+    : [...gruposDeCategoria(categoria, subcategoria), GRUPO_MARCA, GRUPO_PRECIO, GRUPO_ESTADO];
   // Lo que pida el enlace para un grupo que esta categoría no tiene se ignora.
   const seleccion: SeleccionFiltros = {};
   for (const g of esquema) if (seleccionPedida[g.id]?.length) seleccion[g.id] = seleccionPedida[g.id];
@@ -252,7 +260,7 @@ export function aplicarFiltros(
     // Un grupo que no distingue nada (todos tienen lo mismo) no sirve, salvo que esté marcado.
     if (!marcados.length && presentes.size === 1 && conValor === productos.length) continue;
 
-    const ordenEsquema = g.id === "marca"
+    const ordenEsquema = g.id === "marca" || g.id === "categoria"
       ? [...presentes].sort((a, b) => a.localeCompare(b, "es"))
       : [...g.valores.filter((v) => presentes.has(v)), ...[...presentes].filter((v) => !g.valores.includes(v)).sort((a, b) => a.localeCompare(b, "es"))];
 
@@ -278,9 +286,10 @@ export function aplicarFiltros(
 
 /** Enlace a /productos con la selección dada (mantiene categoría, subcategoría, búsqueda y orden). */
 export function enlaceConFiltros(
-  base: { categoria?: string; subcategoria?: string; q?: string; orden?: string },
+  base: { categoria?: string; subcategoria?: string; q?: string; orden?: string; ruta?: string },
   seleccion: SeleccionFiltros
 ): string {
+  const ruta = base.ruta || "/productos";
   const params = new URLSearchParams();
   if (base.categoria) params.set("categoria", base.categoria);
   if (base.subcategoria) params.set("subcategoria", base.subcategoria);
@@ -288,7 +297,7 @@ export function enlaceConFiltros(
   if (base.orden && base.orden !== "relevancia") params.set("orden", base.orden);
   for (const [grupo, lista] of Object.entries(seleccion)) for (const v of lista) params.append(PREFIJO_FILTRO + grupo, v);
   const query = params.toString();
-  return query ? `/productos?${query}` : "/productos";
+  return query ? `${ruta}?${query}` : ruta;
 }
 
 /** La selección con un valor puesto o sacado. */
@@ -298,4 +307,75 @@ export function alternarFiltro(seleccion: SeleccionFiltros, grupo: string, valor
   const copia = { ...seleccion };
   if (siguiente.length) copia[grupo] = siguiente; else delete copia[grupo];
   return copia;
+}
+
+/* ---------- Atajos arriba de cada categoría (#9) ----------
+   Los filtros que más se piden, a un clic. Solo se muestran los que dejan al
+   menos un producto. Usan los mismos grupos y valores del esquema. */
+export interface Atajo {
+  etiqueta: string;
+  seleccion: SeleccionFiltros;
+}
+
+const ATAJOS: Record<string, Atajo[]> = {
+  Monitores: [
+    { etiqueta: "Con HDMI", seleccion: { entradas: ["HDMI"] } },
+    { etiqueta: "Con parlantes", seleccion: { extras: ["Parlantes incluidos"] } },
+    { etiqueta: "Full HD", seleccion: { resolucion: ["Full HD (1920×1080)"] } },
+    { etiqueta: "Gamer", seleccion: { uso: ["Gamer"] } },
+    { etiqueta: "Hasta $60.000", seleccion: { precio: ["Hasta $10.000", "$10.000 a $30.000", "$30.000 a $60.000"] } },
+  ],
+  "Cables y Adaptadores": [
+    { etiqueta: "HDMI", seleccion: { conectores: ["HDMI"] } },
+    { etiqueta: "USB-C", seleccion: { conectores: ["USB-C"] } },
+    { etiqueta: "VGA", seleccion: { conectores: ["VGA"] } },
+    { etiqueta: "Cable de red", seleccion: { conectores: ["Red (RJ45)"] } },
+    { etiqueta: "Soporta 4K", seleccion: { funciones: ["Soporta 4K"] } },
+  ],
+  "Energía Portátil": [
+    { etiqueta: "20.000 mAh o más", seleccion: { capacidad_bateria: ["20.000 mAh o más"] } },
+    { etiqueta: "MagSafe", seleccion: { extras: ["MagSafe (se pega al iPhone)"] } },
+    { etiqueta: "Carga rápida", seleccion: { extras: ["Carga rápida"] } },
+  ],
+  Cargadores: [
+    { etiqueta: "USB-C", seleccion: { conector: ["USB-C"] } },
+    { etiqueta: "iPhone (Lightning)", seleccion: { conector: ["Lightning"] } },
+    { etiqueta: "Para notebook", seleccion: { conector: ["Para notebook"] } },
+  ],
+  "Periféricos": [
+    { etiqueta: "Inalámbricos", seleccion: { conexion: ["Inalámbrico con receptor USB"] } },
+    { etiqueta: "Bluetooth", seleccion: { conexion: ["Bluetooth"] } },
+    { etiqueta: "Gamer", seleccion: { extras: ["Gamer"] } },
+  ],
+  Audio: [
+    { etiqueta: "Bluetooth", seleccion: { conexion: ["Bluetooth"] } },
+    { etiqueta: "Con micrófono", seleccion: { extras: ["Micrófono incluido"] } },
+  ],
+  Almacenamiento: [
+    { etiqueta: "128 GB", seleccion: { capacidad: ["128 GB"] } },
+    { etiqueta: "1 TB", seleccion: { capacidad: ["960 GB a 1 TB"] } },
+    { etiqueta: "USB-C", seleccion: { conexion: ["USB-C"] } },
+  ],
+};
+
+/** Los atajos de la categoría que hoy dejan algún producto, con cuántos. */
+export function atajosDeCategoria(productos: ProductoWeb[], categoria?: string, subcategoria?: string): (Atajo & { cantidad: number })[] {
+  if (!categoria || !ATAJOS[categoria]) return [];
+  return ATAJOS[categoria]
+    .map((a) => ({ ...a, cantidad: aplicarFiltros(productos, categoria, subcategoria, a.seleccion).productos.length }))
+    .filter((a) => a.cantidad > 0 && a.cantidad < productos.length);
+}
+
+/* ---------- Ficha técnica de un producto (#6) ---------- */
+export function fichaTecnica(p: ProductoWeb): { nombre: string; valores: string[] }[] {
+  const caracteristicas = p.caracteristicas && typeof p.caracteristicas === "object" ? p.caracteristicas : {};
+  const filas: { nombre: string; valores: string[] }[] = [];
+  for (const g of gruposDeCategoria(p.categoria ?? undefined, p.subcategoria ?? undefined)) {
+    const lista = (caracteristicas as Record<string, unknown>)[g.id];
+    const valores = Array.isArray(lista) ? lista.filter((v): v is string => typeof v === "string") : [];
+    if (valores.length) filas.push({ nombre: g.nombre, valores });
+  }
+  if (p.condicion === "reacondicionado") filas.push({ nombre: "Estado", valores: ["Reacondicionado"] });
+  if (p.condicion === "nuevo" && filas.length) filas.push({ nombre: "Estado", valores: ["Nuevo"] });
+  return filas;
 }

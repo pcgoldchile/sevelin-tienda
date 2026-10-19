@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { MessageCircle } from "lucide-react";
+import { mensajeWhatsappActual } from "@/lib/whatsapp-producto";
 
 export function WhatsappFlotante() {
   const whatsapp = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER;
@@ -42,6 +43,12 @@ export function WhatsappFlotante() {
   return (
     <motion.a
       href={`https://wa.me/${whatsapp}`}
+      /* En una ficha, el chat abre con el producto ya escrito (#5): el
+         mensaje se lee al hacer clic, porque la ficha lo deja después de montarse. */
+      onClick={(e) => {
+        const mensaje = mensajeWhatsappActual();
+        e.currentTarget.href = `https://wa.me/${whatsapp}${mensaje ? `?text=${encodeURIComponent(mensaje)}` : ""}`;
+      }}
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Escríbenos por WhatsApp"

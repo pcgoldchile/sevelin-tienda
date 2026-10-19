@@ -10,6 +10,7 @@ import { useSesion } from "@/context/sesion-context";
 import { EASE_OUT } from "@/lib/motion";
 import { IconoWhatsApp } from "@/components/iconos-redes";
 import { URL_WHATSAPP, whatsappLegible } from "@/lib/contacto";
+import { SugerenciasBusqueda } from "@/components/sugerencias-busqueda";
 
 /* Enlace de la franja de categorías: una línea azul que crece al pasar el
    mouse (antes solo cambiaba el color del texto) y sin partir el nombre en
@@ -64,11 +65,14 @@ export function Header({
   // dentro de la misma lista (acordeón), con su propio estado.
   const [categoriaMovilExpandida, setCategoriaMovilExpandida] = useState<string | null>(null);
   const [busqueda, setBusqueda] = useState("");
+  // Sugerencias bajo el buscador (#2): abiertas mientras el campo tiene el foco.
+  const [sugerenciasAbiertas, setSugerenciasAbiertas] = useState(false);
 
   const categoriasPrincipales = ORDEN_CATEGORIAS_PRINCIPALES.filter((c) => categorias.includes(c));
   const categoriasResto = categorias.filter((c) => !categoriasPrincipales.includes(c));
 
   const cerrarMenus = useCallback(() => {
+    setSugerenciasAbiertas(false);
     setMenuMovilAbierto(false);
     setDesplegableAbierto(null);
     setCategoriaMovilExpandida(null);
@@ -144,11 +148,16 @@ export function Header({
           <span className="font-display bg-gradient-to-r from-primary-soft via-primary to-accent bg-clip-text text-2xl font-bold uppercase tracking-tight text-transparent">Sevelin</span>
         </Link>
 
-        <form onSubmit={buscar} className="ml-auto hidden max-w-md flex-1 md:flex">
+        <form onSubmit={buscar} className="relative ml-auto hidden max-w-md flex-1 md:flex">
+          <SugerenciasBusqueda texto={busqueda} abierta={sugerenciasAbiertas} onElegir={cerrarMenus} />
           <input
             type="search"
             value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
+            onChange={(e) => { setBusqueda(e.target.value); setSugerenciasAbiertas(true); }}
+            onFocus={() => setSugerenciasAbiertas(true)}
+            onBlur={() => setSugerenciasAbiertas(false)}
+            onKeyDown={(e) => { if (e.key === "Escape") setSugerenciasAbiertas(false); }}
+            autoComplete="off"
             placeholder="¿Qué estás buscando?"
             className="w-full rounded-l-full border border-r-0 border-border-strong bg-surface-sunken/60 px-5 py-2 text-sm outline-none transition-colors placeholder:text-ink-faint focus:border-primary focus:bg-surface"
           />
@@ -406,11 +415,15 @@ export function Header({
             className="overflow-hidden border-t border-border md:hidden"
           >
             <div className="px-4 py-3">
-              <form onSubmit={buscar} className="mb-3 flex">
+              <form onSubmit={buscar} className="relative mb-3 flex">
+                <SugerenciasBusqueda texto={busqueda} abierta={sugerenciasAbiertas} onElegir={cerrarMenus} />
                 <input
                   type="search"
                   value={busqueda}
-                  onChange={(e) => setBusqueda(e.target.value)}
+                  onChange={(e) => { setBusqueda(e.target.value); setSugerenciasAbiertas(true); }}
+                  onFocus={() => setSugerenciasAbiertas(true)}
+                  onBlur={() => setSugerenciasAbiertas(false)}
+                  autoComplete="off"
                   placeholder="Buscar productos…"
                   className="w-full rounded-l-md border border-border px-4 py-1.5 text-sm outline-none focus:border-primary"
                 />

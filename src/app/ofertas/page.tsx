@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Store, Timer, Truck, Wrench } from "lucide-react";
 import { TarjetaProducto } from "@/components/tarjeta-producto";
+import { GrillaConFiltros } from "@/components/grilla-con-filtros";
 import { URL_WHATSAPP } from "@/lib/contacto";
 import { finDeOfertaLegible, inicioDeOfertaLegible } from "@/lib/formato";
 import { HORARIO_LEGIBLE } from "@/lib/horarios";
@@ -85,7 +86,8 @@ function ComoFuncionaServicios({ servicios, vigente }: { servicios: ProductoWeb[
  * Productos y servicios técnicos van en secciones aparte: un servicio no se
  * despacha ni se agota, se reserva (ver ComoFuncionaServicios).
  */
-export default async function Ofertas() {
+export default async function Ofertas({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const params = await searchParams;
   let ofertas: ListaOfertas = { vigentes: [], proximas: [], terminan: null, empiezan: null };
   let error = false;
   try {
@@ -156,11 +158,8 @@ export default async function Ofertas() {
                   <p className="mt-1 text-sm text-ink-soft">El precio que ves hoy es el normal.</p>
                 </>
               )}
-              <div className={`${hayVigentes && servicios.length === 0 ? "mt-8" : "mt-5"} ${GRILLA}`}>
-                {productos.map((p) => (
-                  <TarjetaProducto key={p.id} producto={p} />
-                ))}
-              </div>
+              {/* #10: con el panel "Filtrar" (categoría, marca, precio, estado) */}
+              <GrillaConFiltros productos={productos} params={params} ruta="/ofertas" clase={hayVigentes && servicios.length === 0 ? "mt-8" : "mt-5"} />
             </section>
           )}
 

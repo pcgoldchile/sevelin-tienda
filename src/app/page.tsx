@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { VistosRecientemente } from "@/components/vistos-recientemente";
 import { buscarCatalogo, listarMasVendidos } from "@/lib/catalogo";
 import { CATEGORIA_SERVICIOS, esServicioTecnico } from "@/lib/servicios";
 import { HeroCarrusel, type FotoHero } from "@/components/hero-carrusel";
@@ -136,6 +137,11 @@ export default async function Home() {
           </div>
         )}
       </section>
+
+      {/* #11: lo último que miró este visitante (solo en su navegador). Si no miró nada, no aparece. */}
+      <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
+        <VistosRecientemente />
+      </div>
 
       <TarjetasConfianza />
       <FranjaConfianza />

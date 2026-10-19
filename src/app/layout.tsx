@@ -13,6 +13,7 @@ import { FranjaOfertas } from "@/components/franja-ofertas";
 import { estadoOfertas, type EstadoOfertas } from "@/lib/ofertas";
 import { hayLiquidacion } from "@/lib/liquidacion";
 import { WhatsappFlotante } from "@/components/whatsapp-flotante";
+import { BarraComparar } from "@/components/barra-comparar";
 import { FondoCinematico } from "@/components/fx/fondo-cinematico";
 import { VisitTracker } from "@/components/visit-tracker";
 import { MetaPixel } from "@/components/meta-pixel";
@@ -129,6 +130,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
                 <div id="contenido">{children}</div>
                 <Footer />
                 <WhatsappFlotante />
+                <BarraComparar />
                 <AvisoCookies />
               </CarritoProvider>
             </ToastProvider>

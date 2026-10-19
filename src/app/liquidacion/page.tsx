@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PackageCheck, Store, Truck } from "lucide-react";
-import { TarjetaProducto } from "@/components/tarjeta-producto";
+import { GrillaConFiltros } from "@/components/grilla-con-filtros";
 import { listarLiquidacion } from "@/lib/liquidacion";
 import type { ProductoWeb } from "@/lib/tipos";
 
@@ -19,7 +19,8 @@ export const metadata: Metadata = {
  * quiere sacar. Cada uno sigue en su categoría; esta página solo los reúne.
  * Cuando se agotan o el dueño quita la etiqueta, desaparecen solos.
  */
-export default async function Liquidacion() {
+export default async function Liquidacion({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const params = await searchParams;
   let productos: ProductoWeb[] = [];
   let error = false;
   try {
@@ -68,11 +69,7 @@ export default async function Liquidacion() {
           <Link href="/productos" className="text-accent hover:underline">todo el catálogo</Link>.
         </p>
       ) : (
-        <div className="mt-8 grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4">
-          {productos.map((p) => (
-            <TarjetaProducto key={p.id} producto={p} />
-          ))}
-        </div>
+        <GrillaConFiltros productos={productos} params={params} ruta="/liquidacion" />
       )}
     </main>
   );

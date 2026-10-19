@@ -200,6 +200,16 @@ export function TarjetaProducto({ producto }: { producto: ProductoWeb }) {
             >
               Reservar
             </Link>
+          ) : sinStock ? (
+            /* Agotado (18-10-2026): ahora aparecen en las búsquedas. En vez de un
+               "Sin stock" apagado, lleva a la ficha, donde está el aviso por correo
+               y el "pídelo por encargo" (OpcionesAgotado). */
+            <Link
+              href={`${rutaFicha}#avisame`}
+              className="flex w-full items-center justify-center rounded-md border border-border-strong px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide text-ink-soft transition-colors hover:border-primary hover:text-primary lg:py-1.5"
+            >
+              Agotado · Avísame
+            </Link>
           ) : (
           <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
             <div className="flex items-center justify-between rounded-md border border-border lg:justify-start">

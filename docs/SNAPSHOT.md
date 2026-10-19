@@ -4,6 +4,35 @@
 > arquitectura completo (todas las fases) vive en `README-ECOMMERCE-SEVELIN.md`, en el repo del POS
 > (`sevelin-pos-oficial`) — este documento es el estado de ESTE repo (`sevelin-tienda`) nada más.
 
+**Fecha:** 18-10-2026 (tarde) · **12 mejoras para encontrar, decidir y escribir (`supabase/45` aplicada; POS v160).**
+
+Medido antes de hacerlas: 59 de 185 búsquedas no encontraban nada, y unas 2.000 vistas de productos al mes contra 5
+pedidos web (la venta se cierra por WhatsApp).
+- **Buscador que perdona (`src/lib/busqueda.ts`):** sin tildes ni plurales, palabras en cualquier orden, "128gb" = "128
+  GB", errores chicos de tipeo, sinónimos (`SINONIMOS`: iphone→lightning, aro→anillo, ethernet→red…), busca también en
+  marca, categoría y casillas. Si nada calza entero, muestra los "más parecidos" avisando. Con las 185 búsquedas reales:
+  de 59 sin nada a 17 (y esas son cosas que no se venden). Corre en memoria (`buscarTexto` en `catalogo.ts`).
+- **Agotados en la búsqueda:** salen al final; la tarjeta dice "Agotado · Avísame" y lleva a `#avisame` de la ficha.
+- **Sin resultados → "Te lo conseguimos"** (`sin-resultados.tsx`): WhatsApp con lo buscado ya escrito + encargos/agotados.
+- **Sugerencias al escribir** (`sugerencias-busqueda.tsx` + `GET /api/sugerencias`, catálogo en memoria 1 min:
+  `catalogo-memoria.ts`).
+- **WhatsApp con el producto escrito** (`whatsapp-producto.ts`): el botón verde y el de la ficha abren con "Hola, me
+  interesa [producto] ([precio]): [link] ¿Lo puedo retirar hoy en San Rafael 896?" (texto aprobado por el dueño).
+- **Ficha técnica** en la ficha (las casillas de los filtros, `fichaTecnica()` en `filtros.ts`) y como
+  `additionalProperty` en el JSON-LD.
+- **Comparar** hasta 3 (`/comparar?p=sku1,sku2`, botón en la ficha y barra flotante; lista en localStorage,
+  `listas-navegador.ts`).
+- **"¿Qué me sirve?"** (`/que-me-sirve`): conectar una pantalla (respeta el sentido de los adaptadores: "HDMI a VGA" no
+  sirve para VGA→HDMI), elegir monitor (avisa si falta adaptador) y cargar el celular. Enlazado desde Monitores, Cables y
+  Cargadores.
+- **Atajos** arriba de cada categoría (`atajosDeCategoria`), **filtros en búsquedas, Ofertas y Liquidación**
+  (`aplicarFiltros(..., { mezcla: true })`, `grilla-con-filtros.tsx`; con menos de 5 productos no aparece) y **vistos
+  recientemente** en la ficha y la portada (`GET /api/catalogo/por-sku`).
+- **Búsquedas con resultado:** `eventos_web.resultados` y `parecidos` (supabase/45); las 185 viejas se recalcularon. El
+  POS las muestra en Página Web → Más buscados → "Lo que buscan y no tenemos".
+
+---
+
 **Fecha:** 18-10-2026 · **Panel "Filtrar" en /productos (HDMI, VGA, parlantes, tamaño, marca, precio…).**
 
 - **Filtros del catálogo (`supabase/44` aplicada; pareja de `sevelin-pos-oficial/sql/103`, v159):** el dueño marca en la

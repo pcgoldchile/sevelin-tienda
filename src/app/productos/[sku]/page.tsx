@@ -26,6 +26,11 @@ import { esServicioTecnico } from "@/lib/servicios";
 import { AhorroOferta, PrecioAntes } from "@/components/precio-oferta";
 import { PrecioMayoristaFicha } from "@/components/precio-mayorista-ficha";
 import { fechaHoraOferta } from "@/lib/formato";
+import { fichaTecnica } from "@/lib/filtros";
+import { mensajeDeProducto } from "@/lib/whatsapp-producto";
+import { MensajeWhatsappProducto } from "@/components/mensaje-whatsapp-producto";
+import { BotonComparar } from "@/components/boton-comparar";
+import { VistosRecientemente } from "@/components/vistos-recientemente";
 
 export const revalidate = 60;
 
@@ -139,6 +144,12 @@ export default async function FichaProducto({ params }: PropsPagina) {
   // cuando el producto TIENE marca cargada en el POS (sql/38). Un genérico
   // no lleva marca inventada — declarar a Sevelin como fabricante de un
   // cable sería un dato falso, y Google penaliza eso.
+  const urlFicha = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://sevelin.cl'}/productos/${rutaDeSku(producto.sku)}`;
+  // #5: el WhatsApp de la ficha y el botón verde abren con el producto ya escrito
+  const mensajeWhatsapp = mensajeDeProducto(producto.nombre, formatoCLP.format(producto.precio_web), urlFicha, !!producto.precio_a_consultar);
+  // #6: las casillas de los filtros, como ficha técnica (y para Google, como additionalProperty)
+  const ficha = fichaTecnica(producto);
+
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Product',
@@ -147,6 +158,9 @@ export default async function FichaProducto({ params }: PropsPagina) {
     ...(producto.marca ? { brand: { '@type': 'Brand', name: producto.marca } } : {}),
     image: producto.imagen_urls || [],
     description: producto.descripcion_web ? textoPlanoDesdeHtml(producto.descripcion_web) : producto.nombre,
+    ...(ficha.length
+      ? { additionalProperty: ficha.map((f) => ({ '@type': 'PropertyValue', name: f.nombre, value: f.valores.join(', ') })) }
+      : {}),
     offers: {
       '@type': 'Offer',
       url: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://sevelin.cl'}/productos/${rutaDeSku(producto.sku)}`,
@@ -279,7 +293,7 @@ export default async function FichaProducto({ params }: PropsPagina) {
               />
             </div>
             <div className="hidden [@media(min-width:768px)_and_(min-height:940px)]:block">
-              <InfoEnvioProducto esServicio={esServicioTecnico(producto)} />
+              <InfoEnvioProducto esServicio={esServicioTecnico(producto)} mensajeWhatsapp={mensajeWhatsapp} />
             </div>
           </div>
         </div>
@@ -344,7 +358,8 @@ export default async function FichaProducto({ params }: PropsPagina) {
               carrito con algo que el checkout después rechaza. En su lugar va
               el cartel de agotado, y justo debajo el "Avísame cuando llegue"
               que ya estaba escrito y nunca fue alcanzable. */}
-          <div>
+          {/* #avisame: a este punto lleva el "Agotado · Avísame" de las tarjetas. */}
+          <div id="avisame" className="scroll-mt-28">
             {agotado ? (
               <OpcionesAgotado
                 nombre={producto.nombre}
@@ -385,6 +400,9 @@ export default async function FichaProducto({ params }: PropsPagina) {
           {/* Sin compra en línea no hay pago con tarjeta que anunciar. */}
           {!producto.precio_a_consultar && <AvisoPagoTarjeta enSitio={medioTarjetaDisponible() !== null} />}
 
+          {/* #7: sumar a la comparación (hasta 3, se guarda en el navegador). No en servicios. */}
+          {!esServicioTecnico(producto) && <BotonComparar sku={producto.sku} />}
+
           {producto.descripcion_web && (
             <div className="descripcion-producto rounded-2xl border border-border bg-surface/60 p-5 sm:p-6">
               <h2 className="mb-4 flex items-center gap-2 font-display text-sm font-bold uppercase tracking-wide text-ink">
@@ -423,12 +441,30 @@ export default async function FichaProducto({ params }: PropsPagina) {
             </div>
           )}
 
+          {/* Ficha técnica (#6): las casillas que el dueño marca en el POS para los
+              filtros. Solo lo marcado: si un dato no está, no se inventa. */}
+          {ficha.length > 0 && (
+            <div className="rounded-2xl border border-border bg-surface/60 p-5 sm:p-6">
+              <h2 className="mb-3 flex items-center gap-2 font-display text-sm font-bold uppercase tracking-wide text-ink">
+                <span className="texto-glow-primary text-primary">/</span> Ficha técnica
+              </h2>
+              <dl className="divide-y divide-border text-sm">
+                {ficha.map((f) => (
+                  <div key={f.nombre} className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-3 py-2">
+                    <dt className="text-ink-faint">{f.nombre}</dt>
+                    <dd className="text-ink">{f.valores.join(" · ")}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          )}
+
           {/* La misma tarjeta de arriba: se muestra acá, al final de la
               ficha, en celular y en pantallas de escritorio bajas. En
               pantallas altas sube a la columna de la foto y esta copia se
               oculta — nunca se ven las dos. */}
           <div className="[@media(min-width:768px)_and_(min-height:940px)]:hidden">
-            <InfoEnvioProducto esServicio={esServicioTecnico(producto)} />
+            <InfoEnvioProducto esServicio={esServicioTecnico(producto)} mensajeWhatsapp={mensajeWhatsapp} />
           </div>
         </div>
       </div>
@@ -450,6 +486,9 @@ export default async function FichaProducto({ params }: PropsPagina) {
         titulo={agotado ? "Alternativas disponibles" : "También te puede interesar"}
         productos={relacionados}
       />
+      {/* #11: se anota este producto y se muestran los anteriores (solo en este navegador). */}
+      <VistosRecientemente registrar={producto.sku} />
+      <MensajeWhatsappProducto mensaje={mensajeWhatsapp} />
     </main>
   );
 }

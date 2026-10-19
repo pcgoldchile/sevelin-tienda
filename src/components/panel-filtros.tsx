@@ -10,7 +10,7 @@ const OPCIONES_VISIBLES = 6;
 interface PropsPanelFiltros {
   grupos: GrupoFiltro[];
   seleccion: SeleccionFiltros;
-  base: { categoria?: string; subcategoria?: string; q?: string; orden?: string };
+  base: { categoria?: string; subcategoria?: string; q?: string; orden?: string; ruta?: string };
   totalActivos: number;
 }
 

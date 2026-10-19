@@ -1,3 +1,4 @@
+import { buscarConParecidos } from './busqueda';
 import { supabaseWeb } from './supabase-web';
 import type { ProductoWeb } from './tipos';
 // Oferta con fechas (supabase/37): TODA lectura de productos pasa por aplicarOferta.
@@ -506,4 +507,28 @@ export async function buscarCatalogo(filtros: {
     productos.sort((x, y) => grupo(x) - grupo(y));
   }
   return productos;
+}
+
+/**
+ * Búsqueda por texto para /productos?q= (18-10-2026). Busca en TODO lo
+ * publicado —también lo agotado, que antes desaparecía y la tarjeta ahora
+ * ofrece "Avísame"— con el buscador que perdona tildes, plurales, orden y
+ * errores de tipeo (src/lib/busqueda.ts). `parecidos` = nada calzó entero y
+ * se muestran los que calzan con la mayoría de las palabras.
+ */
+export async function buscarTexto(filtros: { q: string; categoria?: string; orden?: string }): Promise<{ productos: ProductoWeb[]; parecidos: boolean }> {
+  const { data, error } = await supabaseWeb.from('productos_web').select('*').eq('publicado_web', true);
+  if (error) throw new Error(error.message);
+  let todos = (data || []).map((p) => aplicarOferta(p));
+  if (filtros.categoria) todos = todos.filter((p) => p.categoria === filtros.categoria);
+  const resultado = buscarConParecidos(todos, filtros.q);
+  const clave: OrdenCatalogo = esOrdenCatalogoValido(filtros.orden) ? filtros.orden : 'relevancia';
+  if (clave !== 'relevancia') {
+    const { columna, ascending } = ORDEN_CATALOGO[clave];
+    const signo = ascending ? 1 : -1;
+    resultado.productos.sort((x, y) => columna === 'precio_web'
+      ? signo * (x.precio_web - y.precio_web)
+      : signo * x.nombre.localeCompare(y.nombre, 'es'));
+  }
+  return resultado;
 }

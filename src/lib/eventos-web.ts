@@ -8,11 +8,17 @@ import { supabaseWeb } from './supabase-web';
  * la tienda. Se llaman con `after()` (next/server) desde el Server
  * Component correspondiente, para no retrasar la respuesta al cliente.
  */
-export async function registrarBusqueda(termino: string): Promise<void> {
+/** `resultados` y `parecidos` (supabase/45): con eso el POS separa lo que se
+ *  buscó y no estaba ("demanda no satisfecha"). */
+export async function registrarBusqueda(termino: string, resultados?: number, parecidos?: boolean): Promise<void> {
   const limpio = termino.trim().slice(0, 200);
   if (!limpio) return;
   try {
-    const { error } = await supabaseWeb.from('eventos_web').insert({ tipo: 'busqueda', termino: limpio });
+    const { error } = await supabaseWeb.from('eventos_web').insert({
+      tipo: 'busqueda',
+      termino: limpio,
+      ...(resultados !== undefined ? { resultados, parecidos: !!parecidos } : {}),
+    });
     if (error) console.error('[eventos-web] No se pudo registrar la búsqueda:', error.message);
   } catch (err) {
     console.error('[eventos-web] No se pudo registrar la búsqueda:', err instanceof Error ? err.message : err);

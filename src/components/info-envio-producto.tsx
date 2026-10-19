@@ -42,7 +42,7 @@ function IconoBadge({ Icono }: { Icono: typeof Truck }) {
    obra depende del servicio y del estado del equipo, y la pacta el técnico
    (dueño, 12-09-2026) — anunciar "6 meses" ahí sería prometer algo que no
    existe. */
-export function InfoEnvioProducto({ esServicio = false }: { esServicio?: boolean } = {}) {
+export function InfoEnvioProducto({ esServicio = false, mensajeWhatsapp }: { esServicio?: boolean; mensajeWhatsapp?: string } = {}) {
   return (
     <div className="rounded-2xl border border-border bg-surface/60 p-5 sm:p-6">
       <h2 className="mb-4 flex items-center gap-2 font-display text-sm font-bold uppercase tracking-wide text-ink">
@@ -72,7 +72,7 @@ export function InfoEnvioProducto({ esServicio = false }: { esServicio?: boolean
 
         {WHATSAPP && (
           <a
-            href={`https://wa.me/${WHATSAPP}`}
+            href={`https://wa.me/${WHATSAPP}${mensajeWhatsapp ? `?text=${encodeURIComponent(mensajeWhatsapp)}` : ""}`}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-3 rounded-xl border border-border bg-surface-sunken/60 px-3.5 py-3 transition-colors hover:border-primary/40"
