@@ -7,11 +7,11 @@ export const revalidate = 60;
 
 export const metadata: Metadata = {
   title: "¿Qué me sirve? Te ayudamos a elegir",
-  description: "Responde dos o tres preguntas y te decimos qué cable, adaptador, monitor o cargador te sirve, con lo que hay hoy en Sevelin, Arica.",
+  description: "Responde dos o tres preguntas y te decimos qué cable, monitor, cargador, batería portátil, audífonos, pendrive o mouse te sirve, con lo que hay hoy en Sevelin, Arica.",
   alternates: { canonical: "/que-me-sirve" },
 };
 
-const CATEGORIAS = new Set(["Monitores", "Cables y Adaptadores", "Cargadores"]);
+const CATEGORIAS = new Set(["Monitores", "Cables y Adaptadores", "Cargadores", "Energía Portátil", "Audio", "Almacenamiento", "Periféricos"]);
 
 /**
  * "¿Qué me sirve?" (#8, 18-10-2026). Preguntas cortas que recomiendan con lo
@@ -30,6 +30,7 @@ export default async function QueMeSirve() {
         imagen: p.imagen_urls?.[0] ?? null,
         ruta: `/productos/${rutaDeSku(p.sku)}`,
         categoria: p.categoria as string,
+        subcategoria: p.subcategoria ?? null,
         caracteristicas: (p.caracteristicas && typeof p.caracteristicas === "object" ? p.caracteristicas : {}) as Record<string, string[]>,
       }));
   } catch (err) {

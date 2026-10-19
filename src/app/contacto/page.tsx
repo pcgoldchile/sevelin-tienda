@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Clock, Mail, MapPin } from "lucide-react";
 import { IconoInstagram, IconoWhatsApp } from "@/components/iconos-redes";
 import { BotonesRedes } from "@/components/botones-redes";
+import { ComoLlegar } from "@/components/como-llegar";
 import { EMAIL_CONTACTO, URL_INSTAGRAM, URL_PERFIL_GOOGLE, URL_WHATSAPP, whatsappLegible } from "@/lib/contacto";
 import { AVISO_DOMINGO, HORARIO_LEGIBLE } from "@/lib/horarios";
 
@@ -17,7 +18,8 @@ const TARJETA = "flex items-start gap-4 rounded-2xl border border-border bg-surf
 export default function Contacto() {
   const whatsapp = whatsappLegible();
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
+    <main className="flex flex-col">
+      <div className="mx-auto w-full max-w-3xl px-4 pt-12 sm:px-6 lg:px-8">
       <h1 className="font-display text-3xl font-bold tracking-tight text-ink">Contáctanos</h1>
       <p className="mt-3 text-ink-soft">
         Te responde una persona, no un robot. Lo más rápido es WhatsApp: cuéntanos qué buscas o qué le pasa a tu
@@ -72,7 +74,10 @@ export default function Contacto() {
         </div>
       </div>
 
-      <h2 className="mt-10 text-lg font-semibold text-ink">También puedes</h2>
+      </div>
+      <ComoLlegar />
+      <div className="mx-auto w-full max-w-3xl px-4 pb-12 sm:px-6 lg:px-8">
+      <h2 className="text-lg font-semibold text-ink">También puedes</h2>
       <ul className="mt-3 flex flex-col gap-2 text-sm">
         <li><Link href="/preguntas-frecuentes" className="font-medium text-primary hover:underline">Revisar las preguntas frecuentes</Link> <span className="text-ink-soft">(envíos, pagos, garantía).</span></li>
         <li><Link href="/terminos#devoluciones" className="font-medium text-primary hover:underline">Ver la garantía y las devoluciones</Link></li>
@@ -81,6 +86,7 @@ export default function Contacto() {
 
       <p className="mt-10 text-xs font-semibold uppercase tracking-wider text-ink-faint">Nuestras redes</p>
       <BotonesRedes className="mt-3" />
+      </div>
     </main>
   );
 }

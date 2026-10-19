@@ -107,6 +107,26 @@ const PREGUNTAS: { pregunta: string; respuesta: string }[] = [
       "Atendemos de lunes a domingo, de 10:00 a 13:00 y de 14:00 a 21:00 (cerramos de 13:00 a 14:00 por colación). Los domingos atendemos, pero conviene escribirnos o llamarnos antes para confirmar.",
   },
   {
+    pregunta: "¿Dónde queda la tienda y por dónde entro?",
+    respuesta:
+      "Estamos en San Rafael 896, Arica. Es una casa esquina: Pasaje San Rafael con Av. Robinson Rojas, frente a la línea del tren, entre Buena Esperanza y La Ligua. Google Maps te deja en el pasaje, pero la puerta mira a Robinson Rojas: no entres al pasaje. En la página de contacto está el mapa con la entrada marcada.",
+  },
+  {
+    pregunta: "¿Cómo sé si mi computador o celular necesita servicio técnico?",
+    respuesta:
+      "Haz el test gratis de sevelin.cl/diagnostico: en un minuto te dice qué tan probable es que tu equipo necesite mantenimiento, formateo, cambio de pantalla o de puerto de carga, por qué, y cuánto cuesta. Si quieres, lo agendas ahí mismo por WhatsApp. Es una estimación: el diagnóstico real lo hacemos al ver el equipo.",
+  },
+  {
+    pregunta: "¿Cómo sé qué cable, cargador o monitor le sirve a mi equipo?",
+    respuesta:
+      "En sevelin.cl/que-me-sirve respondes dos o tres preguntas y te mostramos lo que calza con tu equipo de lo que hay hoy en tienda. También puedes comparar hasta 3 productos lado a lado con el botón \"Comparar\" de cada ficha. Y si no encuentras lo que buscas, te lo conseguimos.",
+  },
+  {
+    pregunta: "¿Tienen programa de puntos?",
+    respuesta:
+      "Estamos preparando los Puntos Sevelin: cada compra en el local o en la web va a sumar puntos que se canjean como descuento. Todavía no está activo; cuando lo lancemos publicaremos las condiciones en sevelin.cl/puntos.",
+  },
+  {
     pregunta: "¿Qué significa que un producto esté \"por llegar\"?",
     respuesta:
       "Que viene en camino y todavía no está en la tienda. Puedes reservarlo pagando el total, y queda apartado a tu nombre: nadie más se lo lleva. Cuando llega te avisamos por correo, y lo retiras cuando te acomode o te lo despachamos.",

@@ -6,6 +6,7 @@ import { MessageCircle } from "lucide-react";
 import { formatoCLP } from "@/lib/formato";
 
 export interface ProductoAsistente {
+  subcategoria?: string | null;
   sku: string;
   nombre: string;
   precio: number;
@@ -15,7 +16,102 @@ export interface ProductoAsistente {
   caracteristicas: Record<string, string[]>;
 }
 
-type Flujo = "pantalla" | "monitor" | "cargador";
+type Flujo = "pantalla" | "monitor" | "cargador" | GenericoId;
+
+/* Asistentes que solo filtran por las casillas de la ficha (19-10-2026, "agrega más contenido al ¿qué me
+   sirve?"). Cada pregunta mira un grupo de casillas (src/lib/filtros.ts); `valores: null` = "da igual". */
+type GenericoId = "bateria" | "audifonos" | "archivos" | "perifericos";
+interface PreguntaGenerica { titulo: string; grupo: string; opciones: { texto: string; valores: string[] | null }[]; ayuda?: string }
+interface FlujoGenerico { id: GenericoId; titulo: string; texto: string; categoria: string; sinSub?: string; soloSub?: string; preguntas: PreguntaGenerica[]; busco: string }
+
+const GENERICOS: FlujoGenerico[] = [
+  {
+    id: "bateria",
+    titulo: "Batería portátil",
+    texto: "Para cargar el celular o el notebook fuera de casa",
+    categoria: "Energía Portátil",
+    sinSub: "Pilas y Energía Solar",
+    busco: "una batería portátil",
+    preguntas: [
+      { titulo: "1. ¿Qué vas a cargar?", grupo: "extras", opciones: [
+        { texto: "Celular", valores: null },
+        { texto: "iPhone con MagSafe (que se pegue)", valores: ["MagSafe (se pega al iPhone)"] },
+        { texto: "Notebook", valores: ["Sirve para notebook"] },
+      ] },
+      { titulo: "2. ¿Cuántas cargas completas del celular necesitas?", grupo: "capacidad_bateria", ayuda: "Un celular normal se carga unas 2 veces con 10.000 mAh.", opciones: [
+        { texto: "Una, para emergencias", valores: ["Hasta 5.000 mAh", "10.000 mAh"] },
+        { texto: "Dos", valores: ["10.000 mAh", "20.000 mAh o más"] },
+        { texto: "Tres o más (viajes)", valores: ["20.000 mAh o más"] },
+      ] },
+      { titulo: "3. ¿Qué conector usa tu equipo?", grupo: "puertos", opciones: [
+        { texto: "USB-C", valores: ["USB-C"] },
+        { texto: "iPhone (Lightning)", valores: ["Lightning", "USB-A"] },
+        { texto: "Micro USB", valores: ["Micro USB", "USB-A"] },
+      ] },
+    ],
+  },
+  {
+    id: "audifonos",
+    titulo: "Audífonos",
+    texto: "Para música, llamadas o jugar",
+    categoria: "Audio",
+    soloSub: "Audífonos",
+    busco: "audífonos",
+    preguntas: [
+      { titulo: "1. ¿Cómo los quieres conectar?", grupo: "conexion", opciones: [
+        { texto: "Sin cables (Bluetooth)", valores: ["Bluetooth"] },
+        { texto: "Con cable (3,5 mm)", valores: ["Cable 3,5 mm"] },
+        { texto: "USB (PC)", valores: ["USB"] },
+      ] },
+      { titulo: "2. ¿Para qué los vas a usar más?", grupo: "extras", opciones: [
+        { texto: "Llamadas y reuniones", valores: ["Micrófono incluido"] },
+        { texto: "Jugar", valores: ["Gamer", "Micrófono incluido"] },
+        { texto: "Música y viajes", valores: null },
+      ] },
+    ],
+  },
+  {
+    id: "archivos",
+    titulo: "Guardar archivos",
+    texto: "Pendrive, disco externo, SSD o tarjeta de memoria",
+    categoria: "Almacenamiento",
+    busco: "dónde guardar archivos",
+    preguntas: [
+      { titulo: "1. ¿Dónde lo vas a usar?", grupo: "conexion", opciones: [
+        { texto: "En el PC o notebook (USB)", valores: ["USB-A"] },
+        { texto: "En el celular o un Mac (USB-C)", valores: ["USB-C"] },
+        { texto: "Dentro del PC, para que ande más rápido", valores: ['SATA 2,5"', "M.2 NVMe", "M.2 SATA"] },
+        { texto: "En una cámara, celular o consola (microSD)", valores: ["microSD"] },
+      ] },
+      { titulo: "2. ¿Cuánto espacio necesitas?", grupo: "capacidad", ayuda: "Referencia: 64 GB son unas 15.000 fotos de celular.", opciones: [
+        { texto: "Poco: documentos", valores: ["32 GB o menos", "64 GB"] },
+        { texto: "Fotos y videos", valores: ["128 GB", "256 GB"] },
+        { texto: "Mucho: respaldo completo o juegos", valores: ["480 a 512 GB", "960 GB a 1 TB", "2 TB o más"] },
+      ] },
+    ],
+  },
+  {
+    id: "perifericos",
+    titulo: "Mouse y teclado",
+    texto: "Para la oficina, la casa o jugar",
+    categoria: "Periféricos",
+    sinSub: "Mandos y Joystick",
+    busco: "mouse o teclado",
+    preguntas: [
+      { titulo: "1. ¿Con cable o inalámbrico?", grupo: "conexion", opciones: [
+        { texto: "Inalámbrico", valores: ["Inalámbrico con receptor USB", "Bluetooth"] },
+        { texto: "Con cable", valores: ["Con cable USB"] },
+        { texto: "Da igual", valores: null },
+      ] },
+      { titulo: "2. ¿Qué es lo más importante?", grupo: "extras", opciones: [
+        { texto: "Que sea gamer", valores: ["Gamer"] },
+        { texto: "Que no haga ruido", valores: ["Silencioso"] },
+        { texto: "Que se recargue (sin pilas)", valores: ["Recargable"] },
+        { texto: "Lo más económico", valores: null },
+      ] },
+    ],
+  },
+];
 const VIDEO = ["HDMI", "VGA", "DisplayPort", "DVI", "USB-C"];
 
 /* Cómo se nombra cada conector en el NOMBRE del producto, para saber el sentido
@@ -122,15 +218,49 @@ export function AsistenteQueMeSirve({ productos, whatsapp }: { productos: Produc
   const [uso, setUso] = useState<string | null>(null);
   const [presupuesto, setPresupuesto] = useState<string | null>(null);
   const [conector, setConector] = useState<string | null>(null);
+  const [respuestas, setRespuestas] = useState<Record<number, number>>({});
 
   function elegirFlujo(f: Flujo) {
-    setFlujo(f); setSalida(null); setEntrada(null); setUso(null); setPresupuesto(null); setConector(null);
+    setFlujo(f); setSalida(null); setEntrada(null); setUso(null); setPresupuesto(null); setConector(null); setRespuestas({});
+  }
+
+  /* ---------- 4 a 7. Los asistentes por casillas ---------- */
+  const generico = GENERICOS.find((g) => g.id === flujo) ?? null;
+  let resultadoGenerico: React.ReactNode = null;
+  if (generico && generico.preguntas.every((_, i) => respuestas[i] !== undefined)) {
+    const deCategoria = productos
+      .filter((p) => p.categoria === generico.categoria && (!generico.sinSub || p.subcategoria !== generico.sinSub) && (!generico.soloSub || p.subcategoria === generico.soloSub))
+      .sort((a, b) => a.precio - b.precio);
+    const calzan = deCategoria.filter((p) =>
+      generico.preguntas.every((q, i) => {
+        const valores = q.opciones[respuestas[i]].valores;
+        return !valores || (p.caracteristicas[q.grupo] ?? []).some((v) => valores.includes(v));
+      }),
+    );
+    const elegidas = generico.preguntas.map((q, i) => q.opciones[respuestas[i]].texto.toLowerCase());
+    resultadoGenerico = (
+      <div className="mt-6">
+        <h3 className="text-sm font-semibold uppercase tracking-wider text-ink-faint">Te sirven ({calzan.length})</h3>
+        {calzan.length ? (
+          <ul className="mt-3 grid gap-3 sm:grid-cols-2">{calzan.slice(0, 8).map((p) => <Tarjeta key={p.sku} p={p} />)}</ul>
+        ) : (
+          <>
+            <p className="mt-2 text-sm text-ink-soft">Hoy no tenemos uno exacto con eso. Te lo podemos conseguir{deCategoria.length ? ", o mira lo que hay:" : "."}</p>
+            {deCategoria.length > 0 && (
+              <ul className="mt-3 grid gap-3 sm:grid-cols-2">{deCategoria.slice(0, 4).map((p) => <Tarjeta key={p.sku} p={p} />)}</ul>
+            )}
+            <PedirloPorWhatsapp whatsapp={whatsapp} mensaje={`Hola, busco ${generico.busco}: ${elegidas.join(", ")}. ¿Qué me recomiendan?`} />
+          </>
+        )}
+      </div>
+    );
   }
 
   const FLUJOS: { id: Flujo; titulo: string; texto: string }[] = [
     { id: "pantalla", titulo: "Conectar una pantalla", texto: "PC, notebook o consola a un monitor, TV o proyector" },
     { id: "monitor", titulo: "Elegir un monitor", texto: "Para oficina, estudio o jugar" },
     { id: "cargador", titulo: "Cargar mi celular", texto: "Cargador o cable según tu conector" },
+    ...GENERICOS.map((g) => ({ id: g.id, titulo: g.titulo, texto: g.texto })),
   ];
 
   /* ---------- 1. Conectar una pantalla ---------- */
@@ -233,7 +363,7 @@ export function AsistenteQueMeSirve({ productos, whatsapp }: { productos: Produc
 
   return (
     <div className="mt-6">
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {FLUJOS.map((f) => (
           <button
             key={f.id}
@@ -246,7 +376,29 @@ export function AsistenteQueMeSirve({ productos, whatsapp }: { productos: Produc
             <span className="mt-1 block text-xs text-ink-soft">{f.texto}</span>
           </button>
         ))}
+        {/* Si lo que falla es el equipo, no un accesorio */}
+        <Link href="/diagnostico" className="rounded-2xl border border-dashed border-primary/50 bg-primary/5 p-4 text-left transition-colors hover:border-primary">
+          <span className="block font-semibold text-primary">¿Tu equipo anda mal?</span>
+          <span className="mt-1 block text-xs text-ink-soft">Lento, se calienta, no carga o pantalla rota: haz el test de servicio técnico</span>
+        </Link>
       </div>
+
+      {generico && (
+        <>
+          {generico.preguntas.map((q, i) => (
+            <div key={q.titulo}>
+              <Opciones
+                titulo={q.titulo}
+                opciones={q.opciones.map((o) => o.texto)}
+                valor={respuestas[i] !== undefined ? q.opciones[respuestas[i]].texto : null}
+                onElegir={(v) => setRespuestas((r) => ({ ...r, [i]: q.opciones.findIndex((o) => o.texto === v) }))}
+              />
+              {q.ayuda && <p className="mt-2 text-xs text-ink-faint">{q.ayuda}</p>}
+            </div>
+          ))}
+          {resultadoGenerico}
+        </>
+      )}
 
       {flujo === "pantalla" && (
         <>

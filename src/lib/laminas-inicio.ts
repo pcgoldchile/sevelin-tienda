@@ -17,7 +17,7 @@ import { CATEGORIA_SERVICIOS } from './servicios';
  * Este archivo no importa Supabase: lo usa el servidor (page.tsx) y el tipo, el cliente.
  */
 
-export type IconoLamina = 'servicio' | 'celular' | 'por-llegar' | 'encargo' | 'oferta' | 'asistente' | 'test';
+export type IconoLamina = 'servicio' | 'celular' | 'por-llegar' | 'encargo' | 'oferta' | 'asistente' | 'test' | 'ubicacion';
 
 export interface LaminaInicio {
   id: string;
@@ -29,6 +29,8 @@ export interface LaminaInicio {
   cta: string;
   /** Foto de un producto o servicio real que calza con la lámina. Sin foto, va el ícono grande. */
   foto?: { src: string; nombre: string };
+  /** Imagen que ocupa todo el cuadro (el mapa de "¿Dónde estamos?"), en vez de la foto. */
+  fondo?: { src: string; alt: string };
 }
 
 const conFoto = (p: ProductoWeb | undefined) => (p?.imagen_urls?.[0] ? { src: p.imagen_urls[0], nombre: p.nombre } : undefined);
@@ -101,6 +103,18 @@ export function armarLaminas({
     texto: 'Responde 1 minuto de preguntas y te decimos qué tan probable es, y cuánto cuesta.',
     href: '/diagnostico',
     cta: 'Hacer el test',
+  });
+
+  // 2c. Dónde estamos (19-10-2026): Google deja a la gente en el pasaje; la puerta mira a Robinson Rojas.
+  laminas.push({
+    id: 'ubicacion',
+    icono: 'ubicacion',
+    etiqueta: 'Cómo llegar',
+    titulo: 'La entrada es por Robinson Rojas',
+    texto: 'Casa esquina con el Pje. San Rafael, frente a la línea del tren. No entres al pasaje.',
+    href: '/#como-llegar',
+    cta: 'Ver el mapa',
+    fondo: { src: '/como-llegar/mapa.svg', alt: 'Mapa: Sevelin en la esquina del Pasaje San Rafael con Av. Robinson Rojas, entrada por Robinson Rojas' },
   });
 
   // 3. Ofertas, solo mientras haya.

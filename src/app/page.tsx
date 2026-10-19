@@ -7,6 +7,7 @@ import { URL_WHATSAPP } from "@/lib/contacto";
 import { listarEncargos, listarPorLlegar } from "@/lib/encargos";
 import { armarLaminas } from "@/lib/laminas-inicio";
 import { VitrinaInicio } from "@/components/vitrina-inicio";
+import { ComoLlegar } from "@/components/como-llegar";
 import { AccesosCategorias } from "@/components/accesos-categorias";
 import { ServiciosInicio } from "@/components/servicios-inicio";
 import { PestanasProductos } from "@/components/pestanas-productos";
@@ -82,6 +83,9 @@ export default async function Home() {
       <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
         <VistosRecientemente />
       </div>
+
+      {/* 19-10-2026: Google deja a la gente en el pasaje; la puerta mira a Robinson Rojas */}
+      <ComoLlegar />
 
       <TarjetasConfianza />
       <FranjaConfianza />

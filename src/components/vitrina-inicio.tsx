@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { ArrowRight, BadgePercent, MessageCircle, PackageSearch, ShieldCheck, Smartphone, Sparkles, Stethoscope, Store, Truck, Wrench, type LucideIcon } from "lucide-react";
+import { ArrowRight, BadgePercent, MapPin, MessageCircle, PackageSearch, ShieldCheck, Smartphone, Sparkles, Stethoscope, Store, Truck, Wrench, type LucideIcon } from "lucide-react";
 import type { ProductoWeb } from "@/lib/tipos";
 import { formatoCLP } from "@/lib/formato";
 import { rutaDeSku } from "@/lib/sku-url";
@@ -26,6 +26,7 @@ const ICONOS: Record<IconoLamina, LucideIcon> = {
   oferta: BadgePercent,
   asistente: Sparkles,
   test: Stethoscope,
+  ubicacion: MapPin,
 };
 
 /* Lo que va pasando por el cuadro grande: un producto destacado, una lámina, otro
@@ -275,11 +276,16 @@ function GrandeLamina({ l, activo }: { l: LaminaInicio; activo: boolean }) {
       className="group flex h-full flex-col overflow-hidden rounded-2xl border border-primary/40 bg-surface shadow-glow-primary"
     >
       <span className="relative block aspect-[4/3] w-full overflow-hidden bg-gradient-to-br from-primary-deep/70 via-surface to-surface-sunken sm:aspect-square">
+        {l.fondo && (
+          /* eslint-disable-next-line @next/next/no-img-element -- SVG propio, nítido a cualquier tamaño */
+          <img src={l.fondo.src} alt={l.fondo.alt} loading="lazy" className="absolute inset-0 h-full w-full object-cover object-[100%_50%] transition-transform duration-700 group-hover:scale-105" />
+        )}
+        {!l.fondo && <>
         {/* Ícono gigante de fondo, cortado por el borde: da movimiento sin tapar nada */}
         <Icono aria-hidden className="absolute -bottom-10 -right-10 h-56 w-56 rotate-[-12deg] text-primary/15 transition-transform duration-700 group-hover:rotate-0 group-hover:scale-105" strokeWidth={1.25} />
         <span aria-hidden className="absolute -left-16 -top-16 h-48 w-48 rounded-full bg-primary/25 blur-3xl" />
 
-        <span className="absolute left-4 top-4 inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-surface-sunken/80 px-3 py-1 text-xs font-semibold text-primary-soft">
+        <span className={`absolute left-4 inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-surface-sunken/80 px-3 py-1 text-xs font-semibold text-primary-soft ${l.fondo ? "bottom-4" : "top-4"}`}>
           <Icono className="h-3.5 w-3.5" aria-hidden /> {l.etiqueta}
         </span>
 
@@ -295,8 +301,10 @@ function GrandeLamina({ l, activo }: { l: LaminaInicio; activo: boolean }) {
             <Icono className="h-1/2 w-1/2 text-primary-soft" aria-hidden strokeWidth={1.5} />
           </span>
         )}
+        </>}
 
-        <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-surface-sunken via-surface-sunken/70 to-transparent px-4 pb-4 pt-12">
+        {/* Con el mapa de fondo, el título va arriba: abajo están el logo y la entrada */}
+        <span className={`absolute inset-x-0 px-4 ${l.fondo ? "top-0 bg-gradient-to-b from-surface-sunken via-surface-sunken/80 to-transparent pb-12 pt-4" : "bottom-0 bg-gradient-to-t from-surface-sunken via-surface-sunken/70 to-transparent pb-4 pt-12"}`}>
           <span className="block max-w-[85%] font-display text-2xl font-bold uppercase leading-tight tracking-tight text-ink sm:text-[1.7rem]">
             {l.titulo}
           </span>
