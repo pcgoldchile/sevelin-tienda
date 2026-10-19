@@ -139,7 +139,8 @@ export default async function Home() {
             {destacados.map((producto, i) => (
               <ScrollReveal key={producto.id} delay={(i % 4) * 0.06} distancia={20}>
                 {/* Por qué está acá (más vendido, en tendencia, para el calor…). */}
-                {producto.motivo_destacado && TEXTO_MOTIVO[producto.motivo_destacado as MotivoDestacado] && (
+                {producto.motivo_destacado && TEXTO_MOTIVO[producto.motivo_destacado as MotivoDestacado]
+                  && producto.motivo_destacado !== producto.etiqueta_web && (
                   <p className="mb-1.5 text-xs font-semibold text-primary">{TEXTO_MOTIVO[producto.motivo_destacado as MotivoDestacado]}</p>
                 )}
                 <TarjetaProducto producto={producto} />
