@@ -1,13 +1,12 @@
 import { ImageResponse } from "next/og";
 import { NextRequest } from "next/server";
 import { publicadosEnMemoria } from "@/lib/catalogo-memoria";
-import { formatoCLP } from "@/lib/formato";
 
 /**
  * Tarjeta para compartir una categoría (dueño, 19-10-2026, con la captura de WhatsApp: el enlace
  * de Monitores mostraba la foto de un monitor AOC viejo — la página no tenía imagen propia y
  * WhatsApp tomaba la primera <img>). 1200×630, con la identidad de sevelin.cl y datos reales:
- * cuántos modelos hay con stock y desde cuánto.
+ * las marcas que hay (sin precios: pedido del dueño).
  *   /api/og/categoria?c=Monitores[&s=Subcategoría]
  * Sin fotos de productos a propósito: son .webp y el generador de imágenes no las dibuja.
  */
@@ -16,23 +15,20 @@ export const revalidate = 3600;
 export async function GET(req: NextRequest) {
   const categoria = (req.nextUrl.searchParams.get("c") || "").slice(0, 60);
   const subcategoria = (req.nextUrl.searchParams.get("s") || "").slice(0, 60);
-  let cantidad = 0;
-  let desde: number | null = null;
+  /* Sin precios ni cantidades (dueño, 19-10-2026): solo las marcas que hay, las más repetidas primero */
+  let marcas: string[] = [];
   try {
     const lista = (await publicadosEnMemoria()).filter((p) =>
       p.categoria === categoria && (!subcategoria || p.subcategoria === subcategoria) && (p.stock_web > 0 || p.categoria === "Servicios Técnicos"));
-    cantidad = lista.length;
-    const precios = lista.map((p) => Number(p.precio_web)).filter((n) => n > 0);
-    desde = precios.length ? Math.min(...precios) : null;
+    const cuenta = new Map<string, number>();
+    lista.forEach((p) => { const m = String(p.marca || "").trim(); if (m && !/gen[eé]ric/i.test(m)) cuenta.set(m, (cuenta.get(m) || 0) + 1); });
+    marcas = [...cuenta.entries()].sort((a, b) => b[1] - a[1]).map(([m]) => m).slice(0, 4);
   } catch {
     /* sin datos, la tarjeta sale igual con el nombre */
   }
   const titulo = subcategoria || categoria || "Tecnología";
   const servicio = categoria === "Servicios Técnicos";
-  const linea = [
-    cantidad ? `${cantidad} ${servicio ? (cantidad === 1 ? "servicio" : "servicios") : cantidad === 1 ? "modelo disponible" : "modelos disponibles"}` : null,
-    desde ? `desde ${formatoCLP.format(desde)}` : null,
-  ].filter(Boolean).join(" · ");
+  const linea = servicio ? "Mantenimiento, formateo y reparación" : marcas.length >= 2 ? `${marcas.join(" · ")} y más` : "Varias marcas y modelos";
   const sellos = servicio ? ["Con garantía", "Técnicos propios", "Precio a la vista"] : ["Garantía en todo", "Retiro hoy en Arica", "Despacho a todo Chile"];
 
   return new ImageResponse(
