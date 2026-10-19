@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { ArrowRight, MessageCircle, ShieldCheck, Store, Wrench } from "lucide-react";
 import type { ProductoWeb } from "@/lib/tipos";
 import { formatoCLP } from "@/lib/formato";
@@ -100,45 +100,56 @@ export function VitrinaInicio({ destacados, urlWhatsapp }: { destacados: Destaca
           >
             {/* El grande, que va rotando */}
             <div className="relative">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={grande.producto_pos_id}
-                  initial={quieto ? false : { opacity: 0, scale: 0.97, y: 10 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={quieto ? undefined : { opacity: 0, scale: 0.98, y: -8 }}
-                  transition={{ duration: 0.45, ease: EASE_OUT }}
-                >
-                  <Link
-                    href={`/productos/${rutaDeSku(grande.sku)}`}
-                    className="group flex flex-col overflow-hidden rounded-2xl border border-primary/40 bg-surface shadow-glow-primary"
-                  >
-                    <span className="relative block aspect-[4/3] w-full bg-white sm:aspect-square">
-                      <Image
-                        src={grande.imagen_urls[0]}
-                        alt={grande.nombre}
-                        fill
-                        priority
-                        sizes="(min-width: 1024px) 340px, (min-width: 640px) 55vw, 92vw"
-                        className="object-contain p-3 transition-transform duration-500 group-hover:scale-105"
-                      />
-                      {sello(grande) && (
-                        <span className="absolute left-3 top-3 rounded-full bg-surface-sunken/90 px-3 py-1 text-xs font-semibold text-primary-soft">
-                          {sello(grande)}
+              {/* Todos los grandes apilados en la misma celda y se cambia cuál se ve (fundido
+                  cruzado). Antes salía uno y después entraba el otro: por un instante quedaba el
+                  hueco vacío y la vitrina saltaba (se vio en la captura de producción, 19-10-2026). */}
+              <div className="grid">
+                {lista.slice(0, Math.min(lista.length, 4)).map((p, i) => {
+                  const activo = i === actual;
+                  return (
+                    <motion.div
+                      key={p.producto_pos_id}
+                      className="[grid-area:1/1]"
+                      initial={false}
+                      animate={quieto ? { opacity: activo ? 1 : 0 } : { opacity: activo ? 1 : 0, scale: activo ? 1 : 0.97, y: activo ? 0 : 8 }}
+                      transition={{ duration: 0.55, ease: EASE_OUT }}
+                      style={{ pointerEvents: activo ? "auto" : "none", zIndex: activo ? 1 : 0 }}
+                      aria-hidden={!activo}
+                    >
+                      <Link
+                        href={`/productos/${rutaDeSku(p.sku)}`}
+                        tabIndex={activo ? 0 : -1}
+                        className="group flex flex-col overflow-hidden rounded-2xl border border-primary/40 bg-surface shadow-glow-primary"
+                      >
+                        <span className="relative block aspect-[4/3] w-full bg-white sm:aspect-square">
+                          <Image
+                            src={p.imagen_urls[0]}
+                            alt={p.nombre}
+                            fill
+                            priority={i === 0}
+                            sizes="(min-width: 1024px) 340px, (min-width: 640px) 55vw, 92vw"
+                            className="object-contain p-3 transition-transform duration-500 group-hover:scale-105"
+                          />
+                          {sello(p) && (
+                            <span className="absolute left-3 top-3 rounded-full bg-surface-sunken/90 px-3 py-1 text-xs font-semibold text-primary-soft">
+                              {sello(p)}
+                            </span>
+                          )}
                         </span>
-                      )}
-                    </span>
-                    <span className="flex items-end justify-between gap-3 p-4">
-                      <span className="min-w-0">
-                        <span className="line-clamp-2 text-sm font-medium leading-5 text-ink">{grande.nombre}</span>
-                        <span className="precio-gamer mt-1 block text-2xl text-ink">{formatoCLP.format(grande.precio_web)}</span>
-                      </span>
-                      <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-primary px-3 py-2 text-xs font-semibold uppercase tracking-wide text-surface-sunken">
-                        Ver <ArrowRight className="h-3.5 w-3.5" aria-hidden />
-                      </span>
-                    </span>
-                  </Link>
-                </motion.div>
-              </AnimatePresence>
+                        <span className="flex items-end justify-between gap-3 p-4">
+                          <span className="min-w-0">
+                            <span className="line-clamp-2 h-10 text-sm font-medium leading-5 text-ink">{p.nombre}</span>
+                            <span className="precio-gamer mt-1 block text-2xl text-ink">{formatoCLP.format(p.precio_web)}</span>
+                          </span>
+                          <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-primary px-3 py-2 text-xs font-semibold uppercase tracking-wide text-surface-sunken">
+                            Ver <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+                          </span>
+                        </span>
+                      </Link>
+                    </motion.div>
+                  );
+                })}
+              </div>
               {/* Puntos: cuál se está mostrando y para saltar a otro */}
               {lista.length > 1 && (
                 <div className="mt-3 flex justify-center gap-2">
