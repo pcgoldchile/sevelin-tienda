@@ -1,160 +1,77 @@
-import Link from "next/link";
 import { VistosRecientemente } from "@/components/vistos-recientemente";
-import { listarDestacados, TEXTO_MOTIVO, type MotivoDestacado } from "@/lib/destacados";
-import { buscarCatalogo, listarMasVendidos } from "@/lib/catalogo";
-import { CATEGORIA_SERVICIOS, esServicioTecnico } from "@/lib/servicios";
-import { HeroCarrusel, type FotoHero } from "@/components/hero-carrusel";
-import { listarEncargos, listarPorLlegar } from "@/lib/encargos";
-import { rutaDeSku } from "@/lib/sku-url";
-import type { ProductoWeb } from "@/lib/tipos";
-import { BannersCategoria } from "@/components/banners-categoria";
+import { listarDestacados } from "@/lib/destacados";
+import { listarCategorias, listarMasVendidos } from "@/lib/catalogo";
+import { listarMasVendidosDelMes, listarMasVistos, listarServiciosInicio } from "@/lib/inicio";
+import { estadoOfertas } from "@/lib/ofertas";
+import { URL_WHATSAPP } from "@/lib/contacto";
+import { VitrinaInicio } from "@/components/vitrina-inicio";
+import { AccesosCategorias } from "@/components/accesos-categorias";
+import { ServiciosInicio } from "@/components/servicios-inicio";
+import { PestanasProductos } from "@/components/pestanas-productos";
 import { FranjaConfianza } from "@/components/franja-confianza";
 import { TarjetasConfianza } from "@/components/tarjetas-confianza";
-import { TarjetaProducto } from "@/components/tarjeta-producto";
-import { ScrollReveal } from "@/components/fx/scroll-reveal";
 import { AvisoPagoTarjeta } from "@/components/aviso-pago-tarjeta";
 import { medioTarjetaDisponible } from "@/lib/link-pago";
+import type { ProductoWeb } from "@/lib/tipos";
 
 // ISR: el catálogo no cambia segundo a segundo (se sincroniza vía webhook
 // desde el POS), así que 60s de cache es suficiente para una navegación
 // fluida sin pegarle a Supabase en cada visita.
 export const revalidate = 60;
 
-const CANTIDAD_DESTACADOS = 8;
-
-/* Fotos del carrusel (opción A del dueño, 29-09-2026): cada lámina muestra un
-   producto REAL que calza con su tema. "Viene en camino" usa algo por llegar
-   y "Pedidos por encargo" un encargo; si no hay, se usa el siguiente más
-   vendido. Nunca se repite un producto entre láminas. Si todo falla, el
-   carrusel sigue solo con texto, como antes. */
-function fotosDelHero(
-  masVendidos: ProductoWeb[],
-  porLlegar: ProductoWeb[],
-  encargos: ProductoWeb[],
-  servicios: ProductoWeb[],
-): Record<string, FotoHero | undefined> {
-  const usados = new Set<number>();
-  const aFoto = (p: ProductoWeb, esEncargo = false): FotoHero => {
-    usados.add(p.producto_pos_id);
-    return {
-      src: p.imagen_urls[0],
-      nombre: p.nombre,
-      href: `${esEncargo ? "/pedidos-por-encargo" : "/productos"}/${rutaDeSku(p.sku)}`,
-    };
-  };
-  const conFoto = (p: ProductoWeb) => !!p.imagen_urls?.[0] && !!p.sku && !usados.has(p.producto_pos_id);
-  // Las demás láminas hablan de productos: un servicio nunca les presta su foto.
-  const siguienteVendido = () => {
-    const p = masVendidos.find((x) => !esServicioTecnico(x) && conFoto(x));
-    return p ? aFoto(p) : undefined;
-  };
-  const deLista = (lista: ProductoWeb[], esEncargo = false) => {
-    const p = lista.find(conFoto);
-    return p ? aFoto(p, esEncargo) : siguienteVendido();
-  };
-
-  const fotos: Record<string, FotoHero | undefined> = {};
-  fotos.tecnologia = siguienteVendido();
-  // La lámina de servicio técnico lleva la foto de un servicio (el más vendido), nunca la de un producto.
-  const servicio = servicios.find(conFoto);
-  fotos.servicios = servicio ? aFoto(servicio) : undefined;
-  // Sin nada por llegar, la lámina se oculta (ver `ocultar` en Home): no se le pone foto de otro producto.
-  const conFotoPorLlegar = porLlegar.filter((p) => !p.es_pedido_encargo).find(conFoto);
-  fotos["por-llegar"] = conFotoPorLlegar ? aFoto(conFotoPorLlegar) : undefined;
-  fotos.encargos = deLista(encargos, true);
-  fotos.despacho = siguienteVendido();
-  fotos.whatsapp = siguienteVendido();
-  fotos.fiestas = siguienteVendido();
-  return fotos;
-}
-
+/**
+ * Inicio (rediseño del dueño, 19-10-2026): "una combinación de A y C, sin lo de los
+ * grados, más dinámica; los servicios más rentables (mantenimiento y formateo) a la
+ * vista, pantallas y puertos para cotizar, los más vendidos, los más vistos y los
+ * íconos de la A". De arriba a abajo:
+ *   1. Vitrina: lo pides hoy / lo tienes hoy + los Destacados del día, rotando.
+ *   2. Íconos de categorías.
+ *   3. Servicio técnico (src/lib/inicio.ts → SERVICIOS_INICIO).
+ *   4. Pestañas: Más vendidos · Más vistos · Destacados.
+ *   5. Pago con tarjeta, vistos recientemente y confianza (como antes).
+ * Reemplaza al carrusel de láminas y a los 3 banners de categoría (los componentes
+ * siguen en el repo por si se quieren volver a usar).
+ */
 export default async function Home() {
-  /* "Destacados" = los más vendidos según el POS (`unidades_vendidas`, que
-     el POS empuja vía POST /api/sync/mas-vendidos). Antes eran simplemente
-     los 8 primeros del catálogo por orden alfabético, que no es un
-     criterio: el A de "Adaptador" no dice nada de si el producto se vende. */
-  /* Desde el 18-10-2026 son AUTOMÁTICOS (src/lib/destacados.ts): ventas y vistas
-     del mes, tendencia de la semana, la etiqueta "Tendencia" del POS y el clima
-     de Arica, recalculados cada día. Si todavía no hay puntajes, los más
-     vendidos de siempre. */
-  let destacados: (Awaited<ReturnType<typeof listarMasVendidos>>[number] & { motivo_destacado?: string | null })[] = [];
-  let errorCatalogo = false;
+  let destacados: (ProductoWeb & { motivo_destacado?: string | null })[] = [];
   try {
-    destacados = await listarDestacados(CANTIDAD_DESTACADOS);
-    if (destacados.length < 4) destacados = await listarMasVendidos(CANTIDAD_DESTACADOS);
+    destacados = await listarDestacados(12);
+    if (destacados.length < 4) destacados = await listarMasVendidos(12);
   } catch (err) {
     console.error("[Home] No se pudo cargar el catálogo:", err instanceof Error ? err.message : err);
     // Relanzar hace que ISR siga sirviendo la última Home buena; atrapado, cacheaba una Home rota.
-    // En el build no hay Home anterior, así que ahí se muestra el aviso.
     if (process.env.NEXT_PHASE !== "phase-production-build") throw err;
-    errorCatalogo = true;
   }
 
-  // Las fotos son adorno: si Supabase falla acá, el hero queda solo con texto.
-  const [porLlegar, encargos, servicios] = await Promise.all([
-    listarPorLlegar().catch(() => []),
-    listarEncargos().catch(() => []),
-    buscarCatalogo({ categoria: CATEGORIA_SERVICIOS })
-      .then((lista) => lista.filter((p) => !p.precio_a_consultar).sort((a, b) => (b.unidades_vendidas ?? 0) - (a.unidades_vendidas ?? 0)))
-      .catch(() => []),
+  // Lo demás es complemento: si falla una consulta, esa sección no aparece.
+  const [categorias, servicios, masVendidos, masVistos, ofertas] = await Promise.all([
+    listarCategorias().catch(() => [] as string[]),
+    listarServiciosInicio().catch(() => []),
+    listarMasVendidosDelMes(8).catch(() => []),
+    listarMasVistos(8).catch(() => []),
+    estadoOfertas().catch(() => null),
   ]);
-  const fotosHero = fotosDelHero(destacados, porLlegar, encargos, servicios);
 
   return (
     <main className="flex flex-col">
-      <HeroCarrusel fotos={fotosHero} ocultar={porLlegar.length ? [] : ["por-llegar"]} />
-      <BannersCategoria />
+      <VitrinaInicio destacados={destacados} urlWhatsapp={URL_WHATSAPP} />
+      <AccesosCategorias categorias={categorias} hayOfertas={!!ofertas?.activo} />
+      <ServiciosInicio servicios={servicios} />
 
-      {/* Arriba de Destacados, no en el pie: quien quiere pagar con
-          tarjeta tiene que enterarse de que puede ANTES de recorrer el
-          catálogo, no después de decidir que no le sirve la tienda. */}
-      <div className="mx-auto w-full max-w-6xl px-4 pt-10 sm:px-6 lg:px-8">
+      <PestanasProductos
+        pestanas={[
+          { id: "vendidos", titulo: "⭐ Más vendidos", bajada: "Lo que más se llevó la gente este mes, en el local y en la web.", productos: masVendidos },
+          { id: "vistos", titulo: "👀 Más vistos", bajada: "Lo que más están mirando en sevelin.cl este mes.", productos: masVistos },
+          { id: "destacados", titulo: "🔥 Destacados", bajada: "Lo que está en tendencia ahora: cambia solo, todos los días.", productos: destacados.slice(0, 8) },
+        ]}
+      />
+
+      {/* Quien quiere pagar con tarjeta tiene que enterarse antes de irse. */}
+      <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
         <AvisoPagoTarjeta enSitio={medioTarjetaDisponible() !== null} />
       </div>
 
-      <section className="mx-auto w-full max-w-6xl px-4 py-14 sm:px-6 lg:px-8">
-        <ScrollReveal>
-          <div className="flex items-baseline justify-between">
-            <h2 className="font-display text-2xl font-bold uppercase tracking-tight text-ink">
-              <span className="texto-glow-primary text-primary">/</span> Destacados
-            </h2>
-            <Link href="/productos" className="text-sm font-medium text-ink-soft transition-colors hover:text-primary">
-              Ver todos →
-            </Link>
-          </div>
-          <p className="mt-1 text-sm text-ink-soft">Lo más vendido, lo más visto y lo que está en tendencia este mes en Arica. Cambia solo, todos los días.</p>
-        </ScrollReveal>
-
-        {errorCatalogo ? (
-          <p className="mt-10 text-ink-soft">
-            Los destacados no están disponibles en este momento. Vuelve a intentarlo en unos minutos.
-          </p>
-        ) : destacados.length === 0 ? (
-          <p className="mt-10 text-ink-soft">
-            Todavía no hay productos publicados en la tienda. Se publican desde el modal de producto
-            del POS (toggle &quot;Publicar en la web&quot;).
-          </p>
-        ) : (
-          <div className="mt-8 grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4">
-            {destacados.map((producto, i) => (
-              <ScrollReveal key={producto.id} delay={(i % 4) * 0.06} distancia={20} className="flex h-full flex-col">
-                {/* Por qué está acá (más vendido, en tendencia, para el calor…). La línea va
-                    siempre, vacía si no hay sello: así las fotos de una fila quedan parejas. */}
-                <p className="mb-1.5 h-4 text-xs font-semibold leading-4 text-primary">
-                  {producto.motivo_destacado && producto.motivo_destacado !== producto.etiqueta_web
-                    ? TEXTO_MOTIVO[producto.motivo_destacado as MotivoDestacado] ?? ""
-                    : ""}
-                </p>
-                <div className="flex-1">
-                  <TarjetaProducto producto={producto} />
-                </div>
-              </ScrollReveal>
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* #11: lo último que miró este visitante (solo en su navegador). Si no miró nada, no aparece. */}
+      {/* Lo último que miró este visitante (solo en su navegador). Si no miró nada, no aparece. */}
       <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
         <VistosRecientemente />
       </div>

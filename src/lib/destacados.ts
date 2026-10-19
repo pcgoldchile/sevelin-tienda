@@ -22,16 +22,10 @@ import type { ProductoWeb } from './tipos';
  * subcategoría. Los servicios técnicos no compiten (tienen su propia sección).
  */
 
-export type MotivoDestacado = 'VENDIDO' | 'VISTO' | 'TENDENCIA' | 'CALOR' | 'NOVEDAD' | 'OFERTA';
-
-export const TEXTO_MOTIVO: Record<MotivoDestacado, string> = {
-  VENDIDO: '⭐ Más vendido',
-  VISTO: '👀 Lo más visto',
-  TENDENCIA: '🔥 En tendencia',
-  CALOR: '☀️ Para el calor',
-  NOVEDAD: '🆕 Novedad',
-  OFERTA: '🏷️ En oferta',
-};
+/* Los textos van aparte (destacados-texto.ts): los usa también el navegador, y este
+   archivo habla con la base con la llave del servidor. */
+import { TEXTO_MOTIVO, type MotivoDestacado } from './destacados-texto';
+export { TEXTO_MOTIVO, type MotivoDestacado };
 
 /* Arica (centro). Open-Meteo: gratis y sin llave. */
 const URL_CLIMA = 'https://api.open-meteo.com/v1/forecast?latitude=-18.48&longitude=-70.31&daily=temperature_2m_max&timezone=America%2FSantiago&forecast_days=1';

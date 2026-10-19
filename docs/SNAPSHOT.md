@@ -4,6 +4,23 @@
 > arquitectura completo (todas las fases) vive en `README-ECOMMERCE-SEVELIN.md`, en el repo del POS
 > (`sevelin-pos-oficial`) — este documento es el estado de ESTE repo (`sevelin-tienda`) nada más.
 
+**Fecha:** 19-10-2026 (noche) · **Inicio nuevo: mezcla de las propuestas A y C que eligió el dueño.**
+
+- `src/app/page.tsx` de arriba a abajo: **vitrina** (`vitrina-inicio.tsx`: "Lo pides hoy, lo tienes hoy", retiro en San
+  Rafael 896, WhatsApp, y los Destacados del día con el grande rotando cada 5 s, pausa con el mouse, quieto con "reducir
+  movimiento"; **sin grados**, pidió el dueño), **íconos de categorías** (`accesos-categorias.tsx`, lucide, + Ofertas si
+  hay, ¿Qué me sirve? y Por llegar), **servicio técnico** (`servicios-inicio.tsx`; cuáles en `SERVICIOS_INICIO` de
+  `src/lib/inicio.ts`: mantenimiento notebook y PC gamer, los dos formateos, cambio de pantalla y de puerto para cotizar),
+  **pestañas** Más vendidos (30 días) · Más vistos (30 días) · Destacados (`pestanas-productos.tsx`, accesibles con
+  flechas), y después pago con tarjeta, vistos recientemente y confianza.
+- Salen del inicio el carrusel de láminas (`hero-carrusel.tsx`) y los 3 banners de categoría (`banners-categoria.tsx`); los
+  archivos quedan. `TEXTO_MOTIVO` se movió a `src/lib/destacados-texto.ts` (lo usa el navegador). La maqueta simula
+  `vistas_por_producto` y puntajes de prueba.
+- Probado: maqueta a 1280 px (captura con el Chrome de Playwright) y a 375 px en el navegador del panel (sin desborde;
+  solo los íconos se deslizan de lado, a propósito). `tsc`, `eslint` (sin errores nuevos) y `next build`.
+
+---
+
 **Fecha:** 19-10-2026 · **Tarjetas parejas, precio desde–hasta, accesibilidad (POS v162).**
 
 - **Tarjetas del mismo alto en cada fila** (`tarjeta-producto.tsx` `h-full` + `ScrollReveal className="h-full"`): antes el

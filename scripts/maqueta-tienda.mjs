@@ -55,6 +55,13 @@ const productos = JSON.parse(readFileSync(path.join(RAIZ, 'scripts/maqueta-tiend
       stock_web: 1, por_llegar: true, stock_por_llegar: 4, fecha_llegada_estimada: enDias(5), es_pedido_encargo: false, categoria: 'Hogar y Estilo de Vida', subcategoria: 'Balanzas' },
   );
 }
+/* Destacados automáticos (supabase/46, 19-10-2026): puntajes, motivos y ventas del mes de prueba,
+   para ver el inicio completo (vitrina, pestañas). En la base real los calcula src/lib/destacados.ts. */
+{
+  const motivos = ['VENDIDO', 'VISTO', 'TENDENCIA', 'VENDIDO', 'VISTO'];
+  productos.filter((x) => x.stock_web > 0 && !x.es_pedido_encargo && x.categoria !== 'Servicios Técnicos' && (x.imagen_urls || []).length)
+    .forEach((x, i) => { x.puntaje_destacado = 10 - i * 0.4; x.motivo_destacado = motivos[i % motivos.length]; x.vendidos_30d = Math.max(0, 6 - (i % 7)); });
+}
 // Liquidación (supabase/43, 15-10-2026): dos productos con la etiqueta, para /liquidacion y el enlace del menú.
 productos.filter((p) => p.stock_web > 0 && !p.es_pedido_encargo && !p.precio_a_consultar && p.categoria !== 'Servicios Técnicos')
   .slice(3, 5).forEach((p) => { p.etiqueta_web = 'LIQUIDACION'; });
@@ -319,6 +326,10 @@ const servidor = http.createServer(async (req, res) => {
 
   // --- RPC ---
   if (url.pathname === '/rest/v1/rpc/generar_numero_pedido') return responder(200, `WEB-${++correlativoPedido}`);
+  // Destacados e inicio (supabase/46): vistas de mentira, estables, por producto con stock.
+  if (url.pathname === '/rest/v1/rpc/vistas_por_producto') {
+    return responder(200, productos.filter((x) => x.stock_web > 0).map((x, i) => ({ producto_pos_id: x.producto_pos_id, vistas: 60 - ((i * 7) % 50) })));
+  }
   if (url.pathname.startsWith('/rest/v1/rpc/')) return responder(200, null);
 
   // --- Tablas ---
