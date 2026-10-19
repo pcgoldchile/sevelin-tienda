@@ -37,11 +37,15 @@ export async function generateMetadata({ searchParams }: PropsPagina): Promise<M
   const titulo = subcategoria ? `${subcategoria} — ${categoria}` : categoria;
   const descripcion = DESCRIPCIONES_CATEGORIA[categoria] || `${titulo} en Sevelin, Arica — despacho a todo Chile.`;
 
+  /* Tarjeta propia para compartir (19-10-2026): sin ella WhatsApp mostraba la foto de un producto al azar */
+  const tarjeta = `/api/og/categoria?c=${encodeURIComponent(categoria)}${subcategoria ? `&s=${encodeURIComponent(subcategoria)}` : ""}`;
+  const tituloCompartir = `${subcategoria || categoria} en Arica · Sevelin`;
   return {
     title: titulo,
     description: descripcion,
     alternates: { canonical: `/productos?categoria=${encodeURIComponent(categoria)}` },
-    openGraph: { title: titulo, description: descripcion },
+    openGraph: { title: tituloCompartir, description: descripcion, images: [{ url: tarjeta, width: 1200, height: 630, alt: tituloCompartir }] },
+    twitter: { card: "summary_large_image", title: tituloCompartir, description: descripcion, images: [tarjeta] },
   };
 }
 
