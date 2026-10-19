@@ -17,7 +17,7 @@ import { CATEGORIA_SERVICIOS } from './servicios';
  * Este archivo no importa Supabase: lo usa el servidor (page.tsx) y el tipo, el cliente.
  */
 
-export type IconoLamina = 'servicio' | 'celular' | 'por-llegar' | 'encargo' | 'oferta' | 'asistente';
+export type IconoLamina = 'servicio' | 'celular' | 'por-llegar' | 'encargo' | 'oferta' | 'asistente' | 'test';
 
 export interface LaminaInicio {
   id: string;
@@ -91,6 +91,17 @@ export function armarLaminas({
       foto: conFoto(pantalla?.imagen_urls?.[0] ? pantalla : puerto),
     });
   }
+
+  // 2b. El test de /diagnostico (19-10-2026): para quien no sabe si su equipo lo necesita.
+  laminas.push({
+    id: 'diagnostico',
+    icono: 'test',
+    etiqueta: 'Test gratis',
+    titulo: '¿Tu PC necesita mantenimiento?',
+    texto: 'Responde 1 minuto de preguntas y te decimos qué tan probable es, y cuánto cuesta.',
+    href: '/diagnostico',
+    cta: 'Hacer el test',
+  });
 
   // 3. Ofertas, solo mientras haya.
   if (ofertas?.activo) {

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { testDeServicio } from "@/lib/test-servicios";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { after } from "next/server";
@@ -402,6 +403,13 @@ export default async function FichaProducto({ params }: PropsPagina) {
 
           {/* #7: sumar a la comparación (hasta 3, se guarda en el navegador). No en servicios. */}
           {!esServicioTecnico(producto) && <BotonComparar sku={producto.sku} />}
+
+          {/* 19-10-2026: en los servicios que tienen test, "¿lo necesitas?" (/diagnostico) */}
+          {esServicioTecnico(producto) && testDeServicio(producto.producto_pos_id) && (
+            <Link href={`/diagnostico?test=${testDeServicio(producto.producto_pos_id)}`} className="text-sm font-medium text-primary hover:underline">
+              ¿No sabes si lo necesitas? Haz el test de 1 minuto →
+            </Link>
+          )}
 
           {/* #8: donde la duda típica es "¿esto le sirve a mi equipo?" */}
           {producto.categoria && ["Monitores", "Cables y Adaptadores", "Cargadores"].includes(producto.categoria) && (

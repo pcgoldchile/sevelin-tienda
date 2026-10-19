@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Wrench } from "lucide-react";
+import { ArrowRight, Stethoscope, Wrench } from "lucide-react";
 import type { ProductoWeb } from "@/lib/tipos";
 import { TarjetaProducto } from "@/components/tarjeta-producto";
 import { ScrollReveal } from "@/components/fx/scroll-reveal";
@@ -28,9 +28,18 @@ export function ServiciosInicio({ servicios }: { servicios: ProductoWeb[] }) {
                 Mantención y formateo con precio fijo. Pantallas y puertos de celular te los cotizamos al tiro por WhatsApp.
               </p>
             </div>
-            <Link href="/productos?categoria=Servicios%20T%C3%A9cnicos" className="inline-flex min-h-11 items-center gap-1 text-sm font-medium text-primary hover:underline">
-              Ver todos los servicios <ArrowRight className="h-4 w-4" aria-hidden />
-            </Link>
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+              {/* 19-10-2026: el test de /diagnostico, para quien no sabe si lo necesita */}
+              <Link
+                href="/diagnostico"
+                className="inline-flex min-h-11 items-center gap-2 rounded-md border border-primary/60 bg-primary/10 px-4 text-sm font-semibold text-primary transition-colors hover:bg-primary hover:text-surface-sunken"
+              >
+                <Stethoscope className="h-4 w-4" aria-hidden /> ¿Lo necesito? Haz el test
+              </Link>
+              <Link href="/productos?categoria=Servicios%20T%C3%A9cnicos" className="inline-flex min-h-11 items-center gap-1 text-sm font-medium text-primary hover:underline">
+                Ver todos los servicios <ArrowRight className="h-4 w-4" aria-hidden />
+              </Link>
+            </div>
           </div>
         </ScrollReveal>
         <div className="mt-8 grid grid-cols-2 gap-6 sm:grid-cols-3">

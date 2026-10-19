@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { ArrowRight, BadgePercent, MessageCircle, PackageSearch, ShieldCheck, Smartphone, Sparkles, Store, Truck, Wrench, type LucideIcon } from "lucide-react";
+import { ArrowRight, BadgePercent, MessageCircle, PackageSearch, ShieldCheck, Smartphone, Sparkles, Stethoscope, Store, Truck, Wrench, type LucideIcon } from "lucide-react";
 import type { ProductoWeb } from "@/lib/tipos";
 import { formatoCLP } from "@/lib/formato";
 import { rutaDeSku } from "@/lib/sku-url";
@@ -25,6 +25,7 @@ const ICONOS: Record<IconoLamina, LucideIcon> = {
   encargo: PackageSearch,
   oferta: BadgePercent,
   asistente: Sparkles,
+  test: Stethoscope,
 };
 
 /* Lo que va pasando por el cuadro grande: un producto destacado, una lámina, otro

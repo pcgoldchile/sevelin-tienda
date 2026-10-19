@@ -22,6 +22,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/ofertas`, changeFrequency: 'daily', priority: 0.8 },
     { url: `${SITE_URL}/liquidacion`, changeFrequency: 'daily', priority: 0.6 },
     { url: `${SITE_URL}/por-llegar`, changeFrequency: 'daily', priority: 0.6 },
+    { url: `${SITE_URL}/diagnostico`, changeFrequency: 'monthly', priority: 0.6 },
     { url: `${SITE_URL}/pedidos-por-encargo`, changeFrequency: 'weekly', priority: 0.6 },
     { url: `${SITE_URL}/agotados`, changeFrequency: 'daily', priority: 0.4 },
     /* Prioridad más alta que las legales: responde dudas de compra reales
