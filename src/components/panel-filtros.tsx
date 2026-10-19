@@ -10,9 +10,13 @@ const OPCIONES_VISIBLES = 6;
 interface PropsPanelFiltros {
   grupos: GrupoFiltro[];
   seleccion: SeleccionFiltros;
-  base: { categoria?: string; subcategoria?: string; q?: string; orden?: string; ruta?: string };
+  base: { categoria?: string; subcategoria?: string; q?: string; orden?: string; ruta?: string; pmin?: number; pmax?: number };
   totalActivos: number;
 }
+
+/* Campo de precio del rango (#7): texto con teclado numérico, para que "20.000" también sirva. */
+const CAMPO_PRECIO =
+  "w-full min-w-0 rounded-md border border-border-strong bg-surface-sunken px-2.5 py-2 text-sm text-ink outline-none placeholder:text-ink-faint focus:border-primary";
 
 /**
  * Panel "Filtrar" de /productos (ver src/lib/filtros.ts). Cada casilla es un
@@ -42,7 +46,7 @@ export function PanelFiltros({ grupos, seleccion, base, totalActivos }: PropsPan
         <div className="flex items-center justify-between">
           <p className="text-xs font-bold uppercase tracking-wider text-ink-soft">Filtrar</p>
           {totalActivos > 0 && (
-            <Link href={enlaceConFiltros(base, {})} scroll={false} className="text-xs font-medium text-primary hover:underline">
+            <Link href={enlaceConFiltros({ ...base, pmin: undefined, pmax: undefined }, {})} scroll={false} className="inline-flex min-h-11 items-center text-xs font-medium text-primary hover:underline lg:min-h-0">
               Quitar filtros
             </Link>
           )}
@@ -65,7 +69,7 @@ export function PanelFiltros({ grupos, seleccion, base, totalActivos }: PropsPan
                     <>
                       <span
                         aria-hidden="true"
-                        className={`flex h-4 w-4 flex-none items-center justify-center rounded border text-[10px] font-bold leading-none ${
+                        className={`flex h-5 w-5 flex-none items-center justify-center rounded border text-[11px] font-bold leading-none lg:h-4 lg:w-4 lg:text-[10px] ${
                           o.marcada ? "border-primary bg-primary text-surface-sunken" : "border-border-strong"
                         }`}
                       >
@@ -78,7 +82,7 @@ export function PanelFiltros({ grupos, seleccion, base, totalActivos }: PropsPan
                   return (
                     <li key={o.valor}>
                       {deshabilitada ? (
-                        <span className="flex items-center gap-2 py-1 text-sm text-ink-faint opacity-50" aria-disabled="true">
+                        <span className="flex min-h-11 items-center gap-2 py-1 text-sm text-ink-faint opacity-60 lg:min-h-8" aria-disabled="true">
                           {contenido}
                         </span>
                       ) : (
@@ -88,7 +92,7 @@ export function PanelFiltros({ grupos, seleccion, base, totalActivos }: PropsPan
                           role="checkbox"
                           aria-checked={o.marcada}
                           rel="nofollow"
-                          className={`flex items-center gap-2 rounded py-1 text-sm transition-colors hover:text-primary ${
+                          className={`flex min-h-11 items-center gap-2 rounded py-1 text-sm transition-colors hover:text-primary lg:min-h-8 ${
                             o.marcada ? "font-medium text-ink" : "text-ink-soft"
                           }`}
                         >
@@ -103,7 +107,7 @@ export function PanelFiltros({ grupos, seleccion, base, totalActivos }: PropsPan
                 <button
                   type="button"
                   onClick={() => setExpandidos((e) => ({ ...e, [g.id]: !e[g.id] }))}
-                  className="mt-1 text-xs font-medium text-primary hover:underline"
+                  className="mt-1 inline-flex min-h-11 items-center text-xs font-medium text-primary hover:underline lg:min-h-0"
                 >
                   {verTodo ? "Ver menos" : `Ver ${g.opciones.length - visibles.length} más`}
                 </button>
@@ -114,6 +118,28 @@ export function PanelFiltros({ grupos, seleccion, base, totalActivos }: PropsPan
             </fieldset>
           );
         })}
+
+        {/* #7: precio escrito. Formulario GET normal: lleva todo lo marcado en campos ocultos. */}
+        <form method="get" action={base.ruta || "/productos"} className="mt-4 border-t border-border pt-3">
+          <p className="mb-2 text-sm font-semibold text-ink">Precio a tu medida</p>
+          {base.categoria && <input type="hidden" name="categoria" value={base.categoria} />}
+          {base.subcategoria && <input type="hidden" name="subcategoria" value={base.subcategoria} />}
+          {base.q && <input type="hidden" name="q" value={base.q} />}
+          {base.orden && base.orden !== "relevancia" && <input type="hidden" name="orden" value={base.orden} />}
+          {Object.entries(seleccion).flatMap(([grupo, lista]) =>
+            lista.map((v) => <input key={`${grupo}:${v}`} type="hidden" name={`f_${grupo}`} value={v} />)
+          )}
+          <div className="flex items-center gap-2">
+            <label className="sr-only" htmlFor="filtro-pmin">Precio desde</label>
+            <input id="filtro-pmin" name="pmin" inputMode="numeric" autoComplete="off" placeholder="Desde $" defaultValue={base.pmin ?? ""} className={CAMPO_PRECIO} />
+            <span aria-hidden="true" className="text-ink-faint">–</span>
+            <label className="sr-only" htmlFor="filtro-pmax">Precio hasta</label>
+            <input id="filtro-pmax" name="pmax" inputMode="numeric" autoComplete="off" placeholder="Hasta $" defaultValue={base.pmax ?? ""} className={CAMPO_PRECIO} />
+          </div>
+          <button type="submit" className="mt-2 min-h-11 w-full rounded-md bg-primary px-3 text-sm font-semibold text-surface-sunken transition-colors hover:bg-primary-soft lg:min-h-9">
+            Aplicar precio
+          </button>
+        </form>
       </div>
     </aside>
   );

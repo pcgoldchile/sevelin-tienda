@@ -88,7 +88,9 @@ export function TarjetaProducto({ producto }: { producto: ProductoWeb }) {
     // nada de inclinación 3D ni brillo que siga al mouse. Es puro CSS
     // reaccionando a :hover, sin JS ni mousemove: la tarjeta queda plana en
     // todo momento, incluido touch, y respeta prefers-reduced-motion sola.
-    <div className="panel-hud group relative flex flex-col overflow-hidden rounded-2xl transition-shadow duration-200">
+    /* h-full (18-10-2026): en una fila, todas las tarjetas miden lo mismo y el botón
+       queda abajo aunque una tenga una línea más ("Precio referencial", "Desde"). */
+    <div className="panel-hud group relative flex h-full flex-col overflow-hidden rounded-2xl transition-shadow duration-200">
       <Link href={rutaFicha} className="relative aspect-square w-full overflow-hidden bg-surface-sunken">
         {producto.imagen_urls?.[0] ? (
           <Image

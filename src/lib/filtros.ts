@@ -179,6 +179,33 @@ export function categoriaTieneFiltros(categoria?: string): boolean {
   return !!categoria && !CATEGORIAS_SIN_FILTROS.has(categoria);
 }
 
+/** Precio "desde – hasta" escrito por el cliente (#7, 18-10-2026): ?pmin=20000&pmax=45000.
+ *  Se aceptan puntos y el signo $ ("$20.000"): se queda solo con los dígitos. */
+export interface RangoPrecio {
+  min?: number;
+  max?: number;
+}
+
+export function leerRangoPrecio(params: Record<string, string | string[] | undefined>): RangoPrecio {
+  const leer = (v: string | string[] | undefined) => {
+    const texto = (Array.isArray(v) ? v[0] : v || "").replace(/\D/g, "").slice(0, 9);
+    return texto ? Number(texto) : undefined;
+  };
+  let min = leer(params.pmin);
+  let max = leer(params.pmax);
+  if (min !== undefined && max !== undefined && min > max) [min, max] = [max, min];
+  return { ...(min ? { min } : {}), ...(max ? { max } : {}) };
+}
+
+/** "Desde $20.000 hasta $45.000", para la etiqueta con ✕. null si no hay rango. */
+export function textoRangoPrecio({ min, max }: RangoPrecio): string | null {
+  const clp = (n: number) => `$${n.toLocaleString("es-CL")}`;
+  if (min && max) return `${clp(min)} a ${clp(max)}`;
+  if (min) return `Desde ${clp(min)}`;
+  if (max) return `Hasta ${clp(max)}`;
+  return null;
+}
+
 /** Lo marcado, sacado de los parámetros del enlace. Nunca confía en el largo ni en la cantidad. */
 export function leerSeleccion(params: Record<string, string | string[] | undefined>): SeleccionFiltros {
   const seleccion: SeleccionFiltros = {};
@@ -227,8 +254,13 @@ export function aplicarFiltros(
   categoria: string | undefined,
   subcategoria: string | undefined,
   seleccionPedida: SeleccionFiltros,
-  opciones: { mezcla?: boolean } = {}
+  opciones: { mezcla?: boolean; rango?: RangoPrecio } = {}
 ): { productos: ProductoWeb[]; grupos: GrupoFiltro[]; activos: FiltroActivo[]; seleccion: SeleccionFiltros } {
+  // #7: el rango escrito se aplica antes que todo (los conteos ya lo consideran).
+  const { min, max } = opciones.rango ?? {};
+  if (min !== undefined || max !== undefined) {
+    productos = productos.filter((p) => (min === undefined || p.precio_web >= min) && (max === undefined || p.precio_web <= max));
+  }
   /* mezcla: una lista con varias categorías (búsqueda, ofertas, liquidación).
      Ahí no hay casillas de una categoría: van Categoría, Marca, Precio y Estado. */
   if (!opciones.mezcla && !categoriaTieneFiltros(categoria)) return { productos, grupos: [], activos: [], seleccion: {} };
@@ -286,7 +318,7 @@ export function aplicarFiltros(
 
 /** Enlace a /productos con la selección dada (mantiene categoría, subcategoría, búsqueda y orden). */
 export function enlaceConFiltros(
-  base: { categoria?: string; subcategoria?: string; q?: string; orden?: string; ruta?: string },
+  base: { categoria?: string; subcategoria?: string; q?: string; orden?: string; ruta?: string; pmin?: number; pmax?: number },
   seleccion: SeleccionFiltros
 ): string {
   const ruta = base.ruta || "/productos";
@@ -295,6 +327,8 @@ export function enlaceConFiltros(
   if (base.subcategoria) params.set("subcategoria", base.subcategoria);
   if (base.q) params.set("q", base.q);
   if (base.orden && base.orden !== "relevancia") params.set("orden", base.orden);
+  if (base.pmin) params.set("pmin", String(base.pmin));
+  if (base.pmax) params.set("pmax", String(base.pmax));
   for (const [grupo, lista] of Object.entries(seleccion)) for (const v of lista) params.append(PREFIJO_FILTRO + grupo, v);
   const query = params.toString();
   return query ? `${ruta}?${query}` : ruta;

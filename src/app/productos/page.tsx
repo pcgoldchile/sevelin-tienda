@@ -8,7 +8,7 @@ import { TarjetaProducto } from "@/components/tarjeta-producto";
 import { SelectorOrden } from "@/components/selector-orden";
 import { ScrollReveal } from "@/components/fx/scroll-reveal";
 import { PanelFiltros } from "@/components/panel-filtros";
-import { aplicarFiltros, alternarFiltro, atajosDeCategoria, enlaceConFiltros, leerSeleccion } from "@/lib/filtros";
+import { aplicarFiltros, alternarFiltro, atajosDeCategoria, enlaceConFiltros, leerRangoPrecio, leerSeleccion, textoRangoPrecio } from "@/lib/filtros";
 import { SinResultados } from "@/components/sin-resultados";
 
 export const revalidate = 60;
@@ -85,9 +85,12 @@ export default async function Productos({ searchParams }: PropsPagina) {
 
   /* Panel "Filtrar": con las casillas de la categoría al navegarla; en una
      búsqueda (que mezcla categorías) con Categoría, Marca, Precio y Estado. */
-  const filtro = aplicarFiltros(productos, categoria, subcategoria, leerSeleccion(params), { mezcla: conTexto });
+  const rango = leerRangoPrecio(params);   // #7: precio desde–hasta escrito
+  const rangoTexto = textoRangoPrecio(rango);
+  const filtro = aplicarFiltros(productos, categoria, subcategoria, leerSeleccion(params), { mezcla: conTexto, rango });
   const visibles = filtro.productos;
-  const baseEnlace = { categoria, subcategoria, q, orden: ordenActual };
+  const baseEnlace = { categoria, subcategoria, q, orden: ordenActual, pmin: rango.min, pmax: rango.max };
+  const totalActivos = filtro.activos.length + (rangoTexto ? 1 : 0);
   const conPanel = filtro.grupos.length > 0;
   const atajos = conTexto ? [] : atajosDeCategoria(productos, categoria, subcategoria);
 
@@ -100,7 +103,7 @@ export default async function Productos({ searchParams }: PropsPagina) {
         {conTexto
           ? `${visibles.length} resultado${visibles.length === 1 ? "" : "s"}`
           : `${visibles.length} producto${visibles.length === 1 ? "" : "s"} disponible${visibles.length === 1 ? "" : "s"}`}
-        {filtro.activos.length > 0 && ` de ${productos.length}`}
+        {totalActivos > 0 && ` de ${productos.length}`}
       </p>
 
       {/* Párrafo real de la categoría (no solo el grid de productos) — ver
@@ -195,7 +198,7 @@ export default async function Productos({ searchParams }: PropsPagina) {
               href={enlaceConFiltros(baseEnlace, a.seleccion)}
               scroll={false}
               rel="nofollow"
-              className="rounded-full border border-border bg-surface px-3 py-1 text-xs font-medium text-ink-soft transition-colors hover:border-primary hover:text-primary"
+              className="inline-flex min-h-9 items-center rounded-full border border-border bg-surface px-3 py-1 text-xs font-medium text-ink-soft transition-colors hover:border-primary hover:text-primary"
             >
               {a.etiqueta} <span className="text-ink-faint">({a.cantidad})</span>
             </Link>
@@ -218,19 +221,30 @@ export default async function Productos({ searchParams }: PropsPagina) {
       ) : (
         <div className={conPanel ? "mt-8 gap-8 lg:grid lg:grid-cols-[240px_minmax(0,1fr)]" : "mt-8"}>
           {conPanel && (
-            <PanelFiltros grupos={filtro.grupos} seleccion={filtro.seleccion} base={baseEnlace} totalActivos={filtro.activos.length} />
+            <PanelFiltros grupos={filtro.grupos} seleccion={filtro.seleccion} base={baseEnlace} totalActivos={totalActivos} />
           )}
           <div className={conPanel ? "mt-6 lg:mt-0" : ""}>
             {/* Lo marcado, a la vista y con su ✕ para sacarlo de a uno. */}
-            {filtro.activos.length > 0 && (
+            {totalActivos > 0 && (
               <div className="mb-5 flex flex-wrap gap-2">
+            {rangoTexto && (
+              <Link
+                href={enlaceConFiltros({ ...baseEnlace, pmin: undefined, pmax: undefined }, filtro.seleccion)}
+                scroll={false}
+                rel="nofollow"
+                aria-label={`Quitar precio: ${rangoTexto}`}
+                className="inline-flex min-h-9 items-center rounded-full border border-primary/60 bg-primary/10 px-3 py-1 text-xs font-medium text-ink transition-colors hover:border-primary"
+              >
+                {rangoTexto} <span aria-hidden="true" className="ml-1 text-ink-soft">✕</span>
+              </Link>
+            )}
                 {filtro.activos.map((a) => (
                   <Link
                     key={`${a.grupo}:${a.valor}`}
                     href={enlaceConFiltros(baseEnlace, alternarFiltro(filtro.seleccion, a.grupo, a.valor))}
                     scroll={false}
                     rel="nofollow"
-                    className="rounded-full border border-primary/60 bg-primary/10 px-3 py-1 text-xs font-medium text-ink transition-colors hover:border-primary"
+                    className="inline-flex min-h-9 items-center rounded-full border border-primary/60 bg-primary/10 px-3 py-1 text-xs font-medium text-ink transition-colors hover:border-primary"
                     aria-label={`Quitar ${a.nombreGrupo}: ${a.valor}`}
                   >
                     {a.valor} <span aria-hidden="true" className="ml-1 text-ink-soft">✕</span>
@@ -241,14 +255,14 @@ export default async function Productos({ searchParams }: PropsPagina) {
             {visibles.length === 0 ? (
               <p className="text-ink-soft">
                 Ningún producto cumple con todo lo marcado.{" "}
-                <Link href={enlaceConFiltros(baseEnlace, {})} scroll={false} className="font-medium text-primary hover:underline">
+                <Link href={enlaceConFiltros({ ...baseEnlace, pmin: undefined, pmax: undefined }, {})} scroll={false} className="font-medium text-primary hover:underline">
                   Quitar filtros
                 </Link>
               </p>
             ) : (
               <div className={`grid grid-cols-2 gap-6 sm:grid-cols-3 ${conPanel ? "" : "lg:grid-cols-4"}`}>
                 {visibles.map((producto, i) => (
-                  <ScrollReveal key={producto.id} delay={(i % 8) * 0.05} distancia={18}>
+                  <ScrollReveal key={producto.id} delay={(i % 8) * 0.05} distancia={18} className="h-full">
                     <TarjetaProducto producto={producto} />
                   </ScrollReveal>
                 ))}

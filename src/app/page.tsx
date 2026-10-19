@@ -137,13 +137,17 @@ export default async function Home() {
         ) : (
           <div className="mt-8 grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4">
             {destacados.map((producto, i) => (
-              <ScrollReveal key={producto.id} delay={(i % 4) * 0.06} distancia={20}>
-                {/* Por qué está acá (más vendido, en tendencia, para el calor…). */}
-                {producto.motivo_destacado && TEXTO_MOTIVO[producto.motivo_destacado as MotivoDestacado]
-                  && producto.motivo_destacado !== producto.etiqueta_web && (
-                  <p className="mb-1.5 text-xs font-semibold text-primary">{TEXTO_MOTIVO[producto.motivo_destacado as MotivoDestacado]}</p>
-                )}
-                <TarjetaProducto producto={producto} />
+              <ScrollReveal key={producto.id} delay={(i % 4) * 0.06} distancia={20} className="flex h-full flex-col">
+                {/* Por qué está acá (más vendido, en tendencia, para el calor…). La línea va
+                    siempre, vacía si no hay sello: así las fotos de una fila quedan parejas. */}
+                <p className="mb-1.5 h-4 text-xs font-semibold leading-4 text-primary">
+                  {producto.motivo_destacado && producto.motivo_destacado !== producto.etiqueta_web
+                    ? TEXTO_MOTIVO[producto.motivo_destacado as MotivoDestacado] ?? ""
+                    : ""}
+                </p>
+                <div className="flex-1">
+                  <TarjetaProducto producto={producto} />
+                </div>
               </ScrollReveal>
             ))}
           </div>

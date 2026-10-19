@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ProductoWeb } from "@/lib/tipos";
-import { aplicarFiltros, alternarFiltro, enlaceConFiltros, leerSeleccion } from "@/lib/filtros";
+import { aplicarFiltros, alternarFiltro, enlaceConFiltros, leerRangoPrecio, leerSeleccion, textoRangoPrecio } from "@/lib/filtros";
 import { PanelFiltros } from "@/components/panel-filtros";
 import { TarjetaProducto } from "@/components/tarjeta-producto";
 
@@ -21,18 +21,32 @@ export function GrillaConFiltros({
   ruta: string;
   clase?: string;
 }) {
+  const rango = leerRangoPrecio(params);
+  const rangoTexto = productos.length >= 5 ? textoRangoPrecio(rango) : null;
   const filtro = productos.length >= 5
-    ? aplicarFiltros(productos, undefined, undefined, leerSeleccion(params), { mezcla: true })
+    ? aplicarFiltros(productos, undefined, undefined, leerSeleccion(params), { mezcla: true, rango })
     : { productos, grupos: [], activos: [], seleccion: {} };
-  const base = { ruta };
+  const base = { ruta, pmin: rango.min, pmax: rango.max };
   const conPanel = filtro.grupos.length > 0;
+  const totalActivos = filtro.activos.length + (rangoTexto ? 1 : 0);
 
   return (
     <div className={conPanel ? `${clase} gap-8 lg:grid lg:grid-cols-[240px_minmax(0,1fr)]` : clase}>
-      {conPanel && <PanelFiltros grupos={filtro.grupos} seleccion={filtro.seleccion} base={base} totalActivos={filtro.activos.length} />}
+      {conPanel && <PanelFiltros grupos={filtro.grupos} seleccion={filtro.seleccion} base={base} totalActivos={totalActivos} />}
       <div className={conPanel ? "mt-6 lg:mt-0" : ""}>
-        {filtro.activos.length > 0 && (
+        {totalActivos > 0 && (
           <div className="mb-5 flex flex-wrap gap-2">
+            {rangoTexto && (
+              <Link
+                href={enlaceConFiltros({ ...base, pmin: undefined, pmax: undefined }, filtro.seleccion)}
+                scroll={false}
+                rel="nofollow"
+                aria-label={`Quitar precio: ${rangoTexto}`}
+                className="inline-flex min-h-9 items-center rounded-full border border-primary/60 bg-primary/10 px-3 py-1 text-xs font-medium text-ink transition-colors hover:border-primary"
+              >
+                {rangoTexto} <span aria-hidden="true" className="ml-1 text-ink-soft">✕</span>
+              </Link>
+            )}
             {filtro.activos.map((a) => (
               <Link
                 key={`${a.grupo}:${a.valor}`}
@@ -40,7 +54,7 @@ export function GrillaConFiltros({
                 scroll={false}
                 rel="nofollow"
                 aria-label={`Quitar ${a.nombreGrupo}: ${a.valor}`}
-                className="rounded-full border border-primary/60 bg-primary/10 px-3 py-1 text-xs font-medium text-ink transition-colors hover:border-primary"
+                className="inline-flex min-h-9 items-center rounded-full border border-primary/60 bg-primary/10 px-3 py-1 text-xs font-medium text-ink transition-colors hover:border-primary"
               >
                 {a.valor} <span aria-hidden="true" className="ml-1 text-ink-soft">✕</span>
               </Link>

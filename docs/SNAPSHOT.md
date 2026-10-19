@@ -4,6 +4,18 @@
 > arquitectura completo (todas las fases) vive en `README-ECOMMERCE-SEVELIN.md`, en el repo del POS
 > (`sevelin-pos-oficial`) — este documento es el estado de ESTE repo (`sevelin-tienda`) nada más.
 
+**Fecha:** 19-10-2026 · **Tarjetas parejas, precio desde–hasta, accesibilidad (POS v162).**
+
+- **Tarjetas del mismo alto en cada fila** (`tarjeta-producto.tsx` `h-full` + `ScrollReveal className="h-full"`): antes el
+  sello de Destacados, el "Desde" o el "Precio referencial" dejaban los botones a distinta altura. En Destacados la línea
+  del sello va siempre (vacía si no hay), así las fotos también quedan parejas.
+- **#7 Precio "desde – hasta"** escrito (`?pmin=&pmax=`, `leerRangoPrecio` y `textoRangoPrecio` en `filtros.ts`): formulario
+  GET al final del panel que conserva lo marcado; acepta "$20.000"; etiqueta con ✕. También en Ofertas y Liquidación.
+- **#11** casillas del panel de 44 px en el celular (32 px en el computador), etiquetas de 36 px. **#12** `--color-ink-faint`
+  de #71717a (4,0:1) a #8b8b94 (5,75:1, pasa WCAG AA).
+
+---
+
 **Fecha:** 18-10-2026 (noche) · **Destacados automáticos (`supabase/46` aplicada; POS v161).**
 
 - **Destacados (`src/lib/destacados.ts`):** antes era el total histórico de ventas que el POS mandaba solo a mano (no
