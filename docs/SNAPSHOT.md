@@ -14,8 +14,8 @@
   uno solo" (tamaño) cualquiera. Marca, precio y estado salen de columnas existentes. Panel en
   `src/components/panel-filtros.tsx` (columna en el computador, plegado en el celular); cada casilla es un enlace
   `?f_<grupo>=<valor>` que se puede compartir. Sin panel en Servicios Técnicos, Hogar y en las búsquedas.
-- Las casillas de los productos publicados quedaron **propuestas, sin escribir**: esperan el OK del dueño (ver el
-  CHANGELOG-V159 del POS). Hasta entonces el panel muestra solo marca, precio y estado.
+- Casillas de 144 productos escritas el mismo día con el OK del dueño; `productos_web` calza con el POS en los 144
+  (ver el CHANGELOG-V159 del POS).
 
 ---
 
