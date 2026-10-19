@@ -4,6 +4,8 @@ import { listarCategorias, listarMasVendidos } from "@/lib/catalogo";
 import { listarMasVendidosDelMes, listarMasVistos, listarServiciosInicio } from "@/lib/inicio";
 import { estadoOfertas } from "@/lib/ofertas";
 import { URL_WHATSAPP } from "@/lib/contacto";
+import { listarEncargos, listarPorLlegar } from "@/lib/encargos";
+import { armarLaminas } from "@/lib/laminas-inicio";
 import { VitrinaInicio } from "@/components/vitrina-inicio";
 import { AccesosCategorias } from "@/components/accesos-categorias";
 import { ServiciosInicio } from "@/components/servicios-inicio";
@@ -24,7 +26,9 @@ export const revalidate = 60;
  * grados, más dinámica; los servicios más rentables (mantenimiento y formateo) a la
  * vista, pantallas y puertos para cotizar, los más vendidos, los más vistos y los
  * íconos de la A". De arriba a abajo:
- *   1. Vitrina: lo pides hoy / lo tienes hoy + los Destacados del día, rotando.
+ *   1. Vitrina: lo pides hoy / lo tienes hoy + los Destacados del día, rotando, con
+ *      las láminas del carrusel de antes intercaladas (servicio técnico, celulares,
+ *      ofertas, por llegar, encargos, ¿qué me sirve?; src/lib/laminas-inicio.ts).
  *   2. Íconos de categorías.
  *   3. Servicio técnico (src/lib/inicio.ts → SERVICIOS_INICIO).
  *   4. Pestañas: Más vendidos · Más vistos · Destacados.
@@ -44,17 +48,20 @@ export default async function Home() {
   }
 
   // Lo demás es complemento: si falla una consulta, esa sección no aparece.
-  const [categorias, servicios, masVendidos, masVistos, ofertas] = await Promise.all([
+  const [categorias, servicios, masVendidos, masVistos, ofertas, porLlegar, encargos] = await Promise.all([
     listarCategorias().catch(() => [] as string[]),
     listarServiciosInicio().catch(() => []),
     listarMasVendidosDelMes(8).catch(() => []),
     listarMasVistos(8).catch(() => []),
     estadoOfertas().catch(() => null),
+    listarPorLlegar().catch(() => []),
+    listarEncargos().catch(() => []),
   ]);
+  const laminas = armarLaminas({ servicios, porLlegar, encargos, ofertas });
 
   return (
     <main className="flex flex-col">
-      <VitrinaInicio destacados={destacados} urlWhatsapp={URL_WHATSAPP} />
+      <VitrinaInicio destacados={destacados} laminas={laminas} urlWhatsapp={URL_WHATSAPP} />
       <AccesosCategorias categorias={categorias} hayOfertas={!!ofertas?.activo} />
       <ServiciosInicio servicios={servicios} />
 
