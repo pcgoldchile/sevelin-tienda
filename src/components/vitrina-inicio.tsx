@@ -29,7 +29,7 @@ function sello(p: Destacado): string | null {
  * chicos muestran los demás.
  */
 export function VitrinaInicio({ destacados, urlWhatsapp }: { destacados: Destacado[]; urlWhatsapp: string | null }) {
-  const lista = destacados.filter((p) => p.imagen_urls?.[0]).slice(0, 5);
+  const lista = destacados.filter((p) => p.imagen_urls?.[0]).slice(0, 4);
   const quieto = useReducedMotion();
   const [actual, setActual] = useState(0);
   const [pausa, setPausa] = useState(false);
@@ -41,7 +41,6 @@ export function VitrinaInicio({ destacados, urlWhatsapp }: { destacados: Destaca
   }, [quieto, pausa, lista.length]);
 
   const grande = lista[actual];
-  const chicos = lista.filter((_, i) => i !== actual).slice(0, 4);
 
   return (
     <section className="relative overflow-hidden border-b border-border">
@@ -169,18 +168,23 @@ export function VitrinaInicio({ destacados, urlWhatsapp }: { destacados: Destaca
               )}
             </div>
 
-            {/* Los chicos: los otros destacados */}
+            {/* Los chicos (19-10-2026): siempre los mismos cuatro y siempre visibles; el que está
+                en grande va con borde azul y pasar el mouse por uno lo pone en grande. Antes se
+                reordenaban en cada rotación y entraban con una animación que, si el navegador no
+                la corría (pestaña en segundo plano), los dejaba invisibles. */}
             <div className="grid grid-cols-4 content-start gap-3 sm:grid-cols-2">
-              {chicos.map((p, i) => (
-                <motion.div
-                  key={p.producto_pos_id}
-                  initial={quieto ? false : { opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, delay: quieto ? 0 : 0.08 * i, ease: EASE_OUT }}
-                >
+              {lista.slice(0, 4).map((p, i) => {
+                const activo = i === actual;
+                return (
                   <Link
+                    key={p.producto_pos_id}
                     href={`/productos/${rutaDeSku(p.sku)}`}
-                    className="group flex h-full flex-col overflow-hidden rounded-xl border border-border bg-surface transition-colors hover:border-primary/60"
+                    onMouseEnter={() => setActual(i)}
+                    onFocus={() => setActual(i)}
+                    aria-current={activo ? "true" : undefined}
+                    className={`group flex h-full flex-col overflow-hidden rounded-xl border bg-surface transition-all duration-300 ${
+                      activo ? "border-primary shadow-glow-primary" : "border-border hover:border-primary/60"
+                    }`}
                   >
                     <span className="relative block aspect-square w-full bg-white">
                       <Image
@@ -196,8 +200,8 @@ export function VitrinaInicio({ destacados, urlWhatsapp }: { destacados: Destaca
                       <span className="text-sm font-semibold text-ink">{formatoCLP.format(p.precio_web)}</span>
                     </span>
                   </Link>
-                </motion.div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
