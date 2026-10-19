@@ -35,6 +35,9 @@ export function SinResultados({ termino, compacto = false }: { termino: string; 
             <MessageCircle className="h-4 w-4" aria-hidden /> Te lo conseguimos por WhatsApp
           </a>
         )}
+        <Link href="/que-me-sirve" className="inline-flex items-center rounded-md border border-border px-4 py-2 text-sm font-medium text-ink-soft transition-colors hover:border-primary hover:text-primary">
+          ¿No sabes qué te sirve? Te ayudamos
+        </Link>
         <Link href="/pedidos-por-encargo" className="inline-flex items-center rounded-md border border-border px-4 py-2 text-sm font-medium text-ink-soft transition-colors hover:border-primary hover:text-primary">
           Ver pedidos por encargo
         </Link>

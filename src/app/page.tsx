@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { VistosRecientemente } from "@/components/vistos-recientemente";
+import { listarDestacados, TEXTO_MOTIVO, type MotivoDestacado } from "@/lib/destacados";
 import { buscarCatalogo, listarMasVendidos } from "@/lib/catalogo";
 import { CATEGORIA_SERVICIOS, esServicioTecnico } from "@/lib/servicios";
 import { HeroCarrusel, type FotoHero } from "@/components/hero-carrusel";
@@ -72,10 +73,15 @@ export default async function Home() {
      el POS empuja vía POST /api/sync/mas-vendidos). Antes eran simplemente
      los 8 primeros del catálogo por orden alfabético, que no es un
      criterio: el A de "Adaptador" no dice nada de si el producto se vende. */
-  let destacados: Awaited<ReturnType<typeof listarMasVendidos>> = [];
+  /* Desde el 18-10-2026 son AUTOMÁTICOS (src/lib/destacados.ts): ventas y vistas
+     del mes, tendencia de la semana, la etiqueta "Tendencia" del POS y el clima
+     de Arica, recalculados cada día. Si todavía no hay puntajes, los más
+     vendidos de siempre. */
+  let destacados: (Awaited<ReturnType<typeof listarMasVendidos>>[number] & { motivo_destacado?: string | null })[] = [];
   let errorCatalogo = false;
   try {
-    destacados = await listarMasVendidos(CANTIDAD_DESTACADOS);
+    destacados = await listarDestacados(CANTIDAD_DESTACADOS);
+    if (destacados.length < 4) destacados = await listarMasVendidos(CANTIDAD_DESTACADOS);
   } catch (err) {
     console.error("[Home] No se pudo cargar el catálogo:", err instanceof Error ? err.message : err);
     // Relanzar hace que ISR siga sirviendo la última Home buena; atrapado, cacheaba una Home rota.
@@ -116,6 +122,7 @@ export default async function Home() {
               Ver todos →
             </Link>
           </div>
+          <p className="mt-1 text-sm text-ink-soft">Lo más vendido, lo más visto y lo que está en tendencia este mes en Arica. Cambia solo, todos los días.</p>
         </ScrollReveal>
 
         {errorCatalogo ? (
@@ -131,6 +138,10 @@ export default async function Home() {
           <div className="mt-8 grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4">
             {destacados.map((producto, i) => (
               <ScrollReveal key={producto.id} delay={(i % 4) * 0.06} distancia={20}>
+                {/* Por qué está acá (más vendido, en tendencia, para el calor…). */}
+                {producto.motivo_destacado && TEXTO_MOTIVO[producto.motivo_destacado as MotivoDestacado] && (
+                  <p className="mb-1.5 text-xs font-semibold text-primary">{TEXTO_MOTIVO[producto.motivo_destacado as MotivoDestacado]}</p>
+                )}
                 <TarjetaProducto producto={producto} />
               </ScrollReveal>
             ))}

@@ -145,8 +145,9 @@ function calce(buscada: string, delProducto: string[]): number {
     const suyas = formas(palabra);
     if (suyas.some((f) => propias.includes(f))) return 3;
     if (suyas.some((f) => sinonimos.has(f))) { mejor = Math.max(mejor, 2); continue; }
-    // "pend" → "pendrive": solo como comienzo y desde 3 letras (para las sugerencias al escribir)
-    if (buscada.length >= 3 && !/^[0-9]+$/.test(buscada) && palabra.startsWith(buscada)) { mejor = Math.max(mejor, 2); continue; }
+    // "pa" → "pasta": como comienzo de palabra desde 2 letras (dueño, 18-10-2026: escribió
+    // "pa" y la pasta recién salía con "pas"). Los números no: "240" no es "2400 DPI".
+    if (buscada.length >= 2 && !/^[0-9]+$/.test(buscada) && palabra.startsWith(buscada)) { mejor = Math.max(mejor, 2); continue; }
     if (tope && suyas.some((f) => distancia(base, f, tope) <= tope)) mejor = Math.max(mejor, 1);
   }
   return mejor;
@@ -186,6 +187,8 @@ function puntuar<T extends ProductoWeb>(productos: T[], texto: string): { buscad
     }
     // La frase entera tal cual en el nombre ("pasta termica" en "Pasta Térmica Kronos") va primero
     if (buscadas.length > 1 && nombre.join(" ").includes(frase)) puntos += 4;
+    // El nombre EMPIEZA con lo escrito: "pa" → "Pasta Térmica…" antes que "Mini Parrillera"
+    if (nombre[0]?.startsWith(buscadas[0])) puntos += 2;
     // El SKU tal cual (a veces lo pegan) sigue funcionando
     if (sku.length >= 4 && (p.sku || "").replace(/-/g, "").includes(sku)) { calzan = buscadas.length; utiles = calzan; puntos = Math.max(puntos, 1); }
     if (calzan) lista.push({ p, puntos, calzan, utiles });
@@ -193,11 +196,15 @@ function puntuar<T extends ProductoWeb>(productos: T[], texto: string): { buscad
   return { buscadas, lista };
 }
 
-/* A igual puntaje: primero lo que se lleva (no un servicio) y lo que tiene stock. */
+/* A igual puntaje: primero lo que se lleva (no un servicio) y lo que tiene stock, y
+   después lo que más se busca y se vende (el puntaje de Destacados, supabase/46). Con
+   2 letras ("pa") calzan muchos y esto decide cuáles se ven primero. */
 function ordenar<T extends ProductoWeb>(lista: Puntuado<T>[]): T[] {
   const peso = (p: ProductoWeb) => (p.categoria === "Servicios Técnicos" ? 1 : 0) + (p.stock_web > 0 || p.es_pedido_encargo ? 0 : 2);
   return lista
-    .sort((a, b) => b.puntos - a.puntos || peso(a.p) - peso(b.p) || a.p.nombre.length - b.p.nombre.length)
+    .sort((a, b) => b.puntos - a.puntos || peso(a.p) - peso(b.p)
+      || (Number(b.p.puntaje_destacado) || 0) - (Number(a.p.puntaje_destacado) || 0)
+      || a.p.nombre.length - b.p.nombre.length)
     .map((x) => x.p);
 }
 

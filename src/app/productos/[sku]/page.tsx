@@ -403,6 +403,13 @@ export default async function FichaProducto({ params }: PropsPagina) {
           {/* #7: sumar a la comparación (hasta 3, se guarda en el navegador). No en servicios. */}
           {!esServicioTecnico(producto) && <BotonComparar sku={producto.sku} />}
 
+          {/* #8: donde la duda típica es "¿esto le sirve a mi equipo?" */}
+          {producto.categoria && ["Monitores", "Cables y Adaptadores", "Cargadores"].includes(producto.categoria) && (
+            <Link href="/que-me-sirve" className="text-sm font-medium text-primary hover:underline">
+              ¿No sabes si te sirve? Te ayudamos a elegir →
+            </Link>
+          )}
+
           {producto.descripcion_web && (
             <div className="descripcion-producto rounded-2xl border border-border bg-surface/60 p-5 sm:p-6">
               <h2 className="mb-4 flex items-center gap-2 font-display text-sm font-bold uppercase tracking-wide text-ink">

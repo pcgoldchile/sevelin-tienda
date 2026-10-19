@@ -4,6 +4,24 @@
 > arquitectura completo (todas las fases) vive en `README-ECOMMERCE-SEVELIN.md`, en el repo del POS
 > (`sevelin-pos-oficial`) — este documento es el estado de ESTE repo (`sevelin-tienda`) nada más.
 
+**Fecha:** 18-10-2026 (noche) · **Destacados automáticos (`supabase/46` aplicada; POS v161).**
+
+- **Destacados (`src/lib/destacados.ts`):** antes era el total histórico de ventas que el POS mandaba solo a mano (no
+  cambiaba nunca). Ahora cada producto que se puede comprar hoy tiene un puntaje diario: ventas de 30 días ×3, vistas de
+  30 días ×2, tendencia de la semana ×1,5, ventas de siempre ×0,5, +2,5 con la etiqueta "🔥 Tendencia" del POS, +1
+  Novedad, +0,8 oferta vigente y **+3 a la subcategoría Ventiladores si la máxima de Arica es ≥ 24 °C** (Open-Meteo, sin
+  llave). Portada: 8, máximo 2 por subcategoría y 3 por categoría, con el sello del motivo (⭐ Más vendido, 👀 Lo más
+  visto, 🔥 En tendencia, ☀️ Para el calor…). Sin servicios técnicos. Columnas `vendidos_30d`, `puntaje_destacado`,
+  `motivo_destacado`; vistas contadas en la base con `vistas_por_producto(desde)`.
+- **Cuándo se recalcula:** el POS manda las ventas a las 07:30 (su cron `/api/cron/mas-vendidos`) y `/api/sync/mas-vendidos`
+  recalcula al recibirlas; además `/api/cron/destacados` a las 08:00 (`vercel.json`). Primer cálculo hecho a mano el
+  18-10-2026 con 24,5 °C: ventilador industrial 1.º y mini ventilador 3.º, los dos "☀️ Para el calor".
+- **"¿Qué me sirve?"** ahora en el menú de arriba (y celular), el pie de página, la búsqueda sin resultados y las fichas
+  de Monitores, Cables y Cargadores. **Buscador:** calza por el comienzo desde 2 letras ("pa" → pasta), da prioridad al
+  nombre que empieza con lo escrito y desempata por el puntaje de Destacados.
+
+---
+
 **Fecha:** 18-10-2026 (tarde) · **12 mejoras para encontrar, decidir y escribir (`supabase/45` aplicada; POS v160).**
 
 Medido antes de hacerlas: 59 de 185 búsquedas no encontraban nada, y unas 2.000 vistas de productos al mes contra 5

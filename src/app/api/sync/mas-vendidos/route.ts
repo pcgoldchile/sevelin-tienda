@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
+import { recalcularDestacados } from '@/lib/destacados';
 import { supabaseWeb } from '@/lib/supabase-web';
 
 /**
@@ -26,6 +28,8 @@ import { supabaseWeb } from '@/lib/supabase-web';
 interface FilaVentas {
   producto_pos_id?: number;
   unidades?: number;
+  /** Destacados automáticos (supabase/46): unidades de los últimos 30 días. Opcional: el script viejo no lo manda. */
+  unidades_30d?: number;
 }
 
 export async function POST(req: NextRequest) {
@@ -50,6 +54,7 @@ export async function POST(req: NextRequest) {
       // Nunca negativo: un contador de unidades vendidas por debajo de 0
       // no significa nada y rompería el orden de la portada.
       unidades: Math.max(0, Math.round(Number(v.unidades) || 0)),
+      unidades30: v.unidades_30d === undefined ? null : Math.max(0, Math.round(Number(v.unidades_30d) || 0)),
     }))
     .filter((v) => Number.isFinite(v.producto_pos_id) && v.producto_pos_id > 0);
 
@@ -67,7 +72,9 @@ export async function POST(req: NextRequest) {
   for (const fila of filas) {
     const { error, count } = await supabaseWeb
       .from('productos_web')
-      .update({ unidades_vendidas: fila.unidades }, { count: 'exact' })
+      .update(fila.unidades30 === null
+        ? { unidades_vendidas: fila.unidades }
+        : { unidades_vendidas: fila.unidades, vendidos_30d: fila.unidades30 }, { count: 'exact' })
       .eq('producto_pos_id', fila.producto_pos_id);
 
     if (error) {
@@ -80,5 +87,21 @@ export async function POST(req: NextRequest) {
     else sinCoincidencia += 1;
   }
 
-  return NextResponse.json({ ok: true, recibidos: filas.length, actualizados, sinCoincidencia });
+  /* Con las ventas del mes (el cron diario del POS), lo que no vino no vendió
+     nada en 30 días: vuelve a 0. Después se recalculan los Destacados. */
+  let destacados: Awaited<ReturnType<typeof recalcularDestacados>> | null = null;
+  if (filas.some((f) => f.unidades30 !== null)) {
+    const ids = filas.map((f) => f.producto_pos_id);
+    const { error: errCero } = await supabaseWeb.from('productos_web').update({ vendidos_30d: 0 })
+      .gt('vendidos_30d', 0).not('producto_pos_id', 'in', `(${ids.join(',')})`);
+    if (errCero) console.error('[sync/mas-vendidos] No se pudo poner en 0 el resto:', errCero.message);
+    try {
+      destacados = await recalcularDestacados();
+      revalidatePath('/');
+    } catch (err) {
+      console.error('[sync/mas-vendidos] No se pudieron recalcular los destacados:', err instanceof Error ? err.message : err);
+    }
+  }
+
+  return NextResponse.json({ ok: true, recibidos: filas.length, actualizados, sinCoincidencia, destacados });
 }

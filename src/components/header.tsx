@@ -402,6 +402,10 @@ export function Header({
           >
             Encargos
           </Link>
+          {/* Asistente (#8): antes solo se llegaba desde 3 categorías y nadie lo veía (dueño, 18-10-2026). */}
+          <Link href="/que-me-sirve" className={`${ENLACE_NAV} text-primary-soft`}>
+            ¿Qué me sirve?
+          </Link>
         </div>
       </nav>
 
@@ -518,6 +522,9 @@ export function Header({
 
               <Link href="/pedidos-por-encargo" className="block py-1.5 text-sm font-medium text-ink-soft" onClick={() => setMenuMovilAbierto(false)}>
                 Encargos
+              </Link>
+              <Link href="/que-me-sirve" className="block py-1.5 text-sm font-medium text-primary-soft" onClick={() => setMenuMovilAbierto(false)}>
+                ¿Qué me sirve? Te ayudamos a elegir
               </Link>
 
               <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2 border-t border-border pt-3 text-sm font-medium text-primary-soft">

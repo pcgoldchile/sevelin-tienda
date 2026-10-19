@@ -48,6 +48,10 @@ export interface ProductoWeb {
   precio_a_consultar: boolean;
   /** Unidades vendidas según el POS (supabase/10, POST /api/sync/mas-vendidos). */
   unidades_vendidas?: number;
+  /** Destacados automáticos (supabase/46, src/lib/destacados.ts). */
+  vendidos_30d?: number;
+  puntaje_destacado?: number;
+  motivo_destacado?: string | null;
   // SEO — título/meta-descripción propios para Google, distintos del
   // nombre/descripcion_web que ve el cliente. NULL = generateMetadata()
   // arma uno automático (ver productos/[sku]/page.tsx). Se llenan a mano o
