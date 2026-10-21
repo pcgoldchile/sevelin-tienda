@@ -85,6 +85,15 @@ function caracteristicasDesdePos(valor: unknown): Record<string, string[]> {
   return limpio;
 }
 
+/** El agregable del POS → columnas de productos_web. Un valor raro queda vacío en vez
+ *  de romper el guardado del producto entero. */
+function agregableDesdePos(producto: ProductoPOS): { agregable_pos_id: number | null; agregable_motivo: string | null } {
+  const id = Number(producto.agregable_id);
+  if (!Number.isInteger(id) || id <= 0 || id === producto.id) return { agregable_pos_id: null, agregable_motivo: null };
+  const motivo = typeof producto.agregable_motivo === 'string' ? producto.agregable_motivo.trim().slice(0, 140) : '';
+  return { agregable_pos_id: id, agregable_motivo: motivo || null };
+}
+
 export async function POST(req: NextRequest) {
   if (!verificarSecretoSync(req)) {
     return NextResponse.json({ error: 'Secreto de sincronización inválido' }, { status: 401 });
@@ -168,6 +177,9 @@ export async function POST(req: NextRequest) {
     relacionados_pos_ids: Array.isArray(producto.relacionados_ids)
       ? producto.relacionados_ids.map(Number).filter((n) => Number.isInteger(n) && n > 0).slice(0, 12)
       : [],
+    /* "➕ Agregable" (sql/110 del POS → supabase/48): uno solo, nunca el mismo
+       producto, y la frase con el mismo tope que el CHECK de la tabla. */
+    ...agregableDesdePos(producto),
     /* Filtros del catálogo (sql/103 del POS → supabase/44). El POS ya valida
        contra su esquema; acá solo se asegura la forma, para que un dato raro
        no rompa el guardado del producto entero. */

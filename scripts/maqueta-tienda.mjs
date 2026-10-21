@@ -55,6 +55,15 @@ const productos = JSON.parse(readFileSync(path.join(RAIZ, 'scripts/maqueta-tiend
       stock_web: 1, por_llegar: true, stock_por_llegar: 4, fecha_llegada_estimada: enDias(5), es_pedido_encargo: false, categoria: 'Hogar y Estilo de Vida', subcategoria: 'Balanzas' },
   );
 }
+/* "➕ Agregable" (supabase/48, 21-10-2026): un monitor solo VGA que ofrece el adaptador HDMI a VGA (#104)
+   en el cuadro de compra. Se abre en /productos/maqueta-monitor-solo-vga. */
+{
+  const base = productos.find((p) => p.producto_pos_id === 132);
+  if (base) productos.push({ ...base, id: 990003, producto_pos_id: 990003, sku: 'maqueta-monitor-solo-vga',
+    nombre: 'Monitor Samsung SyncMaster 21.5" Full HD 5 ms Negro 2233SN (maqueta, solo VGA)', stock_web: 3,
+    caracteristicas: { entradas: ['VGA'] }, condicion: 'reacondicionado',
+    agregable_pos_id: 104, agregable_motivo: 'Para conectarlo a un PC o notebook que solo tiene salida HDMI.' });
+}
 /* Destacados automáticos (supabase/46, 19-10-2026): puntajes, motivos y ventas del mes de prueba,
    para ver el inicio completo (vitrina, pestañas). En la base real los calcula src/lib/destacados.ts. */
 {

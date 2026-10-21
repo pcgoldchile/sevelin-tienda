@@ -454,6 +454,29 @@ export async function productosComplementarios(
     .map((p) => aplicarOferta(p));
 }
 
+/** "➕ Agregable" (supabase/48): el accesorio opcional del cuadro de compra. Solo si hoy
+ *  se puede comprar en línea —publicado, con stock, sin encargo ni precio a consultar—: si
+ *  no, la casilla simplemente no aparece. */
+export async function productoAgregable(
+  producto: Pick<ProductoWeb, 'id' | 'agregable_pos_id'>
+): Promise<ProductoWeb | null> {
+  const idPos = Number(producto.agregable_pos_id);
+  if (!Number.isInteger(idPos) || idPos <= 0) return null;
+
+  const { data, error } = await supabaseWeb
+    .from('productos_web')
+    .select('*')
+    .eq('producto_pos_id', idPos)
+    .eq('publicado_web', true)
+    .eq('es_pedido_encargo', false)
+    .eq('precio_a_consultar', false)
+    .gt('stock_web', 0)
+    .neq('id', producto.id)
+    .maybeSingle();
+  if (error || !data) return null;
+  return aplicarOferta(data);
+}
+
 /** Catálogo publicado filtrado por categoría y/o texto libre, para /productos. */
 export async function buscarCatalogo(filtros: {
   categoria?: string;

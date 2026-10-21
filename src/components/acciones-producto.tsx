@@ -5,16 +5,25 @@ import { motion } from "framer-motion";
 import { Share2, Check, MessageCircle } from "lucide-react";
 import { useCarrito } from "@/context/carrito-context";
 import { useToast } from "@/context/toast-context";
-import { formatoStock } from "@/lib/formato";
+import { formatoCLP, formatoStock } from "@/lib/formato";
 import { trackearEventoPixel } from "@/lib/meta-pixel";
 import { AVISO_ENCARGO, urlCotizarEncargo } from "@/lib/encargo-cotizar";
 import type { ProductoWeb } from "@/lib/tipos";
 
-export function AccionesProducto({ producto }: { producto: ProductoWeb }) {
+export function AccionesProducto({
+  producto,
+  agregable = null,
+}: {
+  producto: ProductoWeb;
+  /** "➕ Agregable" (supabase/48): el accesorio opcional que el dueño eligió en el POS.
+   *  Llega solo si hoy se puede comprar (ver productoAgregable en src/lib/catalogo.ts). */
+  agregable?: ProductoWeb | null;
+}) {
   const { agregarItem } = useCarrito();
   const { mostrarToast } = useToast();
   const [cantidad, setCantidad] = useState(1);
   const [agregado, setAgregado] = useState(false);
+  const [conAgregable, setConAgregable] = useState(false);
   const [enlaceCopiado, setEnlaceCopiado] = useState(false);
 
   // Pedido explícito: cada ficha (producto o servicio) necesita un botón
@@ -61,6 +70,12 @@ export function AccionesProducto({ producto }: { producto: ProductoWeb }) {
     : producto.por_llegar
       ? Math.max(0, producto.stock_por_llegar ?? 0)
       : 0;
+
+  /* El agregable va uno por unidad (un adaptador por monitor), hasta lo que haya.
+     No en una reserva: el producto todavía no está y el agregable sí, y mezclar las dos
+     cosas en un mismo pedido complica la entrega. */
+  const ofrecerAgregable = !!agregable && !esReserva && agregable.stock_web > 0;
+  const cantidadAgregable = ofrecerAgregable && agregable ? Math.min(cantidad, agregable.stock_web) : 0;
 
   /* Pedido por encargo (dueño, 02-10-2026): no se agrega al carrito ni se
      paga en línea. No está en la tienda y su precio es referencial hasta
@@ -133,6 +148,48 @@ export function AccionesProducto({ producto }: { producto: ProductoWeb }) {
         </span>
       </div>
 
+      {ofrecerAgregable && agregable && (
+        <label
+          className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors ${
+            conAgregable ? "border-accent bg-accent/10" : "border-dashed border-primary/40 bg-primary/5 hover:border-primary/70"
+          }`}
+        >
+          <input
+            type="checkbox"
+            checked={conAgregable}
+            onChange={(e) => setConAgregable(e.target.checked)}
+            className="mt-1 h-4 w-4 shrink-0 accent-accent"
+          />
+          {agregable.imagen_urls?.[0] && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={agregable.imagen_urls[0]}
+              alt=""
+              className="h-11 w-11 shrink-0 rounded-lg border border-border bg-white object-contain"
+              loading="lazy"
+            />
+          )}
+          <span className="min-w-0 flex-1">
+            <span className="block text-[11px] font-bold uppercase tracking-[0.12em] text-primary">➕ Agrégale (opcional)</span>
+            <span className="block text-sm font-semibold leading-snug text-ink">
+              {agregable.nombre}{" "}
+              <span className="whitespace-nowrap text-accent">+{formatoCLP.format(agregable.precio_web)}</span>
+            </span>
+            {producto.agregable_motivo && (
+              <span className="mt-0.5 block text-xs leading-snug text-ink-soft">{producto.agregable_motivo}</span>
+            )}
+          </span>
+        </label>
+      )}
+      {conAgregable && ofrecerAgregable && agregable && (
+        <p className="-mt-1 text-right text-xs text-ink-faint">
+          Total con {cantidadAgregable > 1 ? `${cantidadAgregable} unidades del accesorio` : "el accesorio"}:{" "}
+          <strong className="text-sm text-ink">
+            {formatoCLP.format(producto.precio_web * cantidad + agregable.precio_web * cantidadAgregable)}
+          </strong>
+        </p>
+      )}
+
       <motion.button
         type="button"
         whileTap={{ scale: 0.97 }}
@@ -145,6 +202,16 @@ export function AccionesProducto({ producto }: { producto: ProductoWeb }) {
             value: producto.precio_web * cantidad,
             currency: "CLP",
           });
+          if (conAgregable && agregable && cantidadAgregable > 0) {
+            agregarItem(agregable, cantidadAgregable);
+            trackearEventoPixel("AddToCart", {
+              content_ids: [agregable.sku],
+              content_name: agregable.nombre,
+              content_type: "product",
+              value: agregable.precio_web * cantidadAgregable,
+              currency: "CLP",
+            });
+          }
           mostrarToast({
             imagen: producto.imagen_urls?.[0] ?? null,
             nombre: producto.nombre,
@@ -152,6 +219,7 @@ export function AccionesProducto({ producto }: { producto: ProductoWeb }) {
             cantidad,
           });
           setCantidad(1);
+          setConAgregable(false);
           setAgregado(true);
           setTimeout(() => setAgregado(false), 2000);
         }}
@@ -159,7 +227,13 @@ export function AccionesProducto({ producto }: { producto: ProductoWeb }) {
           agregado ? "bg-success" : "bg-accent hover:bg-accent-deep"
         }`}
       >
-        {agregado ? "¡Agregado! ✓" : esReserva ? "Reservar — pago 100%" : "Agregar al carrito"}
+        {agregado
+          ? "¡Agregado! ✓"
+          : esReserva
+            ? "Reservar — pago 100%"
+            : conAgregable && cantidadAgregable > 0
+              ? "Agregar al carrito con el accesorio"
+              : "Agregar al carrito"}
       </motion.button>
       </>
       )}

@@ -4,7 +4,7 @@ import { testDeServicio } from "@/lib/test-servicios";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { after } from "next/server";
-import { obtenerProductoPublicado, productosComplementarios, productosRelacionados, skuVigenteDeEnlaceViejo } from "@/lib/catalogo";
+import { obtenerProductoPublicado, productoAgregable, productosComplementarios, productosRelacionados, skuVigenteDeEnlaceViejo } from "@/lib/catalogo";
 import { CarruselProductos } from "@/components/carrusel-productos";
 import { OpcionesAgotado } from "@/components/opciones-agotado";
 import { skuDesdeRuta, rutaDeSku } from "@/lib/sku-url";
@@ -122,10 +122,12 @@ export default async function FichaProducto({ params }: PropsPagina) {
 
   // Relacionados: mismo criterio de resiliencia que el resto de la página
   // — si falla, la ficha se muestra igual, solo sin esa sección.
-  const [complementarios, parecidos] = await Promise.all([
+  const [complementarios, parecidos, agregable] = await Promise.all([
     productosComplementarios(producto).catch(() => []),
     // 12 y no 4: ahora van en un carrusel con flechas (#57), no en una grilla de una fila.
     productosRelacionados(producto, 12).catch(() => []),
+    // "➕ Agregable" (supabase/48): la casilla del cuadro de compra. Si falla, no sale y listo.
+    productoAgregable(producto).catch(() => null),
   ]);
   // Un producto elegido como complemento no se repite abajo como "parecido".
   const idsComplementarios = new Set(complementarios.map((p) => p.id));
@@ -370,7 +372,7 @@ export default async function FichaProducto({ params }: PropsPagina) {
             ) : producto.precio_a_consultar ? (
               <CotizarWhatsapp producto={producto} />
             ) : (
-              <AccionesProducto producto={producto} />
+              <AccionesProducto producto={producto} agregable={agregable} />
             )}
           </div>
 
@@ -462,6 +464,20 @@ export default async function FichaProducto({ params }: PropsPagina) {
                   [&_li]:before:text-primary [&_li]:before:content-['✓']"
                 dangerouslySetInnerHTML={{ __html: descripcionSegura }}
               />
+              {/* "➕ Agregable" también dentro de la descripción, armado al mostrar la página
+                  (no escrito en el texto): así el precio que se lee es siempre el de hoy. */}
+              {/* Solo cuando la casilla existe: con el producto agotado, a consultar o en reserva no hay. */}
+              {agregable && !agotado && !producto.precio_a_consultar && !(producto.por_llegar && producto.stock_web <= 0) && (
+                <p className="mt-5 rounded-xl border border-dashed border-primary/40 bg-primary/5 px-4 py-3 text-sm leading-relaxed text-ink-soft">
+                  <strong className="font-semibold text-ink">➕ Opcional:</strong>{" "}
+                  {producto.agregable_motivo ? `${producto.agregable_motivo.trim().replace(/\.+$/, "")}, agrégale el ` : "Agrégale el "}
+                  <Link href={`/productos/${rutaDeSku(agregable.sku)}`} className="font-medium text-accent underline hover:text-accent-deep">
+                    {agregable.nombre}
+                  </Link>{" "}
+                  por <strong className="font-semibold text-ink">{formatoCLP.format(agregable.precio_web)}</strong>{" "}
+                  con la casilla junto al botón de compra.
+                </p>
+              )}
             </div>
           )}
 

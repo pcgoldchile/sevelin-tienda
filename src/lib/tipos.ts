@@ -70,6 +70,11 @@ export interface ProductoWeb {
   oferta_hasta?: string | null;
   /** "Complementa tu compra" (supabase/38): ids del POS elegidos a mano, en orden. */
   relacionados_pos_ids?: number[] | null;
+  /** "➕ Agregable" (supabase/48): UN accesorio opcional que se suma con una casilla en el
+   *  cuadro de compra (ej. el adaptador HDMI a VGA de un monitor sin HDMI). Id del POS. */
+  agregable_pos_id?: number | null;
+  /** Para qué sirve el agregable, en una frase corta escrita en el POS. */
+  agregable_motivo?: string | null;
   /** Solo con oferta vigente: el precio normal, para mostrarlo tachado.
    *  null/undefined = sin oferta, precio_web es el de siempre. */
   precio_antes?: number | null;
@@ -384,6 +389,9 @@ export interface ProductoPOS {
   oferta_pausada?: boolean | null;
   // Complementarios elegidos en el POS — ver sevelin-pos-oficial/sql/75.
   relacionados_ids?: number[] | null;
+  // Agregable del cuadro de compra — ver sevelin-pos-oficial/sql/110.
+  agregable_id?: number | null;
+  agregable_motivo?: string | null;
   // Venta mayorista — ver sevelin-pos-oficial/sql/76. Va a precios_mayoristas
   // (supabase/39), NUNCA a productos_web: no es público.
   precio_mayorista?: number | null;
