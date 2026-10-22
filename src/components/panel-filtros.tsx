@@ -46,7 +46,7 @@ export function PanelFiltros({ grupos, seleccion, base, totalActivos }: PropsPan
         <div className="flex items-center justify-between">
           <p className="text-xs font-bold uppercase tracking-wider text-ink-soft">Filtrar</p>
           {totalActivos > 0 && (
-            <Link href={enlaceConFiltros({ ...base, pmin: undefined, pmax: undefined }, {})} scroll={false} className="inline-flex min-h-11 items-center text-xs font-medium text-primary hover:underline lg:min-h-0">
+            <Link rel="nofollow" href={enlaceConFiltros({ ...base, pmin: undefined, pmax: undefined }, {})} scroll={false} className="inline-flex min-h-11 items-center text-xs font-medium text-primary hover:underline lg:min-h-0">
               Quitar filtros
             </Link>
           )}

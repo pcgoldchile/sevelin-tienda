@@ -259,7 +259,7 @@ export default async function Productos({ searchParams }: PropsPagina) {
             {visibles.length === 0 ? (
               <p className="text-ink-soft">
                 Ningún producto cumple con todo lo marcado.{" "}
-                <Link href={enlaceConFiltros({ ...baseEnlace, pmin: undefined, pmax: undefined }, {})} scroll={false} className="font-medium text-primary hover:underline">
+                <Link rel="nofollow" href={enlaceConFiltros({ ...baseEnlace, pmin: undefined, pmax: undefined }, {})} scroll={false} className="font-medium text-primary hover:underline">
                   Quitar filtros
                 </Link>
               </p>

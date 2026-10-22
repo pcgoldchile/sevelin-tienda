@@ -53,7 +53,7 @@ export function SelectorOrden({ ordenActual, categoria, subcategoria, q, filtros
       <noscript>
         <div className="flex flex-wrap gap-1">
           {OPCIONES_ORDEN.map((opcion) => (
-            <Link key={opcion.valor} href={construirHref(opcion.valor)} className="underline">
+            <Link key={opcion.valor} rel="nofollow" href={construirHref(opcion.valor)} className="underline">
               {opcion.etiqueta}
             </Link>
           ))}

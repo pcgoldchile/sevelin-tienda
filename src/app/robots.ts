@@ -12,11 +12,26 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://sevelin.cl';
  */
 export default function robots(): MetadataRoute.Robots {
   return {
-    rules: {
-      userAgent: '*',
-      allow: '/',
-      disallow: ['/carrito', '/carrito-compartido', '/checkout', '/cuenta/', '/pedido/', '/api/', '/baja-recordatorio'],
-    },
+    rules: [
+      {
+        userAgent: '*',
+        allow: '/',
+        disallow: [
+          '/carrito', '/carrito-compartido', '/checkout', '/cuenta/', '/pedido/', '/api/', '/baja-recordatorio',
+          /* 22-10-2026: las combinaciones del panel "Filtrar" y del orden. Googlebot las
+             recorría una por una (5.400 visitas en 12 horas a /productos?...&f_…&orden=…):
+             cada una armaba la página de nuevo y la organización de Supabase pasó su
+             límite de tráfico (13 GB de 5). Las categorías y subcategorías
+             (?categoria=…&subcategoria=…) siguen abiertas: son las que se indexan. */
+          '/*?*orden=', '/*?*f_', '/*?*pmin=', '/*?*pmax=',
+          // Búsquedas internas y comparador: resultados que cambian por persona, no páginas para Google
+          '/*?q=', '/*?*&q=', '/comparar',
+        ],
+      },
+      /* PetalBot (buscador de Huawei, sin uso en Chile): 490 visitas en 12 horas y casi nada
+         desde el caché. Se le cierra el sitio entero. */
+      { userAgent: 'PetalBot', disallow: '/' },
+    ],
     sitemap: `${SITE_URL}/sitemap.xml`,
   };
 }

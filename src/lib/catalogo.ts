@@ -4,6 +4,10 @@ import type { ProductoWeb } from './tipos';
 // Oferta con fechas (supabase/37): TODA lectura de productos pasa por aplicarOferta.
 import { aplicarOferta } from './oferta';
 import { productoDeCodigoViejo } from './enlaces-codigo';
+/* 22-10-2026: las listas, el menú y los avisos leen la copia en memoria (ver
+   catalogo-memoria.ts: por qué). La ficha, el carrito y el checkout siguen
+   leyendo la base directo. */
+import { porNombre, publicadosEnMemoria, vendiblesEnMemoria } from './catalogo-memoria';
 
 /**
  * Catálogo público: SIEMPRE filtra por publicado_web=true y stock_web>0
@@ -13,6 +17,12 @@ import { productoDeCodigoViejo } from './enlaces-codigo';
  * explícita del dueño, tomada desde el modal de producto del POS.
  */
 export async function listarCatalogo(): Promise<ProductoWeb[]> {
+  return (await vendiblesEnMemoria()).sort(porNombre);
+}
+
+/** Lo mismo que listarCatalogo, pero desde la base y con la descripción: solo para
+ *  GET /api/productos (contrato público, ver README-ECOMMERCE-SEVELIN.md sección 5). */
+export async function listarCatalogoCompleto(): Promise<ProductoWeb[]> {
   const { data, error } = await supabaseWeb
     .from('productos_web')
     .select('*')
@@ -133,15 +143,7 @@ export async function skuVigenteDeEnlaceViejo(enlace: string): Promise<string | 
  * es justamente lo que lo mantiene en Google mientras vuelve a haber.
  */
 export async function listarPublicados(): Promise<ProductoWeb[]> {
-  const { data, error } = await supabaseWeb
-    .from('productos_web')
-    .select('*')
-    .eq('publicado_web', true)
-    .eq('es_pedido_encargo', false)
-    .order('nombre', { ascending: true });
-
-  if (error) throw new Error(error.message);
-  return (data || []).map((p) => aplicarOferta(p));
+  return (await publicadosEnMemoria()).filter((p) => !p.es_pedido_encargo).sort(porNombre);
 }
 
 /**
@@ -152,17 +154,9 @@ export async function listarPublicados(): Promise<ProductoWeb[]> {
  * orden que devuelva Supabase.
  */
 export async function obtenerProductosPorSku(skus: string[]): Promise<Record<string, ProductoWeb>> {
-  const { data, error } = await supabaseWeb
-    .from('productos_web')
-    .select('*')
-    .in('sku', skus)
-    .eq('publicado_web', true)
-    .eq('es_pedido_encargo', false)
-    .gt('stock_web', 0);
-
-  if (error) throw new Error(error.message);
+  const pedidos = new Set(skus);
   const porSku: Record<string, ProductoWeb> = {};
-  for (const producto of data || []) porSku[producto.sku] = aplicarOferta(producto);
+  for (const producto of await vendiblesEnMemoria()) if (pedidos.has(producto.sku)) porSku[producto.sku] = producto;
   return porSku;
 }
 
@@ -199,16 +193,7 @@ export async function obtenerImagenesPorProductoPosId(
  * schema, así que esto es un filtro plano, no un mega-menú jerárquico).
  */
 export async function listarCategorias(): Promise<string[]> {
-  const { data, error } = await supabaseWeb
-    .from('productos_web')
-    .select('categoria')
-    .eq('publicado_web', true)
-    .eq('es_pedido_encargo', false)
-    .gt('stock_web', 0)
-    .not('categoria', 'is', null);
-
-  if (error) throw new Error(error.message);
-  const categorias = new Set((data || []).map((fila) => fila.categoria as string));
+  const categorias = new Set((await vendiblesEnMemoria()).map((p) => p.categoria).filter((c): c is string => !!c));
   return Array.from(categorias).sort((a, b) => a.localeCompare(b, 'es'));
 }
 
@@ -221,17 +206,12 @@ export async function listarCategorias(): Promise<string[]> {
  * página simplemente no muestra la fila de chips en ese caso.
  */
 export async function listarSubcategorias(categoria: string): Promise<string[]> {
-  const { data, error } = await supabaseWeb
-    .from('productos_web')
-    .select('subcategoria')
-    .eq('publicado_web', true)
-    .eq('es_pedido_encargo', false)
-    .gt('stock_web', 0)
-    .eq('categoria', categoria)
-    .not('subcategoria', 'is', null);
-
-  if (error) throw new Error(error.message);
-  const subcategorias = new Set((data || []).map((fila) => fila.subcategoria as string));
+  const subcategorias = new Set(
+    (await vendiblesEnMemoria())
+      .filter((p) => p.categoria === categoria)
+      .map((p) => p.subcategoria)
+      .filter((s): s is string => !!s)
+  );
   return Array.from(subcategorias).sort((a, b) => a.localeCompare(b, 'es'));
 }
 
@@ -243,19 +223,10 @@ export async function listarSubcategorias(categoria: string): Promise<string[]> 
  * vez de una por categoría — se agrupa acá mismo en memoria.
  */
 export async function listarArbolCategorias(): Promise<Record<string, string[]>> {
-  const { data, error } = await supabaseWeb
-    .from('productos_web')
-    .select('categoria, subcategoria')
-    .eq('publicado_web', true)
-    .eq('es_pedido_encargo', false)
-    .gt('stock_web', 0)
-    .not('categoria', 'is', null);
-
-  if (error) throw new Error(error.message);
-
   const arbol: Record<string, Set<string>> = {};
-  for (const fila of data || []) {
-    const categoria = fila.categoria as string;
+  for (const fila of await vendiblesEnMemoria()) {
+    if (!fila.categoria) continue;
+    const categoria = fila.categoria;
     if (!arbol[categoria]) arbol[categoria] = new Set();
     if (fila.subcategoria) arbol[categoria].add(fila.subcategoria as string);
   }
@@ -300,18 +271,9 @@ export function esOrdenCatalogoValido(valor: string | undefined): valor is Orden
  * hasta la primera sincronización.
  */
 export async function listarMasVendidos(limite = 8): Promise<ProductoWeb[]> {
-  const { data, error } = await supabaseWeb
-    .from('productos_web')
-    .select('*')
-    .eq('publicado_web', true)
-    .eq('es_pedido_encargo', false)
-    .gt('stock_web', 0)
-    .order('unidades_vendidas', { ascending: false })
-    .order('nombre', { ascending: true })
-    .limit(limite);
-
-  if (error) throw new Error(error.message);
-  return (data || []).map((p) => aplicarOferta(p));
+  return (await vendiblesEnMemoria())
+    .sort((a, b) => (Number(b.unidades_vendidas) || 0) - (Number(a.unidades_vendidas) || 0) || porNombre(a, b))
+    .slice(0, limite);
 }
 
 /**
@@ -345,30 +307,22 @@ export async function productoMasBaratoPorCategoria(
   categorias: string[],
   preferidos: Record<string, string> = {}
 ): Promise<Record<string, ProductoWeb>> {
+  const vendibles = await vendiblesEnMemoria();
   const resultados = await Promise.all(
     categorias.map(async (categoria) => {
-      const { data, error } = await supabaseWeb
-        .from('productos_web')
-        .select('*')
-        .eq('publicado_web', true)
-        .eq('es_pedido_encargo', false)
-        .gt('stock_web', 0)
-        .eq('categoria', categoria)
-        .order('precio_web', { ascending: true })
-        .order('sku', { ascending: true })
-        .limit(8);
+      // Con oferta, el "Desde $X" es el precio vigente (la copia ya la trae aplicada).
+      const vigentes = vendibles
+        .filter((p) => p.categoria === categoria)
+        .sort((a, b) => a.precio_web - b.precio_web || a.sku.localeCompare(b.sku));
 
       // Una categoría vacía no es un error: el banner simplemente se
       // muestra sin foto ni precio, como ya hacía antes.
-      if (error || !data || data.length === 0) return null;
-
-      // Con oferta, el "Desde $X" es el precio vigente: se reordena después de aplicarla.
-      const vigentes = data.map((p) => aplicarOferta(p)).sort((a, b) => a.precio_web - b.precio_web);
+      if (vigentes.length === 0) return null;
       const precioMinimo = vigentes[0].precio_web;
       const empatados = vigentes.filter((p) => p.precio_web === precioMinimo);
       const preferido = preferidos[categoria];
       const elegido =
-        (preferido && empatados.find((p) => p.sku === preferido)) ?? empatados[0];
+        (preferido ? empatados.find((p) => p.sku === preferido) : undefined) ?? empatados[0];
 
       return [categoria, elegido] as const;
     })
@@ -398,32 +352,12 @@ export async function productosRelacionados(
 ): Promise<ProductoWeb[]> {
   if (!producto.categoria) return [];
 
-  const base = () =>
-    supabaseWeb
-      .from('productos_web')
-      .select('*')
-      .eq('publicado_web', true)
-      .eq('es_pedido_encargo', false)
-      .gt('stock_web', 0)
-      .eq('categoria', producto.categoria as string)
-      .neq('id', producto.id);
-
-  let resultado: ProductoWeb[] = [];
-
-  if (producto.subcategoria) {
-    const { data, error } = await base().eq('subcategoria', producto.subcategoria).order('nombre').limit(limite);
-    if (!error) resultado = data || [];
-  }
-
-  if (resultado.length < limite) {
-    const yaIncluidos = resultado.map((p) => p.id);
-    let query = base().order('nombre').limit(limite - resultado.length);
-    if (yaIncluidos.length > 0) query = query.not('id', 'in', `(${yaIncluidos.join(',')})`);
-    const { data, error } = await query;
-    if (!error && data) resultado = [...resultado, ...data];
-  }
-
-  return resultado.map((p) => aplicarOferta(p));
+  const deLaCategoria = (await vendiblesEnMemoria())
+    .filter((p) => p.categoria === producto.categoria && p.id !== producto.id)
+    .sort(porNombre);
+  const mismaSub = producto.subcategoria ? deLaCategoria.filter((p) => p.subcategoria === producto.subcategoria) : [];
+  const resto = deLaCategoria.filter((p) => !mismaSub.includes(p));
+  return [...mismaSub, ...resto].slice(0, limite);
 }
 
 /**
@@ -438,20 +372,10 @@ export async function productosComplementarios(
   const ids = (producto.relacionados_pos_ids || []).filter((n) => Number.isInteger(n) && n > 0);
   if (ids.length === 0) return [];
 
-  const { data, error } = await supabaseWeb
-    .from('productos_web')
-    .select('*')
-    .in('producto_pos_id', ids)
-    .eq('publicado_web', true)
-    .eq('es_pedido_encargo', false)
-    .gt('stock_web', 0)
-    .neq('id', producto.id);
-  if (error || !data) return [];
-
   const orden = new Map(ids.map((id, i) => [id, i]));
-  return data
-    .sort((a, b) => (orden.get(a.producto_pos_id) ?? 99) - (orden.get(b.producto_pos_id) ?? 99))
-    .map((p) => aplicarOferta(p));
+  return (await vendiblesEnMemoria())
+    .filter((p) => orden.has(p.producto_pos_id) && p.id !== producto.id)
+    .sort((a, b) => (orden.get(a.producto_pos_id) ?? 99) - (orden.get(b.producto_pos_id) ?? 99));
 }
 
 /** "➕ Agregable" (supabase/48): el accesorio opcional del cuadro de compra. Solo si hoy
@@ -463,18 +387,8 @@ export async function productoAgregable(
   const idPos = Number(producto.agregable_pos_id);
   if (!Number.isInteger(idPos) || idPos <= 0) return null;
 
-  const { data, error } = await supabaseWeb
-    .from('productos_web')
-    .select('*')
-    .eq('producto_pos_id', idPos)
-    .eq('publicado_web', true)
-    .eq('es_pedido_encargo', false)
-    .eq('precio_a_consultar', false)
-    .gt('stock_web', 0)
-    .neq('id', producto.id)
-    .maybeSingle();
-  if (error || !data) return null;
-  return aplicarOferta(data);
+  return (await vendiblesEnMemoria())
+    .find((p) => p.producto_pos_id === idPos && p.id !== producto.id && !p.precio_a_consultar) ?? null;
 }
 
 /** Catálogo publicado filtrado por categoría y/o texto libre, para /productos. */
@@ -493,36 +407,21 @@ export async function buscarCatalogo(filtros: {
      por llegar tienen su propia sección. Pero quien escribe un nombre quiere
      saber si existe, aunque sea para cotizarlo o reservarlo; la tarjeta dice
      cuál es cuál ("Por encargo" / "Por llegar"). */
-  const qTexto = (filtros.q || '').replace(/[^\p{L}\p{N} ]/gu, '').trim();
-  let query = supabaseWeb
-    .from('productos_web')
-    .select('*')
-    .eq('publicado_web', true)
-    .order(columna, { ascending });
-  query = qTexto
-    ? query.or('stock_web.gt.0,es_pedido_encargo.eq.true,por_llegar.eq.true')
-    : query.eq('es_pedido_encargo', false).gt('stock_web', 0);
-
-  if (filtros.categoria) query = query.eq('categoria', filtros.categoria);
+  const qTexto = (filtros.q || '').replace(/[^\p{L}\p{N} ]/gu, '').trim().toLowerCase();
+  let productos = (await publicadosEnMemoria()).filter((p) =>
+    qTexto ? p.stock_web > 0 || p.es_pedido_encargo || p.por_llegar : !p.es_pedido_encargo && p.stock_web > 0
+  );
+  if (filtros.categoria) productos = productos.filter((p) => p.categoria === filtros.categoria);
   // Solo tiene sentido junto con categoria (los nombres de subcategoría no
   // son únicos entre categorías distintas) — filtros.categoria siempre va
   // presente cuando el llamador manda subcategoria (ver /productos/page.tsx).
-  if (filtros.subcategoria) query = query.eq('subcategoria', filtros.subcategoria);
-  if (filtros.q) {
-    // Sanitizado: la sintaxis de filtros de PostgREST usa coma/paréntesis/punto
-    // como separadores estructurales — si el texto de búsqueda los trae tal
-    // cual, rompe (o altera) el filtro compuesto que arma .or(). Se limita a
-    // letras/números/espacios, suficiente para buscar por nombre o SKU.
-    const qLimpio = filtros.q.replace(/[^\p{L}\p{N} ]/gu, '').trim();
-    if (qLimpio) query = query.or(`nombre.ilike.%${qLimpio}%,sku.ilike.%${qLimpio}%`);
-  }
+  if (filtros.subcategoria) productos = productos.filter((p) => p.subcategoria === filtros.subcategoria);
+  // Letras, números y espacios: lo mismo que buscaba antes la base (nombre o SKU que lo contengan).
+  if (qTexto) productos = productos.filter((p) => p.nombre.toLowerCase().includes(qTexto) || p.sku.toLowerCase().includes(qTexto));
 
-  const { data, error } = await query;
-  if (error) throw new Error(error.message);
-  const productos = (data || []).map((p) => aplicarOferta(p));
-  // La base ordena por el precio NORMAL; con ofertas, el orden por precio
-  // tiene que seguir al precio que se muestra.
-  if (columna === 'precio_web') productos.sort((x, y) => (ascending ? 1 : -1) * (x.precio_web - y.precio_web));
+  // Con oferta, el orden por precio sigue al precio que se muestra (la copia ya trae la oferta aplicada).
+  const signo = ascending ? 1 : -1;
+  productos.sort((x, y) => columna === 'precio_web' ? signo * (x.precio_web - y.precio_web) || porNombre(x, y) : signo * porNombre(x, y));
   /* En una búsqueda sin orden elegido va primero lo que se puede llevar hoy,
      después lo que está por llegar y al final lo que es por encargo. */
   if (qTexto && clave === 'relevancia') {
@@ -540,9 +439,7 @@ export async function buscarCatalogo(filtros: {
  * se muestran los que calzan con la mayoría de las palabras.
  */
 export async function buscarTexto(filtros: { q: string; categoria?: string; orden?: string }): Promise<{ productos: ProductoWeb[]; parecidos: boolean }> {
-  const { data, error } = await supabaseWeb.from('productos_web').select('*').eq('publicado_web', true);
-  if (error) throw new Error(error.message);
-  let todos = (data || []).map((p) => aplicarOferta(p));
+  let todos = await publicadosEnMemoria();
   if (filtros.categoria) todos = todos.filter((p) => p.categoria === filtros.categoria);
   const resultado = buscarConParecidos(todos, filtros.q);
   const clave: OrdenCatalogo = esOrdenCatalogoValido(filtros.orden) ? filtros.orden : 'relevancia';

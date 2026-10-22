@@ -1,5 +1,5 @@
 import { listarCatalogo } from './catalogo';
-import { supabaseWeb } from './supabase-web';
+import { vendiblesEnMemoria } from './catalogo-memoria';
 import type { ProductoWeb } from './tipos';
 
 /**
@@ -17,15 +17,8 @@ export async function listarLiquidacion(): Promise<ProductoWeb[]> {
     .sort((a, b) => Number(a.precio_web) - Number(b.precio_web) || a.nombre.localeCompare(b.nombre, 'es'));
 }
 
-/** ¿Hay al menos uno? Para el enlace del menú: una consulta liviana, sin traer el catálogo. */
+/** ¿Hay al menos uno? Para el enlace del menú, que va en TODAS las páginas: sale de la
+ *  copia en memoria del catálogo (22-10-2026), sin consultar la base en cada página. */
 export async function hayLiquidacion(): Promise<boolean> {
-  const { count, error } = await supabaseWeb
-    .from('productos_web')
-    .select('id', { count: 'exact', head: true })
-    .eq('etiqueta_web', 'LIQUIDACION')
-    .eq('publicado_web', true)
-    .eq('es_pedido_encargo', false)
-    .gt('stock_web', 0);
-  if (error) throw new Error(error.message);
-  return (count ?? 0) > 0;
+  return (await vendiblesEnMemoria()).some((p) => p.etiqueta_web === 'LIQUIDACION');
 }
