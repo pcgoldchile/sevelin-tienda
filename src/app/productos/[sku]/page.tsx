@@ -470,7 +470,9 @@ export default async function FichaProducto({ params }: PropsPagina) {
               {agregable && !agotado && !producto.precio_a_consultar && !(producto.por_llegar && producto.stock_web <= 0) && (
                 <p className="mt-5 rounded-xl border border-dashed border-primary/40 bg-primary/5 px-4 py-3 text-sm leading-relaxed text-ink-soft">
                   <strong className="font-semibold text-ink">➕ Opcional:</strong>{" "}
-                  {producto.agregable_motivo ? `${producto.agregable_motivo.trim().replace(/\.+$/, "")}, agrégale el ` : "Agrégale el "}
+                  {/* Sin "el/la" delante del nombre: sirve igual para un accesorio o un servicio */}
+                  {producto.agregable_motivo ? `${producto.agregable_motivo.trim().replace(/\.+$/, "")}. ` : ""}
+                  Agrega{" "}
                   <Link href={`/productos/${rutaDeSku(agregable.sku)}`} className="font-medium text-accent underline hover:text-accent-deep">
                     {agregable.nombre}
                   </Link>{" "}
