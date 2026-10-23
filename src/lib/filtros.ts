@@ -117,6 +117,16 @@ export const GRUPOS_FILTRO: EntradaEsquema[] = [
     { id: "ram", nombre: "Memoria RAM", multiple: false, valores: ["4 GB", "8 GB", "16 GB o más"] },
     { id: "disco", nombre: "Disco", multiple: true, valores: ["SSD", "Disco duro (HDD)"] },
   ] },
+  // v178 (dueño, 23-10-2026): fundas de celular, para filtrarlas por modelo.
+  { categoria: "Accesorios Móviles", subcategoria: "Fundas", grupos: [
+    { id: "modelo_celular", nombre: "Modelo", multiple: false, valores: [
+      "iPhone 11", "iPhone 12", "iPhone 13", "iPhone 13 Pro Max", "iPhone 14", "iPhone 14 Pro Max",
+      "iPhone 15", "iPhone 15 Pro Max", "iPhone 16", "iPhone 16 Pro Max",
+      "Samsung Galaxy A15", "Samsung Galaxy A25 5G", "Samsung Galaxy A35", "Samsung Galaxy S23", "Samsung Galaxy S24",
+      "Xiaomi Redmi 13C", "Xiaomi Redmi 14C 4G", "Xiaomi Redmi Note 12",
+    ] },
+    { id: "tipo_funda", nombre: "Tipo", multiple: false, valores: ["Transparente", "Antigolpe con Anillo", "Tipo Billetera (Librito)", "Silicona", "Rígida", "MagSafe"] },
+  ] },
 ];
 
 /** Donde las subcategorías ya ordenan bien y un panel solo estorba. */
