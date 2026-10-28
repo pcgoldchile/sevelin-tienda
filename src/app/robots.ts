@@ -31,6 +31,20 @@ export default function robots(): MetadataRoute.Robots {
       /* PetalBot (buscador de Huawei, sin uso en Chile): 490 visitas en 12 horas y casi nada
          desde el caché. Se le cierra el sitio entero. */
       { userAgent: 'PetalBot', disallow: '/' },
+      /* 28-10-2026: Vercel avisó 75% de "Fast Origin Transfer" (7,6 de 10 GB; el 96% de la tienda).
+         En 12 horas, de 2.700 visitas: meta-externalagent 714, GPTBot 241, Amazonbot 119, casi sin
+         caché. Son robots que copian el sitio para entrenar IA o para herramientas de SEO: no traen
+         clientes. Se cierran. Se dejan abiertos Googlebot, Bingbot, google-adsbot, facebookexternalhit
+         (la vista previa de los enlaces en Facebook y WhatsApp) y OAI-SearchBot/ChatGPT-User (las
+         respuestas del buscador de ChatGPT sí pueden mandar gente). */
+      {
+        userAgent: [
+          'meta-externalagent', 'GPTBot', 'Amazonbot', 'CCBot', 'Bytespider', 'ClaudeBot', 'anthropic-ai',
+          'Google-Extended', 'Applebot-Extended', 'PerplexityBot', 'cohere-ai', 'Diffbot', 'ImagesiftBot',
+          'SemrushBot', 'AhrefsBot', 'MJ12bot', 'DotBot', 'DataForSeoBot', 'BLEXBot', 'Barkrowler'
+        ],
+        disallow: '/',
+      },
     ],
     sitemap: `${SITE_URL}/sitemap.xml`,
   };
