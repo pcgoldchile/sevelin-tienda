@@ -1,19 +1,27 @@
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
-import { after } from "next/server";
 import { obtenerEncargoPorSku } from "@/lib/encargos";
 import { skuVigenteDeEnlaceViejo } from "@/lib/catalogo";
 import { skuDesdeRuta, rutaDeSku } from "@/lib/sku-url";
 import { formatoCLP } from "@/lib/formato";
 import { sanitizarDescripcionHtml } from "@/lib/sanitizar-html";
-import { registrarVistaProducto } from "@/lib/eventos-web";
+import { RegistrarVistaProducto } from "@/components/registrar-vista-producto";
 import { GaleriaProducto } from "@/components/galeria-producto";
 import { AccionesProducto } from "@/components/acciones-producto";
 import { EtiquetaProductoBadge } from "@/components/etiqueta-producto-badge";
 import { InfoEnvioProducto } from "@/components/info-envio-producto";
 import { CondicionesEncargo } from "@/components/condiciones-encargo";
 
-export const revalidate = 60;
+// 28-10-2026: cada 1 hora (antes 60 s); los cambios del POS se ven al instante por /api/sync/producto (revalidatePath).
+export const revalidate = 3600;
+
+/* 28-10-2026 (auditoría de costos): sin generateStaticParams, Next.js armaba la ficha de cero en
+   CADA visita (ƒ en el build) y el revalidate no servía. Con una lista vacía, cada ficha se arma
+   la primera vez que alguien la pide y queda en caché hasta 1 hora, o hasta que el POS la cambie
+   (/api/sync/producto hace revalidatePath). */
+export async function generateStaticParams() {
+  return [];
+}
 
 interface PropsPagina {
   params: Promise<{ sku: string }>;
@@ -32,11 +40,10 @@ export default async function FichaEncargo({ params }: PropsPagina) {
     producto = await obtenerEncargoPorSku(skuDesdeRuta(sku));
   } catch (err) {
     console.error("[FichaEncargo] No se pudo cargar el producto:", err instanceof Error ? err.message : err);
-    return (
-      <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
-        <p className="text-ink-soft">Esta sección no está disponible en este momento.</p>
-      </main>
-    );
+    /* 28-10-2026: la ficha queda en caché. Si la base falla al rearmarla, se lanza el error para que
+       Next.js siga mostrando la última versión buena en vez de guardar este aviso por 1 hora. La
+       primera vez que se pide, lo muestra src/app/error.tsx con un botón para reintentar. */
+    throw err;
   }
   // Enlace viejo (era el código de barras, ver src/lib/enlaces-codigo.ts):
   // va a su enlace de hoy. Si la búsqueda falla, se queda en el 404 de siempre.
@@ -46,7 +53,6 @@ export default async function FichaEncargo({ params }: PropsPagina) {
     notFound();
   }
 
-  after(() => registrarVistaProducto(producto.producto_pos_id));
 
   const descripcionSegura = producto.descripcion_web
     ? sanitizarDescripcionHtml(producto.descripcion_web)
@@ -54,6 +60,8 @@ export default async function FichaEncargo({ params }: PropsPagina) {
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
+      {/* La vista la cuenta el navegador: la ficha queda en caché (28-10-2026) */}
+      <RegistrarVistaProducto productoPosId={producto.producto_pos_id} />
       <nav className="mb-6 text-sm text-ink-faint">
         <Link href="/" className="transition-colors hover:text-accent">Inicio</Link>
         <span className="mx-1.5">/</span>

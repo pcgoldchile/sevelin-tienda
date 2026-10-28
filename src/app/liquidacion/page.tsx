@@ -5,7 +5,8 @@ import { GrillaConFiltros } from "@/components/grilla-con-filtros";
 import { listarLiquidacion } from "@/lib/liquidacion";
 import type { ProductoWeb } from "@/lib/tipos";
 
-export const revalidate = 60;
+// 28-10-2026: cada 15 min (antes 60 s); los cambios del POS se ven al instante por /api/sync/producto (revalidatePath).
+export const revalidate = 900;
 
 export const metadata: Metadata = {
   title: "Liquidación",

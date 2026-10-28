@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { esCorreoDeRobot, guardarCarritoAbandonado, type ItemCarritoWeb } from '@/lib/carritos-web';
+import { chequearLimite, ipReal, respuestaLimiteExcedido } from '@/lib/rate-limit';
 
 /** POST /api/carrito/abandono — lo llama formulario-checkout.tsx apenas el
  * cliente deja un correo válido (antes de pagar), y de nuevo si después
@@ -7,6 +8,8 @@ import { esCorreoDeRobot, guardarCarritoAbandonado, type ItemCarritoWeb } from '
  * (ver /api/cron/recordar-carritos) y para que el dueño le escriba por
  * WhatsApp desde el POS. Mejor esfuerzo: si falla, el checkout sigue igual. */
 export async function POST(req: NextRequest) {
+  const limite = await chequearLimite('carrito-abandono', ipReal(req));
+  if (!limite.permitido) return respuestaLimiteExcedido(limite);
   let cuerpo: {
     id?: string;
     correo?: string;

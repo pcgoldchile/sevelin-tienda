@@ -1,8 +1,8 @@
 import { supabaseWeb } from './supabase-web';
 
-/** Ventana de "activo ahora" — más de 2 latidos (25s cada uno) sin
- * responder y se considera que la persona ya no está. */
-export const VENTANA_ACTIVO_MS = 90 * 1000;
+/** Ventana de "activo ahora" — con latidos cada 60 s (28-10-2026), 2 latidos y medio sin
+ * responder y se considera que la persona ya no está. El POS usa la misma ventana. */
+export const VENTANA_ACTIVO_MS = 150 * 1000;
 
 /** Registra/actualiza el latido de una sesión — mejor esfuerzo, igual que
  * registrarVisita() en eventos-web.ts: nunca debe romper la navegación

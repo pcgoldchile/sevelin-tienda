@@ -4,7 +4,8 @@ import { MessageCircle, BellRing, Truck } from "lucide-react";
 import { listarAgotados } from "@/lib/agotados";
 import { TarjetaProducto } from "@/components/tarjeta-producto";
 
-export const revalidate = 60;
+// 28-10-2026: cada 15 min (antes 60 s); los cambios del POS se ven al instante por /api/sync/producto (revalidatePath).
+export const revalidate = 900;
 
 export const metadata: Metadata = {
   title: "Agotados — te los conseguimos | Sevelin Arica",

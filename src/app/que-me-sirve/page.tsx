@@ -3,7 +3,8 @@ import { publicadosEnMemoria } from "@/lib/catalogo-memoria";
 import { rutaDeSku } from "@/lib/sku-url";
 import { AsistenteQueMeSirve, type ProductoAsistente } from "@/components/asistente-que-me-sirve";
 
-export const revalidate = 60;
+// 28-10-2026: cada 15 min (antes 60 s); los cambios del POS se ven al instante por /api/sync/producto (revalidatePath).
+export const revalidate = 900;
 
 export const metadata: Metadata = {
   title: "¿Qué me sirve? Te ayudamos a elegir",

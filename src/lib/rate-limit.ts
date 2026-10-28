@@ -36,7 +36,8 @@ if (!redisConfigurado) {
 
 const redis = redisConfigurado ? Redis.fromEnv() : null;
 
-export type NombreLimite = 'autocompletar-direccion' | 'detalle-direccion' | 'cotizar-envio' | 'crear-cotizacion';
+export type NombreLimite = 'autocompletar-direccion' | 'detalle-direccion' | 'cotizar-envio' | 'crear-cotizacion'
+  | 'avisos' | 'carrito-compartir' | 'carrito-abandono' | 'eventos-visita' | 'visita-activa';
 
 interface ConfigLimite {
   /** Ráfaga corta: frena un script que dispara muchas peticiones seguidas. */
@@ -76,9 +77,18 @@ const CONFIGURACION: Record<NombreLimite, ConfigLimite> = {
      cotiza una o dos veces; 15 al día por IP deja margen para una oficina
      con IP compartida sin dejar margen para abusar. */
   'crear-cotizacion': { rafagaMax: 3, rafagaVentana: '60 s', diarioMax: 15 },
+  /* 28-10-2026 (auditoría): rutas públicas que ESCRIBEN en la base. Sin freno, un script podía
+     llenarlas de basura y gastar el cupo de Vercel y Supabase. Los techos dejan muy sobrado lo que
+     hace una persona real. diarioMax 0 = solo ráfaga (las visitas y latidos son muchos y baratos:
+     así se gasta la mitad de comandos de Upstash). */
+  avisos: { rafagaMax: 5, rafagaVentana: '60 s', diarioMax: 20 },
+  'carrito-compartir': { rafagaMax: 10, rafagaVentana: '60 s', diarioMax: 40 },
+  'carrito-abandono': { rafagaMax: 10, rafagaVentana: '60 s', diarioMax: 60 },
+  'eventos-visita': { rafagaMax: 60, rafagaVentana: '60 s', diarioMax: 0 },
+  'visita-activa': { rafagaMax: 10, rafagaVentana: '60 s', diarioMax: 0 },
 };
 
-const limitadores = new Map<NombreLimite, { rafaga: Ratelimit; diario: Ratelimit }>();
+const limitadores = new Map<NombreLimite, { rafaga: Ratelimit; diario: Ratelimit | null }>();
 
 function obtenerLimitador(nombre: NombreLimite) {
   if (!redis) return null;
@@ -92,12 +102,12 @@ function obtenerLimitador(nombre: NombreLimite) {
         prefix: `sevelin:rl:rafaga:${nombre}`,
         analytics: false,
       }),
-      diario: new Ratelimit({
+      diario: cfg.diarioMax > 0 ? new Ratelimit({
         redis,
         limiter: Ratelimit.fixedWindow(cfg.diarioMax, '1 d'),
         prefix: `sevelin:rl:diario:${nombre}`,
         analytics: false,
-      }),
+      }) : null,
     };
     limitadores.set(nombre, par);
   }
@@ -129,6 +139,7 @@ export async function chequearLimite(nombre: NombreLimite, ip: string): Promise<
     };
   }
 
+  if (!par.diario) return { permitido: true };
   const diario = await par.diario.limit(ip);
   if (!diario.success) {
     return {

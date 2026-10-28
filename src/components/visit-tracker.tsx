@@ -23,8 +23,8 @@ export function VisitTracker() {
 
   // "Visitantes activos ahora" (panel Métricas del POS) — un id de sesión
   // por PESTAÑA (sessionStorage, no localStorage: cerrar la pestaña debe
-  // contar como que esa persona se fue) que manda un latido cada 25s
-  // mientras sigue abierta. document.hidden evita inflar el conteo con
+  // contar como que esa persona se fue) que manda un latido
+  // mientras sigue abierta (cada 60 s). document.hidden evita inflar el conteo con
   // pestañas en segundo plano que el usuario ya no está mirando.
   useEffect(() => {
     let idSesion: string;
@@ -46,7 +46,9 @@ export function VisitTracker() {
     };
 
     latido();
-    const intervalo = setInterval(latido, 25000);
+    // 28-10-2026: cada 60 s (antes 25 s). Cada latido es una llamada a Vercel y una escritura en
+    // Supabase; la ventana de "activo" (150 s, ver visitas-activas.ts y el POS) da margen a 1 latido perdido.
+    const intervalo = setInterval(latido, 60000);
     return () => clearInterval(intervalo);
   }, []);
 

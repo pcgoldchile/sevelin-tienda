@@ -11,7 +11,8 @@ import { PanelFiltros } from "@/components/panel-filtros";
 import { aplicarFiltros, alternarFiltro, atajosDeCategoria, enlaceConFiltros, leerRangoPrecio, leerSeleccion, textoRangoPrecio } from "@/lib/filtros";
 import { SinResultados } from "@/components/sin-resultados";
 
-export const revalidate = 60;
+// 28-10-2026: cada 15 min (antes 60 s); los cambios del POS se ven al instante por /api/sync/producto (revalidatePath).
+export const revalidate = 900;
 
 /* Además de categoria/subcategoria/q/orden llegan los filtros (f_entradas=HDMI…,
    ver src/lib/filtros.ts), que pueden venir repetidos: de ahí el string[]. */
