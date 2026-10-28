@@ -22,8 +22,12 @@ import { NextResponse } from 'next/server';
  * la propia Google Maps).
  */
 
+/* 28-10-2026: también con los nombres KV_REST_API_* que deja la integración de Upstash del
+   Marketplace de Vercel (Redis.fromEnv() ya acepta los dos). La auditoría encontró que en
+   producción no había ninguna: todos los frenos estaban apagados. */
 const redisConfigurado = !!(
-  process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
+  (process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL) &&
+  (process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN)
 );
 
 if (!redisConfigurado) {
