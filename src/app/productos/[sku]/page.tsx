@@ -3,7 +3,6 @@ import { PUNTOS_PUBLICOS, fmtPuntos } from "@/lib/puntos-reglas";
 import { testDeServicio } from "@/lib/test-servicios";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
-import { after } from "next/server";
 import { obtenerProductoPublicado, productoAgregable, productosComplementarios, productosRelacionados, skuVigenteDeEnlaceViejo } from "@/lib/catalogo";
 import { CarruselProductos } from "@/components/carrusel-productos";
 import { OpcionesAgotado } from "@/components/opciones-agotado";
@@ -12,7 +11,7 @@ import { formatoCLP } from "@/lib/formato";
 import { HAY_RECARGO, precioConRecargo } from "@/lib/precios-medio-pago";
 import { sanitizarDescripcionHtml } from "@/lib/sanitizar-html";
 import { textoPlanoDesdeHtml, recortarEnPalabra } from "@/lib/texto-plano";
-import { registrarVistaProducto } from "@/lib/eventos-web";
+import { RegistrarVistaProducto } from "@/components/registrar-vista-producto";
 import { GaleriaProducto } from "@/components/galeria-producto";
 import { AccionesProducto } from "@/components/acciones-producto";
 import { BotonAgregarFoto } from "@/components/boton-agregar-foto";
@@ -34,7 +33,16 @@ import { MensajeWhatsappProducto } from "@/components/mensaje-whatsapp-producto"
 import { BotonComparar } from "@/components/boton-comparar";
 import { VistosRecientemente } from "@/components/vistos-recientemente";
 
-export const revalidate = 60;
+// 28-10-2026: cada 1 hora (antes 60 s); los cambios del POS se ven al instante por /api/sync/producto (revalidatePath).
+export const revalidate = 3600;
+
+/* 28-10-2026 (auditoría de costos): sin generateStaticParams, Next.js armaba la ficha de cero en
+   CADA visita (ƒ en el build) y el revalidate no servía. Con una lista vacía, cada ficha se arma
+   la primera vez que alguien la pide y queda en caché hasta 1 hora, o hasta que el POS la cambie
+   (/api/sync/producto hace revalidatePath). */
+export async function generateStaticParams() {
+  return [];
+}
 
 interface PropsPagina {
   params: Promise<{ sku: string }>;
@@ -98,11 +106,10 @@ export default async function FichaProducto({ params }: PropsPagina) {
     producto = await obtenerProductoPublicado(skuDesdeRuta(sku));
   } catch (err) {
     console.error("[FichaProducto] No se pudo cargar el producto:", err instanceof Error ? err.message : err);
-    return (
-      <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
-        <p className="text-ink-soft">El catálogo no está disponible en este momento.</p>
-      </main>
-    );
+    /* 28-10-2026: la ficha queda en caché. Si la base falla al rearmarla, se lanza el error para que
+       Next.js siga mostrando la última versión buena en vez de guardar este aviso por 1 hora. La
+       primera vez que se pide, lo muestra src/app/error.tsx con un botón para reintentar. */
+    throw err;
   }
   // Enlace viejo de un producto renombrado: va a su enlace de hoy en vez de
   // dar "no encontrado" (ver skuVigenteDeEnlaceViejo). Si la búsqueda falla,
@@ -133,9 +140,6 @@ export default async function FichaProducto({ params }: PropsPagina) {
   const idsComplementarios = new Set(complementarios.map((p) => p.id));
   const relacionados = parecidos.filter((p) => !idsComplementarios.has(p.id));
 
-  // Se registra DESPUÉS de mandar la respuesta (after()), no retrasa la
-  // ficha — el POS la lee para el panel "Más buscados / más vistos".
-  after(() => registrarVistaProducto(producto.producto_pos_id));
 
   const descripcionSegura = producto.descripcion_web
     ? sanitizarDescripcionHtml(producto.descripcion_web)
@@ -189,6 +193,8 @@ export default async function FichaProducto({ params }: PropsPagina) {
        vacío quedaba bajo la foto fija (460px a 1920×1080). El ancho extra
        es lo único que deja crecer una foto cuadrada. */
     <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8 xl:max-w-[1320px]">
+      {/* La vista la cuenta el navegador: la ficha queda en caché (28-10-2026) */}
+      <RegistrarVistaProducto productoPosId={producto.producto_pos_id} />
       <script
         type="application/ld+json"
         // JSON.stringify no puede producir '</script>' válido dentro de un

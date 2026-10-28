@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { registrarLatido } from '@/lib/visitas-activas';
+import { chequearLimite, ipReal, respuestaLimiteExcedido } from '@/lib/rate-limit';
 
 /** POST /api/visita-activa — lo llama VisitTracker (cliente) cada ~25s
  * mientras la pestaña sigue abierta y visible. Sin autenticación, mismo
  * criterio que /api/eventos/visita: no es sensible, solo alimenta
  * "visitantes activos ahora" del panel Métricas del POS. */
 export async function POST(req: NextRequest) {
+  const limite = await chequearLimite('visita-activa', ipReal(req));
+  if (!limite.permitido) return respuestaLimiteExcedido(limite);
   let sessionId = '';
   try {
     const body = await req.json();

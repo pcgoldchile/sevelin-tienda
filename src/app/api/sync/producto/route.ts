@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
+import { rutaDeSku } from '@/lib/sku-url';
 import { supabaseWeb } from '@/lib/supabase-web';
 import { verificarSecretoSync } from '@/lib/verificar-secreto';
 import { tasaPuntos } from '@/lib/puntos-reglas';
@@ -41,6 +43,29 @@ interface WebhookPayload {
  * sincronización lo reemplaza por ese SKU real (cambia la URL — aceptado,
  * ver docs/SNAPSHOT.md).
  */
+/* 28-10-2026 (auditoría de costos): las páginas ya no se rearman cada 60 s sino cada 15 a 60 min.
+   Para que un cambio del POS (precio, stock, fotos) se vea al instante igual, cada sincronización
+   marca como vieja la ficha del producto (con su SKU nuevo y el anterior) y las listas que lo
+   muestran. Solo se rearman cuando alguien las vuelve a pedir. */
+const LISTAS_CON_PRODUCTOS = ['/', '/productos', '/ofertas', '/liquidacion', '/por-llegar', '/agotados', '/pedidos-por-encargo', '/que-me-sirve'];
+
+function refrescarPaginasDeProducto(skus: Array<string | null | undefined>) {
+  try {
+    for (const s of new Set(skus.filter((x): x is string => !!x))) {
+      revalidatePath(`/productos/${rutaDeSku(s)}`);
+      revalidatePath(`/pedidos-por-encargo/${rutaDeSku(s)}`);
+    }
+    for (const ruta of LISTAS_CON_PRODUCTOS) revalidatePath(ruta);
+  } catch (err) {
+    console.error('[sync/producto] No se pudieron refrescar las páginas:', err instanceof Error ? err.message : err);
+  }
+}
+
+function skuAnteriorDe(registro: { sku?: string | null; nombre?: string | null; id?: number } | null | undefined): string | null {
+  if (!registro?.id) return null;
+  return (registro.sku || '').trim() || slugDeRespaldo(registro.nombre || '', registro.id);
+}
+
 function slugDeRespaldo(nombre: string, productoPosId: number): string {
   const base = (nombre || 'producto')
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // quita tildes
@@ -116,6 +141,7 @@ export async function POST(req: NextRequest) {
 
     const { error } = await supabaseWeb.from('productos_web').delete().eq('producto_pos_id', idPos);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    refrescarPaginasDeProducto([skuAnteriorDe(payload.old_record)]);
     return NextResponse.json({ ok: true, accion: 'eliminado', producto_pos_id: idPos });
   }
 
@@ -244,6 +270,7 @@ export async function POST(req: NextRequest) {
     await avisarQueLlego(producto.id, producto.nombre);
   }
 
+  refrescarPaginasDeProducto([sku, skuAnteriorDe(payload.old_record)]);
   return NextResponse.json({ ok: true, accion: 'sincronizado', producto: data });
 }
 

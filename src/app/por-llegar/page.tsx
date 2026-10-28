@@ -5,7 +5,8 @@ import { AvisoPagoTarjeta } from "@/components/aviso-pago-tarjeta";
 import { medioTarjetaDisponible } from "@/lib/link-pago";
 import { Truck, ShieldCheck, BellRing } from "lucide-react";
 
-export const revalidate = 60;
+// 28-10-2026: cada 15 min (antes 60 s); los cambios del POS se ven al instante por /api/sync/producto (revalidatePath).
+export const revalidate = 900;
 
 export const metadata: Metadata = {
   title: "Por llegar — productos en camino | Sevelin Arica",

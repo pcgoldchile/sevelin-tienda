@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { anotarAviso } from '@/lib/avisos-producto';
 import { obtenerProductoPublicado } from '@/lib/catalogo';
+import { chequearLimite, ipReal, respuestaLimiteExcedido } from '@/lib/rate-limit';
 
 /**
  * POST /api/avisos — "avísame cuando llegue".
@@ -16,6 +17,8 @@ import { obtenerProductoPublicado } from '@/lib/catalogo';
  * producto — no habilita marketing, que es otro consentimiento.
  */
 export async function POST(req: NextRequest) {
+  const limite = await chequearLimite('avisos', ipReal(req));
+  if (!limite.permitido) return respuestaLimiteExcedido(limite);
   let cuerpo: { sku?: string; email?: string; nombre?: string; telefono?: string; consentimiento?: boolean };
   try {
     cuerpo = await req.json();

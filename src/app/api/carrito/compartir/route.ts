@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { crearCarritoCompartido, type ItemCarritoWeb } from '@/lib/carritos-web';
+import { chequearLimite, ipReal, respuestaLimiteExcedido } from '@/lib/rate-limit';
 
 /** POST /api/carrito/compartir — crea el carrito detrás del botón "🔗
  * Compartir carrito" (ver carrito-drawer.tsx). Solo guarda sku+cantidad:
  * precio/nombre/stock se revalidan contra el catálogo real al abrir el link
  * (ver /carrito-compartido). No vence. */
 export async function POST(req: NextRequest) {
+  const limite = await chequearLimite('carrito-compartir', ipReal(req));
+  if (!limite.permitido) return respuestaLimiteExcedido(limite);
   let cuerpo: { items?: { sku?: string; cantidad?: number }[] };
   try {
     cuerpo = await req.json();

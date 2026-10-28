@@ -1,7 +1,8 @@
 import { listarEncargos } from "@/lib/encargos";
 import { EncargosNavegables } from "@/components/encargos-navegables";
 
-export const revalidate = 60;
+// 28-10-2026: cada 15 min (antes 60 s); los cambios del POS se ven al instante por /api/sync/producto (revalidatePath).
+export const revalidate = 900;
 
 /**
  * Sección aparte del catálogo normal (ver /productos): productos que el

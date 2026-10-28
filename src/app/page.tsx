@@ -20,7 +20,8 @@ import type { ProductoWeb } from "@/lib/tipos";
 // ISR: el catálogo no cambia segundo a segundo (se sincroniza vía webhook
 // desde el POS), así que 60s de cache es suficiente para una navegación
 // fluida sin pegarle a Supabase en cada visita.
-export const revalidate = 60;
+// 28-10-2026: cada 15 min (antes 60 s); los cambios del POS se ven al instante por /api/sync/producto (revalidatePath).
+export const revalidate = 900;
 
 /**
  * Inicio (rediseño del dueño, 19-10-2026): "una combinación de A y C, sin lo de los
