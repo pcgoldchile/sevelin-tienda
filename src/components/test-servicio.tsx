@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { HORARIO_POR_DEFECTO, tramosLegibles, type HorarioAtencion } from "@/lib/horarios";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
@@ -20,16 +21,15 @@ export interface ServicioTest {
 
 const ICONOS: Record<TestServicio["icono"], LucideIcon> = { pc: Cpu, formateo: Zap, pantalla: Smartphone, carga: BatteryCharging };
 
-const TRAMOS = ["10:00 a 13:00", "14:00 a 21:00"];
 
 /** Los próximos 7 días en Chile (se atiende de lunes a domingo). */
-function proximosDias(): { valor: string; texto: string; domingo: boolean }[] {
+function proximosDias(cierre: number): { valor: string; texto: string; domingo: boolean }[] {
   const dias: { valor: string; texto: string; domingo: boolean }[] = [];
   const fmt = new Intl.DateTimeFormat("es-CL", { timeZone: "America/Santiago", weekday: "short", day: "numeric", month: "numeric" });
   const semana = new Intl.DateTimeFormat("es-CL", { timeZone: "America/Santiago", weekday: "long" });
-  // Después de las 20:00 ya no alcanza a traerlo hoy (se cierra a las 21:00).
+  // Una hora antes del cierre ya no alcanza a traerlo hoy (el cierre sale del horario vigente).
   const hora = Number(new Intl.DateTimeFormat("es-CL", { timeZone: "America/Santiago", hour: "numeric", hourCycle: "h23" }).format(new Date()));
-  for (let i = hora >= 20 ? 1 : 0; i < 8 && dias.length < 7; i++) {
+  for (let i = hora >= cierre - 1 ? 1 : 0; i < 8 && dias.length < 7; i++) {
     const d = new Date(Date.now() + i * 86400000);
     const largo = fmt.format(d);
     dias.push({ valor: largo, texto: i === 0 ? "Hoy" : i === 1 ? "Mañana" : largo, domingo: semana.format(d) === "domingo" });
@@ -42,7 +42,7 @@ function proximosDias(): { valor: string; texto: string; domingo: boolean }[] {
  * (orientativa), por qué, el servicio que corresponde y el botón para agendarlo por
  * WhatsApp con todo ya escrito.
  */
-export function TestDeServicio({ servicios, whatsapp, inicial }: { servicios: Record<number, ServicioTest>; whatsapp: string | null; inicial?: string }) {
+export function TestDeServicio({ servicios, whatsapp, inicial, horario = HORARIO_POR_DEFECTO }: { servicios: Record<number, ServicioTest>; whatsapp: string | null; inicial?: string; horario?: HorarioAtencion }) {
   const quieto = useReducedMotion();
   const [test, setTest] = useState<TestServicio | null>(() => TESTS.find((t) => t.id === inicial) ?? null);
   const [paso, setPaso] = useState(0);
@@ -168,7 +168,7 @@ export function TestDeServicio({ servicios, whatsapp, inicial }: { servicios: Re
           </motion.div>
         ) : (
           <motion.div key="resultado" initial={quieto ? false : { opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: EASE_OUT }}>
-            <Resultado test={test} respuestas={respuestas} libres={libres} servicios={servicios} whatsapp={whatsapp} />
+            <Resultado test={test} respuestas={respuestas} libres={libres} servicios={servicios} whatsapp={whatsapp} horario={horario} />
             <button type="button" onClick={() => empezar(test)} className="mt-6 inline-flex items-center gap-1.5 text-sm text-ink-soft hover:text-primary">
               <RotateCcw className="h-4 w-4" aria-hidden /> Hacerlo de nuevo
             </button>
@@ -185,12 +185,14 @@ function Resultado({
   libres,
   servicios,
   whatsapp,
+  horario,
 }: {
   test: TestServicio;
   respuestas: Record<string, number>;
   libres: Record<string, string>;
   servicios: Record<number, ServicioTest>;
   whatsapp: string | null;
+  horario: HorarioAtencion;
 }) {
   const pct = probabilidad(test, respuestas);
   const v = veredicto(pct);
@@ -201,7 +203,8 @@ function Resultado({
   const servicio = servicios[idServicio];
   const modelo = libres.modelo?.trim();
 
-  const dias = useMemo(() => proximosDias(), []);
+  const dias = useMemo(() => proximosDias(horario.tramos[horario.tramos.length - 1].hasta), [horario]);
+  const TRAMOS = tramosLegibles(horario);
   const [dia, setDia] = useState<string | null>(null);
   const [tramo, setTramo] = useState<string | null>(null);
   const [nombre, setNombre] = useState("");

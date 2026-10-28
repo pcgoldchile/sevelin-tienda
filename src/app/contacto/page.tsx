@@ -5,7 +5,8 @@ import { IconoInstagram, IconoWhatsApp } from "@/components/iconos-redes";
 import { BotonesRedes } from "@/components/botones-redes";
 import { ComoLlegar } from "@/components/como-llegar";
 import { EMAIL_CONTACTO, URL_INSTAGRAM, URL_PERFIL_GOOGLE, URL_WHATSAPP, whatsappLegible } from "@/lib/contacto";
-import { AVISO_DOMINGO, HORARIO_LEGIBLE } from "@/lib/horarios";
+import { horarioLegible } from "@/lib/horarios";
+import { obtenerHorario } from "@/lib/horario-actual";
 
 export const metadata: Metadata = {
   title: "Contáctanos",
@@ -15,8 +16,9 @@ export const metadata: Metadata = {
 
 const TARJETA = "flex items-start gap-4 rounded-2xl border border-border bg-surface p-5 transition-colors hover:border-primary/60";
 
-export default function Contacto() {
+export default async function Contacto() {
   const whatsapp = whatsappLegible();
+  const h = await obtenerHorario();
   return (
     <main className="flex flex-col">
       <div className="mx-auto w-full max-w-3xl px-4 pt-12 sm:px-6 lg:px-8">
@@ -69,8 +71,8 @@ export default function Contacto() {
         <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-amber-400/15 text-amber-300"><Clock className="h-5 w-5" aria-hidden /></span>
         <div>
           <p className="text-sm font-semibold text-ink">Horario de atención</p>
-          <p className="text-sm text-ink-soft">{HORARIO_LEGIBLE}.</p>
-          <p className="mt-1 text-xs text-ink-faint">{AVISO_DOMINGO} Antes de venir, escríbenos para dejarte todo listo.</p>
+          <p className="text-sm text-ink-soft">{horarioLegible(h)}.</p>
+          <p className="mt-1 text-xs text-ink-faint">{h.aviso_domingo} Antes de venir, escríbenos para dejarte todo listo.</p>
         </div>
       </div>
 

@@ -3,7 +3,7 @@
  *
  *   - Despacho a domicilio: solo sale el mismo día si la compra entra
  *     ANTES de las 20:00. Después, se programa para el día hábil siguiente.
- *   - Retiro en tienda: se puede retirar el mismo día hasta las 21:00.
+ *   - Retiro en tienda: se puede retirar el mismo día hasta el cierre (último tramo del horario).
  *
  * TODO se evalúa en hora de Chile, nunca con la hora del navegador del
  * cliente: alguien comprando desde otro huso vería un corte equivocado, y
@@ -16,27 +16,93 @@
 export const ZONA_CHILE = 'America/Santiago';
 
 /**
- * Horario real de atención (confirmado por el dueño el 10-10-2026, local de San Rafael 896; antes 11 a 13 y 14 a 20):
- * lunes a domingo, de 10:00 a 13:00 y de 14:00 a 21:00.
+ * Horario de atención. DESDE EL 28-10-2026 LO CAMBIA EL DUEÑO EN EL POS (botón "🕒 Horario"):
+ * el POS lo manda a POST /api/sync/horario, se guarda en la tabla ajustes_tienda y el servidor
+ * lo lee con obtenerHorario() (src/lib/horario-actual.ts). Lo de aquí es el RESPALDO por si esa
+ * fila no existe o la base no responde, y debe ser el mismo horario vigente.
  *
- * Vive acá y en un solo lugar porque lo usan los bloques de retiro
- * agendado, los avisos del checkout y las Preguntas Frecuentes. Tenerlo
- * escrito en tres partes garantiza que dos queden desactualizadas.
+ * Historia: 11-13 y 14-20 → 10-13 y 14-21 (10-10-2026, San Rafael 896) → 10-13 y 14-20 (28-10-2026).
+ *
+ * Este archivo no lee la base: lo usan también componentes del navegador. Las funciones reciben
+ * el horario como parámetro y, si no se lo dan, usan el de respaldo.
  */
-export const TRAMOS_ATENCION = [
-  { desde: 10, hasta: 13 },
-  { desde: 14, hasta: 21 },
-] as const;
+export interface TramoAtencion {
+  desde: number;
+  hasta: number;
+}
 
-export const APERTURA_HORA = TRAMOS_ATENCION[0].desde;
-export const HORARIO_LEGIBLE = 'Lunes a domingo, de 10:00 a 13:00 y de 14:00 a 21:00';
+export interface HorarioAtencion {
+  /** Horas enteras, 0-24, en orden y sin cruzarse. Entre dos tramos va la pausa (colación). */
+  tramos: TramoAtencion[];
+  /** "Lunes a domingo", "Lunes a sábado"... */
+  dias: string;
+  /** Nota del domingo; vacía si no hay. */
+  aviso_domingo: string;
+}
+
+export const HORARIO_POR_DEFECTO: HorarioAtencion = {
+  tramos: [
+    { desde: 10, hasta: 13 },
+    { desde: 14, hasta: 20 },
+  ],
+  dias: 'Lunes a domingo',
+  aviso_domingo: 'Los domingos atendemos, pero conviene escribirnos o llamarnos antes para confirmar.',
+};
+
+const dosDigitos = (h: number) => `${String(h).padStart(2, '0')}:00`;
+
+/** "Lunes a domingo, de 10:00 a 13:00 y de 14:00 a 20:00" */
+export function horarioLegible(h: HorarioAtencion = HORARIO_POR_DEFECTO): string {
+  const partes = h.tramos.map((t) => `de ${dosDigitos(t.desde)} a ${dosDigitos(t.hasta)}`);
+  const unidos = partes.length > 1 ? `${partes.slice(0, -1).join(', ')} y ${partes[partes.length - 1]}` : partes[0] || '';
+  return `${h.dias}, ${unidos}`;
+}
+
+/** "10:00 a 13:00" por tramo (bloques del test de servicio, etc.). */
+export function tramosLegibles(h: HorarioAtencion = HORARIO_POR_DEFECTO): string[] {
+  return h.tramos.map((t) => `${dosDigitos(t.desde)} a ${dosDigitos(t.hasta)}`);
+}
+
+/** La pausa entre el primer y el segundo tramo ("13:00 a 14:00"), o null si no hay. */
+export function pausaLegible(h: HorarioAtencion = HORARIO_POR_DEFECTO): string | null {
+  if (h.tramos.length < 2) return null;
+  return `${dosDigitos(h.tramos[0].hasta)} a ${dosDigitos(h.tramos[1].desde)}`;
+}
+
+/** Valida lo que llega del POS o de la base. Devuelve null si no sirve (nunca lanza). */
+export function sanearHorario(x: unknown): HorarioAtencion | null {
+  if (!x || typeof x !== 'object') return null;
+  const o = x as Record<string, unknown>;
+  if (!Array.isArray(o.tramos) || o.tramos.length < 1 || o.tramos.length > 3) return null;
+  const tramos: TramoAtencion[] = [];
+  let ultimo = -1;
+  for (const t of o.tramos as unknown[]) {
+    const desde = Number((t as TramoAtencion)?.desde);
+    const hasta = Number((t as TramoAtencion)?.hasta);
+    if (!Number.isInteger(desde) || !Number.isInteger(hasta)) return null;
+    if (desde < 0 || hasta > 24 || desde >= hasta || desde < ultimo) return null;
+    ultimo = hasta;
+    tramos.push({ desde, hasta });
+  }
+  const dias = String(o.dias ?? '').trim().slice(0, 60) || HORARIO_POR_DEFECTO.dias;
+  const aviso_domingo = String(o.aviso_domingo ?? '').trim().slice(0, 200);
+  return { tramos, dias, aviso_domingo };
+}
+
+/** Marca que va en el HTML de los correos (src/lib/correo-pedido.ts) y que enviarCorreo()
+ *  (src/lib/resend.ts) reemplaza con el horario vigente justo antes de mandarlo. */
+export const MARCA_HORARIO = '{{HORARIO_TIENDA}}';
+
+/* Constantes del horario de respaldo, para el código que todavía no recibe el horario vigente. */
+export const TRAMOS_ATENCION = HORARIO_POR_DEFECTO.tramos;
+export const APERTURA_HORA = HORARIO_POR_DEFECTO.tramos[0].desde;
+export const HORARIO_LEGIBLE = horarioLegible(HORARIO_POR_DEFECTO);
 
 /** El domingo se atiende, pero conviene confirmar antes de venir. */
-export const AVISO_DOMINGO =
-  'Los domingos atendemos, pero conviene escribirnos o llamarnos antes para confirmar.';
+export const AVISO_DOMINGO = HORARIO_POR_DEFECTO.aviso_domingo;
 
-export const CORTE_DESPACHO_HORA = 20; // 20:00 (dueño, 10-10-2026; antes 18:00)
-export const CORTE_RETIRO_HORA = 21; // 21:00
+export const CORTE_DESPACHO_HORA = 20; // 20:00 (dueño, 10-10-2026; antes 18:00). No lo cambia el módulo de horario.
+export const CORTE_RETIRO_HORA = HORARIO_POR_DEFECTO.tramos[HORARIO_POR_DEFECTO.tramos.length - 1].hasta;
 
 export interface EstadoHorario {
   /** Hora local de Chile en el momento de evaluar (0-23). */
@@ -90,11 +156,15 @@ function proximoDiaAtencion(diaSemana: number): string {
   return diaSemana === 6 ? 'mañana domingo' : 'mañana';
 }
 
-export function estadoHorario(referencia: Date = new Date()): EstadoHorario {
+export function estadoHorario(referencia: Date = new Date(), h: HorarioAtencion = HORARIO_POR_DEFECTO): EstadoHorario {
   const { hora, minuto, diaSemana } = ahoraEnChile(referencia);
+  const apertura = h.tramos[0].desde;
+  const corteRetiro = h.tramos[h.tramos.length - 1].hasta;
+  const pausa = h.tramos.length > 1 ? { desde: h.tramos[0].hasta, hasta: h.tramos[1].desde } : null;
+  const legible = horarioLegible(h);
 
   const despachoHoy = hora < CORTE_DESPACHO_HORA;
-  const retiroHoy = hora < CORTE_RETIRO_HORA;
+  const retiroHoy = hora < corteRetiro;
 
   return {
     hora,
@@ -118,11 +188,13 @@ export function estadoHorario(referencia: Date = new Date()): EstadoHorario {
        del día y nombra la pausa de colación, que es la otra forma de
        llegar a una puerta cerrada. */
     avisoRetiro: !retiroHoy
-      ? `Pasadas las ${CORTE_RETIRO_HORA}:00 el retiro queda disponible ${proximoDiaAtencion(diaSemana)}.`
-      : hora < APERTURA_HORA
-        ? `Puedes retirarlo hoy desde las ${APERTURA_HORA}:00. ${HORARIO_LEGIBLE}.`
-        : hora === 13
-          ? `Puedes retirarlo hoy — volvemos de colación a las 14:00 y atendemos hasta las ${CORTE_RETIRO_HORA}:00.`
-          : `Puedes retirar hoy mismo — hasta las ${CORTE_RETIRO_HORA}:00 (cerramos de 13:00 a 14:00).`,
+      ? `Pasadas las ${corteRetiro}:00 el retiro queda disponible ${proximoDiaAtencion(diaSemana)}.`
+      : hora < apertura
+        ? `Puedes retirarlo hoy desde las ${apertura}:00. ${legible}.`
+        : pausa && hora >= pausa.desde && hora < pausa.hasta
+          ? `Puedes retirarlo hoy — volvemos de colación a las ${pausa.hasta}:00 y atendemos hasta las ${corteRetiro}:00.`
+          : pausa
+            ? `Puedes retirar hoy mismo — hasta las ${corteRetiro}:00 (cerramos de ${pausa.desde}:00 a ${pausa.hasta}:00).`
+            : `Puedes retirar hoy mismo — hasta las ${corteRetiro}:00.`,
   };
 }

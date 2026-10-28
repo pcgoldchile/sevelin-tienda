@@ -1,4 +1,6 @@
 import { HAY_RECARGO, RECARGO_CHECKOUT_TARJETA } from "@/lib/precios-medio-pago";
+import { horarioLegible } from "@/lib/horarios";
+import { obtenerHorario } from "@/lib/horario-actual";
 import { FLOW_HABILITADO } from "@/lib/flow";
 import { FACTURA_HABILITADA } from "@/lib/factura";
 import { medioTarjetaDisponible } from "@/lib/link-pago";
@@ -8,7 +10,8 @@ export const metadata = {
   title: "Términos y Condiciones",
 };
 
-export default function Terminos() {
+export default async function Terminos() {
+  const horario = horarioLegible(await obtenerHorario());
   return (
     <main className="mx-auto max-w-2xl px-4 py-10 sm:px-6 lg:px-8">
       <h1 className="text-3xl font-semibold tracking-tight text-ink">Términos y Condiciones</h1>
@@ -68,8 +71,8 @@ export default function Terminos() {
             propio no cubre los valles de Azapa y Lluta; si vives allá, escríbenos y lo coordinamos.
           </p>
           <p className="mt-2">
-            <strong className="text-ink">Retiro en tienda:</strong> de lunes a domingo, de 10:00 a 13:00 y
-            de 14:00 a 21:00. Los domingos atendemos, pero conviene confirmar antes por WhatsApp.
+            <strong className="text-ink">Retiro en tienda:</strong> {horario.charAt(0).toLowerCase() + horario.slice(1)}.
+            Los domingos atendemos, pero conviene confirmar antes por WhatsApp.
           </p>
           <p className="mt-2">
             Al comprar puedes indicarnos qué día y en qué horario piensas pasar a retirar. Ese dato es

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { obtenerHorario } from "@/lib/horario-actual";
 import { supabaseWeb } from "@/lib/supabase-web";
 import { rutaDeSku } from "@/lib/sku-url";
 import { SERVICIOS_DE_TESTS } from "@/lib/test-servicios";
@@ -50,7 +51,7 @@ export default async function Diagnostico({ searchParams }: { searchParams: Prom
       <p className="mt-2 max-w-2xl text-sm leading-relaxed text-ink-soft">
         Elige qué le pasa, responde unas preguntas cortas y te decimos qué tan probable es que lo necesite, por qué, y cuánto cuesta. Si quieres, lo agendas por WhatsApp.
       </p>
-      <TestDeServicio servicios={servicios} whatsapp={process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? null} inicial={test} />
+      <TestDeServicio servicios={servicios} whatsapp={process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? null} inicial={test} horario={await obtenerHorario()} />
     </main>
   );
 }

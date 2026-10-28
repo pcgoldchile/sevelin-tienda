@@ -17,7 +17,7 @@ import { VERSION_POLITICA_PRIVACIDAD } from "@/lib/politica-privacidad";
 import { REGIONES_CHILE } from "@/lib/regiones-chile";
 import { VALLES_HABILITADOS } from "@/lib/distancia";
 import { BLOQUES_RETIRO, DIAS_MAXIMOS_RETIRO } from "@/lib/retiro-agendado";
-import { AVISO_DOMINGO, HORARIO_LEGIBLE } from "@/lib/horarios";
+import { HORARIO_POR_DEFECTO, horarioLegible, type HorarioAtencion } from "@/lib/horarios";
 import { COMUNAS_POR_REGION } from "@/lib/comunas-chile";
 import type { OpcionEnvio } from "@/lib/envio";
 import { AvisoMayoristaCarrito } from "@/components/aviso-mayorista-carrito";
@@ -31,6 +31,7 @@ export function FormularioCheckout({
   khipuHabilitado = false,
   flowHabilitado = true,
   medioTarjeta = null,
+  horario = HORARIO_POR_DEFECTO,
 }: {
   khipuHabilitado?: boolean;
   flowHabilitado?: boolean;
@@ -38,6 +39,8 @@ export function FormularioCheckout({
      'LINK_TUU' (el link de pago de Haulmer) mientras tanto. Lo decide el
      servidor; null = hoy no hay tarjeta en el sitio. */
   medioTarjeta?: "WEBPAY" | "LINK_TUU" | null;
+  /** Horario vigente, el que el dueño guarda en el POS (28-10-2026). Lo lee el servidor. */
+  horario?: HorarioAtencion;
 }) {
   // Editar cantidades/quitar ítems ya vive en /carrito (estilo MercadoLibre)
   // — acá solo se paga lo que llegó seleccionado, "Tu pedido" es de solo
@@ -1252,14 +1255,14 @@ export function FormularioCheckout({
                 </select>
               </div>
 
-              <p className="mt-2 text-xs text-ink-soft">{HORARIO_LEGIBLE}.</p>
+              <p className="mt-2 text-xs text-ink-soft">{horarioLegible(horario)}.</p>
 
               {/* El domingo se atiende, pero conviene confirmar. Se avisa
                   acá, en el momento exacto en que eligió ese día, y no
                   enterrado en las Preguntas Frecuentes. */}
               {retiroFecha && new Date(`${retiroFecha}T12:00:00`).getDay() === 0 && (
                 <p className="mt-2 rounded-lg bg-accent/10 px-3 py-2 text-xs leading-relaxed text-ink">
-                  {AVISO_DOMINGO}
+                  {horario.aviso_domingo}
                 </p>
               )}
             </div>

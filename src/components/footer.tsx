@@ -2,13 +2,16 @@ import Link from "next/link";
 import { LinkPreferenciasCookies } from "@/components/aviso-cookies";
 import { BotonesRedes } from "@/components/botones-redes";
 import { EMAIL_CONTACTO, URL_WHATSAPP, whatsappLegible } from "@/lib/contacto";
-import { HORARIO_LEGIBLE } from "@/lib/horarios";
+import { horarioLegible } from "@/lib/horarios";
+import { obtenerHorario } from "@/lib/horario-actual";
 
 const ENLACE = "transition-colors hover:text-primary-soft";
 const TITULO = "text-sm font-semibold uppercase tracking-wider text-white";
 
-export function Footer() {
+export async function Footer() {
   const whatsapp = whatsappLegible();
+  // Horario que el dueño guarda en el POS (28-10-2026), con el de código como respaldo.
+  const horario = horarioLegible(await obtenerHorario());
 
   return (
     <footer className="mt-auto bg-surface-sunken text-white/70">
@@ -84,7 +87,7 @@ export function Footer() {
                 <span className="block text-xs text-white/50">Entrada por Av. Robinson Rojas</span>
               </Link>
             </li>
-            <li className="text-xs text-white/50">{HORARIO_LEGIBLE}</li>
+            <li className="text-xs text-white/50">{horario}</li>
           </ul>
         </div>
       </div>

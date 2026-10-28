@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { horarioLegible, pausaLegible, type HorarioAtencion } from "@/lib/horarios";
+import { obtenerHorario } from "@/lib/horario-actual";
 import { HAY_RECARGO, RECARGO_CHECKOUT_TARJETA } from "@/lib/precios-medio-pago";
 import { FLOW_HABILITADO } from "@/lib/flow";
 import { FACTURA_HABILITADA } from "@/lib/factura";
@@ -104,7 +106,7 @@ const PREGUNTAS: { pregunta: string; respuesta: string }[] = [
   {
     pregunta: "¿Cuál es el horario de atención?",
     respuesta:
-      "Atendemos de lunes a domingo, de 10:00 a 13:00 y de 14:00 a 21:00 (cerramos de 13:00 a 14:00 por colación). Los domingos atendemos, pero conviene escribirnos o llamarnos antes para confirmar.",
+      "{{HORARIO}}",
   },
   {
     pregunta: "¿Dónde queda la tienda y por dónde entro?",
@@ -184,7 +186,7 @@ const PREGUNTAS: { pregunta: string; respuesta: string }[] = [
   {
     pregunta: "¿Puedo retirar mi pedido en la tienda?",
     respuesta:
-      "Sí, y es gratis. Puedes retirar de lunes a domingo, de 10:00 a 13:00 y de 14:00 a 21:00, incluso si compras desde otra ciudad para que un familiar o conocido lo retire por ti en Arica. Al comprar puedes decirnos qué día piensas pasar —es opcional y no te compromete— y te mandamos un recordatorio esa mañana con el pedido preparado.",
+      "Sí, y es gratis. Puedes retirar {{HORARIO_RETIRO}}, incluso si compras desde otra ciudad para que un familiar o conocido lo retire por ti en Arica. Al comprar puedes decirnos qué día piensas pasar —es opcional y no te compromete— y te mandamos un recordatorio esa mañana con el pedido preparado.",
   },
   {
     pregunta: "¿Cómo los contacto?",
@@ -201,7 +203,21 @@ export const metadata = {
     "Garantía, productos reacondicionados, medios de pago, envíos y retiro en tienda. Todo lo que necesitas saber antes de comprar en Sevelin, Arica.",
 };
 
-export default function PreguntasFrecuentes() {
+/* El horario sale del POS (28-10-2026): las preguntas que lo nombran llevan una marca que se
+   reemplaza aquí con el horario vigente, también en el JSON-LD que lee Google. */
+function preguntasConHorario(h: HorarioAtencion) {
+  const legible = horarioLegible(h);
+  const pausa = pausaLegible(h);
+  const atencion = `Atendemos ${legible.charAt(0).toLowerCase()}${legible.slice(1)}${pausa ? ` (cerramos de ${pausa} por colación)` : ''}.${h.aviso_domingo ? ` ${h.aviso_domingo}` : ''}`;
+  const retiro = `${legible.charAt(0).toLowerCase()}${legible.slice(1)}`;
+  return PREGUNTAS.map((p) => ({
+    pregunta: p.pregunta,
+    respuesta: p.respuesta.replace('{{HORARIO}}', atencion).replace('{{HORARIO_RETIRO}}', retiro),
+  }));
+}
+
+export default async function PreguntasFrecuentes() {
+  const preguntas = preguntasConHorario(await obtenerHorario());
   return (
     <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6 lg:px-8">
       <h1 className="text-3xl font-semibold tracking-tight text-ink">Preguntas Frecuentes</h1>
@@ -245,7 +261,7 @@ export default function PreguntasFrecuentes() {
       </section>
 
       <div className="mt-10 flex flex-col gap-7">
-        {PREGUNTAS.map(({ pregunta, respuesta }) => (
+        {preguntas.map(({ pregunta, respuesta }) => (
           <section key={pregunta}>
             <h2 className="mb-1.5 text-base font-semibold text-ink">{pregunta}</h2>
             <p className="text-sm leading-relaxed text-ink-soft">{respuesta}</p>
@@ -283,7 +299,7 @@ export default function PreguntasFrecuentes() {
           __html: JSON.stringify({
             "@context": "https://schema.org",
             "@type": "FAQPage",
-            mainEntity: PREGUNTAS.map(({ pregunta, respuesta }) => ({
+            mainEntity: preguntas.map(({ pregunta, respuesta }) => ({
               "@type": "Question",
               name: pregunta,
               acceptedAnswer: { "@type": "Answer", text: respuesta },

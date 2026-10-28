@@ -3,6 +3,7 @@ import { chilexpressHabilitado, buscarCountyCodePorComuna, cotizarTarifasChilexp
 import { CODIGO_REGION_CHILEXPRESS } from './chilexpress-regiones';
 import { DIRECCION_TIENDA, distanciaDesdePlaceId, distanciaDesdeTienda, distanciaValle, esValleValido, VALLES } from './distancia';
 import { estadoHorario } from './horarios';
+import { obtenerHorario } from './horario-actual';
 import { buscarCodigoCiudadDestino, cotizarTarifaStarken, starkenHabilitado } from './starken';
 import { tarifaPorDistancia } from './tarifas-envio';
 import type { DireccionEnvio, ProductoWeb } from './tipos';
@@ -109,7 +110,7 @@ async function tarifaLocalPorDistancia(direccion: DireccionEnvio): Promise<Opcio
   if (!distancia) return null;
 
   const tarifa = tarifaPorDistancia(distancia.km);
-  const horario = estadoHorario();
+  const horario = estadoHorario(new Date(), await obtenerHorario());
 
   const detalle = esValleValido(direccion.valle)
     ? `Despacho a ${VALLES[direccion.valle].etiqueta}, km ${direccion.km_valle ?? 0} · ` +
@@ -305,12 +306,13 @@ function formatearServicio(servicio: string): string {
  * "Espera ese correo antes de venir" (dueño, 06-10-2026): encontrar los
  * productos, revisarlos y dejarlos listos toma tiempo. El aviso lo manda el
  * POS con el botón "Listo para retiro" (POST /api/pos/notificar-listo-retiro). */
-function opcionRetiro(): OpcionEnvio {
+async function opcionRetiro(): Promise<OpcionEnvio> {
+  const estado = estadoHorario(new Date(), await obtenerHorario());
   return {
     metodo: 'RETIRO',
     costo: 0,
     detalle: `Retiro en tienda (${DIRECCION_TIENDA})`,
-    aviso: `${estadoHorario().avisoRetiro} Te avisamos por correo cuando esté listo para retiro: espera ese correo antes de venir.`,
+    aviso: `${estado.avisoRetiro} Te avisamos por correo cuando esté listo para retiro: espera ese correo antes de venir.`,
   };
 }
 
@@ -409,7 +411,7 @@ export async function cotizarOpcionesEnvio(
   // compra desde otra ciudad pero quiere que un familiar que vive en Arica
   // pase a retirarlo — exigir que la dirección de envío fuera "Arica" para
   // ver esta opción no tenía sentido en ese caso.
-  const opciones: OpcionEnvio[] = [opcionRetiro()];
+  const opciones: OpcionEnvio[] = [await opcionRetiro()];
 
   if (esComunaTienda(direccion.comuna)) {
     const local = await tarifaLocalPorDistancia(direccion);

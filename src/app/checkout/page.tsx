@@ -2,12 +2,14 @@ import { FormularioCheckout } from "@/components/formulario-checkout";
 import { khipuHabilitado } from "@/lib/khipu";
 import { FLOW_HABILITADO } from "@/lib/flow";
 import { medioTarjetaDisponible } from "@/lib/link-pago";
+import { obtenerHorario } from "@/lib/horario-actual";
 
 /* Los medios de pago dependen de variables de entorno (Khipu, Webpay): se
    resuelven en cada visita, no al compilar. */
 export const dynamic = "force-dynamic";
 
-export default function Checkout() {
+export default async function Checkout() {
+  const horario = await obtenerHorario();
   return (
     <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6 lg:px-8">
       <h1 className="mb-6 text-3xl font-semibold tracking-tight text-ink">Finalizar compra</h1>
@@ -18,6 +20,7 @@ export default function Checkout() {
         khipuHabilitado={khipuHabilitado()}
         flowHabilitado={FLOW_HABILITADO}
         medioTarjeta={medioTarjetaDisponible()}
+        horario={horario}
       />
     </main>
   );

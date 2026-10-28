@@ -5,7 +5,8 @@ import { TarjetaProducto } from "@/components/tarjeta-producto";
 import { GrillaConFiltros } from "@/components/grilla-con-filtros";
 import { URL_WHATSAPP } from "@/lib/contacto";
 import { finDeOfertaLegible, inicioDeOfertaLegible } from "@/lib/formato";
-import { HORARIO_LEGIBLE } from "@/lib/horarios";
+import { horarioLegible } from "@/lib/horarios";
+import { obtenerHorario } from "@/lib/horario-actual";
 import { listarOfertas, tituloOfertas, type ListaOfertas } from "@/lib/ofertas";
 import { DIAS_MAXIMOS_RETIRO } from "@/lib/retiro-agendado";
 import { esServicioTecnico } from "@/lib/servicios";
@@ -34,7 +35,7 @@ function primeraFecha(fechas: (string | null | undefined)[]): string | null {
  * exige el día en que se trae el equipo y el pago lo deja reservado. Esto
  * solo lo explica antes de que el cliente llegue ahí.
  */
-function ComoFuncionaServicios({ servicios, vigente }: { servicios: ProductoWeb[]; vigente: boolean }) {
+function ComoFuncionaServicios({ servicios, vigente, horario }: { servicios: ProductoWeb[]; vigente: boolean; horario: string }) {
   const inicio = primeraFecha(servicios.map((s) => s.oferta_desde));
   const fin = primeraFecha(servicios.map((s) => s.oferta_hasta));
   const plazo = vigente
@@ -69,7 +70,7 @@ function ComoFuncionaServicios({ servicios, vigente }: { servicios: ProductoWeb[
         </li>
       </ol>
       <p className="mt-3 text-xs leading-relaxed text-ink-soft">
-        Para tomar la oferta hay que reservar en la web durante esos días. {HORARIO_LEGIBLE}.
+        Para tomar la oferta hay que reservar en la web durante esos días. {horario}.
       </p>
     </div>
   );
@@ -170,7 +171,7 @@ export default async function Ofertas({ searchParams }: { searchParams: Promise<
                 {hayVigentes ? "Servicios técnicos en oferta" : "Servicios técnicos que entran en oferta"} ({servicios.length})
               </h2>
               {!hayVigentes && <p className="mt-1 text-sm text-ink-soft">El precio que ves hoy es el normal.</p>}
-              <ComoFuncionaServicios servicios={servicios} vigente={hayVigentes} />
+              <ComoFuncionaServicios servicios={servicios} vigente={hayVigentes} horario={horarioLegible(await obtenerHorario())} />
               <div className={`mt-5 ${GRILLA}`}>
                 {servicios.map((p) => (
                   <TarjetaProducto key={p.id} producto={p} />

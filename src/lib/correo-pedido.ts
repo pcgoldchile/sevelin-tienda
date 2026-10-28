@@ -3,7 +3,7 @@ import { formatoCLP } from './formato';
 import { escaparHtml } from './escapar-html';
 import { fechaRetiroLegible } from './retiro-agendado';
 import { fechaLlegadaLegible } from './por-llegar';
-import { HORARIO_LEGIBLE } from './horarios';
+import { MARCA_HORARIO } from './horarios';
 import { URL_RESENA_GOOGLE } from './resena-google';
 import type { ItemPedido, PedidoWeb } from './tipos';
 
@@ -327,7 +327,7 @@ export function correoListoParaRetiro(
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">${filas}</table>
     ${bloquePendientes}
     <p style="margin:0 0 6px;font-size:14px;color:${TEXTO_SUAVE};"><strong style="color:${TEXTO};">Dónde:</strong> ${DIRECCION_TIENDA}</p>
-    <p style="margin:0 0 6px;font-size:14px;color:${TEXTO_SUAVE};"><strong style="color:${TEXTO};">Horario:</strong> ${HORARIO_LEGIBLE}</p>
+    <p style="margin:0 0 6px;font-size:14px;color:${TEXTO_SUAVE};"><strong style="color:${TEXTO};">Horario:</strong> ${MARCA_HORARIO}</p>
     <p style="margin:0 0 16px;font-size:14px;color:${TEXTO_SUAVE};"><strong style="color:${TEXTO};">Al llegar:</strong> di tu nombre y el número de pedido ${numero}. El retiro es gratis.</p>
     <p style="margin:0;font-size:13px;color:${TEXTO_SUAVE};">¿Alguna duda? Escríbenos por WhatsApp y lo vemos contigo.</p>
   `;
@@ -634,7 +634,7 @@ export function correoPedidoEsperaPagoLink(
       </td></tr>
     </table>
     <p style="margin:0 0 16px;font-size:13px;color:${TEXTO_SUAVE};">
-      Confirmamos tu pago a mano, normalmente en pocos minutos dentro de nuestro horario (${HORARIO_LEGIBLE}).
+      Confirmamos tu pago a mano, normalmente en pocos minutos dentro de nuestro horario (${MARCA_HORARIO}).
       Apenas quede confirmado te llega otro correo. Tienes ${enlaces.horasParaPagar} horas para pagar; después el pedido se anula solo.
     </p>
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:10px;">${filasConFotoDe(pedido, imagenes)}</table>

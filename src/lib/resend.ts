@@ -1,3 +1,6 @@
+import { MARCA_HORARIO, horarioLegible } from './horarios';
+import { obtenerHorario } from './horario-actual';
+
 /**
  * Correo transaccional vía la API REST de Resend — fetch directo, sin el
  * SDK de `resend` (es una sola llamada HTTP, no vale la pena la
@@ -19,6 +22,12 @@ export async function enviarCorreo(params: { to: string; subject: string; html: 
     return false;
   }
   if (!params.to) return false;
+
+  // El horario de los correos sale del POS (28-10-2026): la plantilla trae una marca y aquí se
+  // pone el vigente. Si la lectura falla, obtenerHorario() ya devuelve el de respaldo.
+  if (params.html.includes(MARCA_HORARIO)) {
+    params = { ...params, html: params.html.split(MARCA_HORARIO).join(horarioLegible(await obtenerHorario())) };
+  }
 
   try {
     const respuesta = await fetch('https://api.resend.com/emails', {

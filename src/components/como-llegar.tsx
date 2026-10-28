@@ -1,7 +1,8 @@
 import Image from "next/image";
 import { MapPin, MessageCircle, Navigation } from "lucide-react";
 import { URL_PERFIL_GOOGLE, URL_WHATSAPP } from "@/lib/contacto";
-import { HORARIO_LEGIBLE } from "@/lib/horarios";
+import { horarioLegible } from "@/lib/horarios";
+import { obtenerHorario } from "@/lib/horario-actual";
 
 /**
  * "¿Cómo llegar?" (dueño, 19-10-2026): la tienda es casa de esquina. Google Maps la marca
@@ -10,7 +11,8 @@ import { HORARIO_LEGIBLE } from "@/lib/horarios";
  * está dibujado sobre el de Google, con el logo donde está el pin y las calles de
  * referencia. Va en el inicio y en /contacto.
  */
-export function ComoLlegar({ id = "como-llegar" }: { id?: string }) {
+export async function ComoLlegar({ id = "como-llegar" }: { id?: string }) {
+  const horario = horarioLegible(await obtenerHorario());
   return (
     <section id={id} className="mx-auto w-full max-w-6xl scroll-mt-24 px-4 py-12 sm:px-6 lg:px-8">
       <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-primary-soft">
@@ -59,7 +61,7 @@ export function ComoLlegar({ id = "como-llegar" }: { id?: string }) {
           </div>
           <ul className="grid gap-2 text-sm text-ink-soft">
             <li><span className="font-semibold text-ink">Referencias:</span> entre Buena Esperanza y La Ligua, frente a la línea del tren.</li>
-            <li><span className="font-semibold text-ink">Horario:</span> {HORARIO_LEGIBLE}.</li>
+            <li><span className="font-semibold text-ink">Horario:</span> {horario}.</li>
           </ul>
           <div className="flex flex-wrap gap-3">
             <a
